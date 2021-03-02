@@ -3,7 +3,7 @@ package storage
 import (
 	"sync"
 
-	"github.com/wings-software/ff-client-sdk-go/utils"
+	"github.com/drone/ff-golang-server-sdk/utils"
 )
 
 type MemoryStore struct {

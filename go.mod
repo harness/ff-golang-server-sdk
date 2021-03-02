@@ -1,4 +1,4 @@
-module https://github.com/drone/ff-golang-server-sdk
+module github.com/drone/ff-golang-server-sdk
 
 go 1.14
 

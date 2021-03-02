@@ -29,10 +29,3 @@ target := dto.NewTargetBuilder("key").
 
 Evaluating Feature Flag
 `showFeature, err := client.BoolVariation(featureFlagKey, target, false)`
-
-
-## for installing private repositories follow this guide:
-
-`go env -w GOPRIVATE=github.com/wings-software`
-
-[link](https://medium.com/swlh/go-modules-with-private-git-repository-3940b6835727)

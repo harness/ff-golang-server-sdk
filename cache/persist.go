@@ -1,11 +1,11 @@
 package cache
 
 import (
+	"github.com/drone/ff-golang-server-sdk/dto"
+	"github.com/drone/ff-golang-server-sdk/evaluation"
+	"github.com/drone/ff-golang-server-sdk/logger"
+	"github.com/drone/ff-golang-server-sdk/storage"
 	"github.com/mitchellh/mapstructure"
-	"github.com/wings-software/ff-client-sdk-go/dto"
-	"github.com/wings-software/ff-client-sdk-go/evaluation"
-	"github.com/wings-software/ff-client-sdk-go/logger"
-	"github.com/wings-software/ff-client-sdk-go/storage"
 )
 
 type Persistence struct {

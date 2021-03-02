@@ -1,9 +1,9 @@
 package client
 
 import (
-	"github.com/wings-software/ff-client-sdk-go/cache"
-	"github.com/wings-software/ff-client-sdk-go/logger"
-	"github.com/wings-software/ff-client-sdk-go/storage"
+	"github.com/drone/ff-golang-server-sdk/cache"
+	"github.com/drone/ff-golang-server-sdk/logger"
+	"github.com/drone/ff-golang-server-sdk/storage"
 )
 
 type ConfigOption func(config *Config)

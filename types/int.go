@@ -2,7 +2,7 @@ package types
 
 import (
 	"fmt"
-	"github.com/wings-software/ff-client-sdk-go"
+	"github.com/drone/ff-golang-server-sdk"
 )
 
 type Integer int64

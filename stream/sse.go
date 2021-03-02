@@ -3,11 +3,11 @@ package stream
 import (
 	"context"
 	"fmt"
+	"github.com/drone/ff-golang-server-sdk/cache"
+	"github.com/drone/ff-golang-server-sdk/dto"
+	"github.com/drone/ff-golang-server-sdk/rest"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/r3labs/sse"
-	"github.com/wings-software/ff-client-sdk-go/cache"
-	"github.com/wings-software/ff-client-sdk-go/dto"
-	"github.com/wings-software/ff-client-sdk-go/rest"
 	"log"
 	"time"
 )

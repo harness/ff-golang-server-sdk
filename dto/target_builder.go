@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"github.com/wings-software/ff-client-sdk-go/evaluation"
+	"github.com/drone/ff-golang-server-sdk/evaluation"
 )
 
 // TargetBuilderInterface used for fluent builder methods

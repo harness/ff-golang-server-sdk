@@ -15,7 +15,7 @@ clean:
 	go clean
 
 test:
-	go test -race -v --cover ./pkg/...
+	go test -race -v --cover ./...
 
 $(LINTER):
 	curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s $(GOLANGCI_LINT_VERSION)
