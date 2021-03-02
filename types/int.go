@@ -2,7 +2,7 @@ package types
 
 import (
 	"fmt"
-	"github.com/wings-software/ff-client-sdk-go/pkg"
+	"github.com/wings-software/ff-client-sdk-go"
 )
 
 type Integer int64
@@ -13,7 +13,7 @@ func NewInteger(value interface{}) (*Integer, error) {
 		newStr := Integer(num)
 		return &newStr, nil
 	}
-	return nil, fmt.Errorf("%v: cant cast to a integer", pkg.ErrWrongTypeAssertion)
+	return nil, fmt.Errorf("%v: cant cast to a integer", ff_golang_server_sdk.ErrWrongTypeAssertion)
 }
 
 func (n Integer) operator(value interface{}, fn func(int64) bool) bool {

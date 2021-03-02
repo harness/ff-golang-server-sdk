@@ -1,6 +1,6 @@
 package rest
 
-import "github.com/wings-software/ff-client-sdk-go/pkg/evaluation"
+import "github.com/wings-software/ff-client-sdk-go/evaluation"
 
 func (wv WeightedVariation) DomainEntity() *evaluation.WeightedVariation {
 	return &evaluation.WeightedVariation{

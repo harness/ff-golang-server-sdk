@@ -2,7 +2,7 @@ package types
 
 import (
 	"fmt"
-	"github.com/wings-software/ff-client-sdk-go/pkg"
+	"github.com/wings-software/ff-client-sdk-go"
 )
 
 type Boolean bool
@@ -14,7 +14,7 @@ func NewBoolean(value interface{}) (*Boolean, error) {
 		newBool := Boolean(num)
 		return &newBool, nil
 	}
-	return nil, fmt.Errorf("%v: cant cast to a integer", pkg.ErrWrongTypeAssertion)
+	return nil, fmt.Errorf("%v: cant cast to a integer", ff_golang_server_sdk.ErrWrongTypeAssertion)
 }
 
 func (b Boolean) StartsWith(value interface{}) bool {

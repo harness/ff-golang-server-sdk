@@ -1,4 +1,4 @@
-package pkg
+package ff_golang_server_sdk
 
 type ErrorType string
 

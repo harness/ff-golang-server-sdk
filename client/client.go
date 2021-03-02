@@ -9,13 +9,13 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/r3labs/sse"
-	"github.com/wings-software/ff-client-sdk-go/pkg"
-	"github.com/wings-software/ff-client-sdk-go/pkg/cache"
-	"github.com/wings-software/ff-client-sdk-go/pkg/dto"
-	"github.com/wings-software/ff-client-sdk-go/pkg/evaluation"
-	"github.com/wings-software/ff-client-sdk-go/pkg/rest"
-	"github.com/wings-software/ff-client-sdk-go/pkg/stream"
-	"github.com/wings-software/ff-client-sdk-go/pkg/types"
+	"github.com/wings-software/ff-client-sdk-go"
+	"github.com/wings-software/ff-client-sdk-go/cache"
+	"github.com/wings-software/ff-client-sdk-go/dto"
+	"github.com/wings-software/ff-client-sdk-go/evaluation"
+	"github.com/wings-software/ff-client-sdk-go/rest"
+	"github.com/wings-software/ff-client-sdk-go/stream"
+	"github.com/wings-software/ff-client-sdk-go/types"
 	"log"
 	"strings"
 	"sync"
@@ -57,7 +57,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	ctx, client.cancelFunc = context.WithCancel(context.Background())
 
 	if sdkKey == "" {
-		return client, pkg.ErrSdkCantBeEmpty
+		return client, ff_golang_server_sdk.ErrSdkCantBeEmpty
 	}
 
 	client.persistence = cache.NewPersistence(config.Store, config.Cache, config.Logger)

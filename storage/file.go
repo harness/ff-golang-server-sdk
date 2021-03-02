@@ -3,7 +3,7 @@ package storage
 import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/wings-software/ff-client-sdk-go/pkg/logger"
+	"github.com/wings-software/ff-client-sdk-go/logger"
 	"os"
 	"path/filepath"
 	"time"

@@ -2,7 +2,7 @@ package types
 
 import (
 	"fmt"
-	"github.com/wings-software/ff-client-sdk-go/pkg"
+	"github.com/wings-software/ff-client-sdk-go"
 )
 
 type Number float64
@@ -13,7 +13,7 @@ func NewNumber(value interface{}) (*Number, error) {
 		newStr := Number(num)
 		return &newStr, nil
 	}
-	return nil, fmt.Errorf("%v: cant cast to a number", pkg.ErrWrongTypeAssertion)
+	return nil, fmt.Errorf("%v: cant cast to a number", ff_golang_server_sdk.ErrWrongTypeAssertion)
 }
 
 func (n Number) operator(value interface{}, fn func(float64) bool) bool {

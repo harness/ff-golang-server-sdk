@@ -1,9 +1,9 @@
 package client
 
 import (
-	"github.com/wings-software/ff-client-sdk-go/pkg/cache"
-	"github.com/wings-software/ff-client-sdk-go/pkg/logger"
-	"github.com/wings-software/ff-client-sdk-go/pkg/storage"
+	"github.com/wings-software/ff-client-sdk-go/cache"
+	"github.com/wings-software/ff-client-sdk-go/logger"
+	"github.com/wings-software/ff-client-sdk-go/storage"
 	"log"
 )
 

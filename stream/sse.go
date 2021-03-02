@@ -5,9 +5,9 @@ import (
 	"fmt"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/r3labs/sse"
-	"github.com/wings-software/ff-client-sdk-go/pkg/cache"
-	"github.com/wings-software/ff-client-sdk-go/pkg/dto"
-	"github.com/wings-software/ff-client-sdk-go/pkg/rest"
+	"github.com/wings-software/ff-client-sdk-go/cache"
+	"github.com/wings-software/ff-client-sdk-go/dto"
+	"github.com/wings-software/ff-client-sdk-go/rest"
 	"log"
 	"time"
 )

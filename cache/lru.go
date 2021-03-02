@@ -2,7 +2,7 @@ package cache
 
 import (
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/wings-software/ff-client-sdk-go/pkg/logger"
+	"github.com/wings-software/ff-client-sdk-go/logger"
 	"reflect"
 	"time"
 )

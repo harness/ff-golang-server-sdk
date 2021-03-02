@@ -2,10 +2,10 @@ package cache
 
 import (
 	"github.com/mitchellh/mapstructure"
-	"github.com/wings-software/ff-client-sdk-go/pkg/evaluation"
-	"github.com/wings-software/ff-client-sdk-go/pkg/dto"
-	"github.com/wings-software/ff-client-sdk-go/pkg/logger"
-	"github.com/wings-software/ff-client-sdk-go/pkg/storage"
+	"github.com/wings-software/ff-client-sdk-go/dto"
+	"github.com/wings-software/ff-client-sdk-go/evaluation"
+	"github.com/wings-software/ff-client-sdk-go/logger"
+	"github.com/wings-software/ff-client-sdk-go/storage"
 )
 
 type Persistence struct {

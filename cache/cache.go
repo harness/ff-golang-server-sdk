@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"github.com/wings-software/ff-client-sdk-go/pkg/logger"
+	"github.com/wings-software/ff-client-sdk-go/logger"
 	"time"
 )
 

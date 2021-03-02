@@ -2,7 +2,7 @@ package types
 
 import (
 	"fmt"
-	"github.com/wings-software/ff-client-sdk-go/pkg"
+	"github.com/wings-software/ff-client-sdk-go"
 	"regexp"
 	"strings"
 )
@@ -15,7 +15,7 @@ func NewString(value interface{}) (*String, error) {
 		newStr := String(str)
 		return &newStr, nil
 	}
-	return nil, fmt.Errorf("%v: cant cast to a string", pkg.ErrWrongTypeAssertion)
+	return nil, fmt.Errorf("%v: cant cast to a string", ff_golang_server_sdk.ErrWrongTypeAssertion)
 }
 
 func (s String) String() string {

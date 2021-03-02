@@ -2,7 +2,7 @@ package evaluation
 
 import (
 	"encoding/json"
-	"github.com/wings-software/ff-client-sdk-go/pkg/types"
+	"github.com/wings-software/ff-client-sdk-go/types"
 	"reflect"
 	"strconv"
 )
