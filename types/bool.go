@@ -7,7 +7,6 @@ import (
 
 type Boolean bool
 
-
 func NewBoolean(value interface{}) (*Boolean, error) {
 	num, ok := value.(bool)
 	if ok {
@@ -64,4 +63,3 @@ func (b Boolean) LessThanEqual(value interface{}) bool {
 func (b Boolean) In(value interface{}) bool {
 	return false
 }
-

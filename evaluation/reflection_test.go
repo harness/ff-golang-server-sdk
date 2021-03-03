@@ -74,11 +74,11 @@ func Test_caseInsensitiveFieldByName(t *testing.T) {
 		{name: "check with struct", args: struct {
 			v    reflect.Value
 			name string
-		}{v:reflect.ValueOf(target), name: "identifier"}, want: reflect.ValueOf("john")},
+		}{v: reflect.ValueOf(target), name: "identifier"}, want: reflect.ValueOf("john")},
 		{name: "check with other than struct", args: struct {
 			v    reflect.Value
 			name string
-		}{v:reflect.ValueOf("Identifier"), name: "identifier"}, want: reflect.ValueOf("Identifier")},
+		}{v: reflect.ValueOf("Identifier"), name: "identifier"}, want: reflect.ValueOf("Identifier")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
