@@ -1,5 +1,7 @@
 # Harness FFM Server-side SDK for Go
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/drone/ff-golang-server-sdk)](https://goreportcard.com/report/github.com/drone/ff-golang-server-sdk)
+
 ## FFM overview
 FFM is feature flag management platform for helping teams to deliver better software and faster.
 

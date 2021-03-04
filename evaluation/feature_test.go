@@ -2,8 +2,8 @@ package evaluation
 
 import (
 	"encoding/json"
-	"github.com/google/uuid"
 	"github.com/drone/ff-golang-server-sdk/types"
+	"github.com/google/uuid"
 	"reflect"
 	"strconv"
 	"testing"
