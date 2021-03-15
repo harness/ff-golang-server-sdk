@@ -84,7 +84,8 @@ func Test_caseInsensitiveFieldByName(t *testing.T) {
 	for _, tt := range tests {
 		val := tt
 		t.Run(val.name, func(t *testing.T) {
-			if got := caseInsensitiveFieldByName(val.args.v, val.args.name); got == val.want {
+			if got := caseInsensitiveFieldByName(val.args.v, val.args.name); !reflect.DeepEqual(got.Interface(),
+				val.want.Interface()) {
 				t.Errorf("caseInsensitiveFieldByName() = %v, want %v", got, val.want)
 			}
 		})

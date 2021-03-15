@@ -75,6 +75,8 @@ func TestTarget_GetOperator(t1 *testing.T) {
 
 func TestTarget_GetAttrValue(t1 *testing.T) {
 	name := "John"
+	identifier := "john"
+	email := "john@doe.com"
 	type fields struct {
 		Identifier string
 		Name       *string
@@ -95,17 +97,17 @@ func TestTarget_GetAttrValue(t1 *testing.T) {
 			Name       *string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "john", Name: &name, Anonymous: false, Attributes: types.JSON{}},
-			args: struct{ attr string }{attr: "identifier"}, want: reflect.ValueOf("john")},
+		}{Identifier: identifier, Name: &name, Anonymous: false, Attributes: types.JSON{}},
+			args: struct{ attr string }{attr: "identifier"}, want: reflect.ValueOf(identifier)},
 		{name: "check attributes", fields: struct {
 			Identifier string
 			Name       *string
 			Anonymous  bool
 			Attributes map[string]interface{}
 		}{Identifier: "john", Name: &name, Anonymous: false, Attributes: types.JSON{
-			"email": "john@doe.com",
+			"email": email,
 		}},
-			args: struct{ attr string }{attr: "email"}, want: reflect.ValueOf("john@doe.com")},
+			args: struct{ attr string }{attr: "email"}, want: reflect.ValueOf(email)},
 	}
 	for _, tt := range tests {
 		val := tt
@@ -116,7 +118,7 @@ func TestTarget_GetAttrValue(t1 *testing.T) {
 				Anonymous:  val.fields.Anonymous,
 				Attributes: val.fields.Attributes,
 			}
-			if got := t.GetAttrValue(val.args.attr); got == val.want {
+			if got := t.GetAttrValue(val.args.attr); !reflect.DeepEqual(got.Interface(), val.want.Interface()) {
 				t1.Errorf("GetAttrValue() = %v, want %v", got, val.want)
 			}
 		})
