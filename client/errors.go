@@ -2,4 +2,7 @@ package client
 
 import "errors"
 
-var ErrUnauthorized = errors.New("unauthorized")
+var (
+	// ErrUnauthorized displays error message for unauthorized users
+	ErrUnauthorized = errors.New("unauthorized")
+)

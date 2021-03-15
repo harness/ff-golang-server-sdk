@@ -2,6 +2,7 @@ package evaluation
 
 import (
 	"github.com/google/uuid"
+
 	"testing"
 )
 
@@ -63,25 +64,26 @@ func TestSegment_Evaluate(t *testing.T) {
 			Version     int64
 		}{Identifier: "beta", Name: "Beta users", CreatedAt: nil, ModifiedAt: nil, Environment: nil, Excluded: nil,
 			Included: nil, Rules: []Clause{
-				{Attribute: "email", Id: uuid.New().String(), Negate: false, Op: equalOperator, Value: []string{"john@doe.com"}},
+				{Attribute: "email", ID: uuid.New().String(), Negate: false, Op: equalOperator, Value: []string{"john@doe.com"}},
 			}, Tags: nil, Version: 1}, args: struct{ target *Target }{target: &target}, want: true},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		val := tt
+		t.Run(val.name, func(t *testing.T) {
 			s := Segment{
-				Identifier:  tt.fields.Identifier,
-				Name:        tt.fields.Name,
-				CreatedAt:   tt.fields.CreatedAt,
-				ModifiedAt:  tt.fields.ModifiedAt,
-				Environment: tt.fields.Environment,
-				Excluded:    tt.fields.Excluded,
-				Included:    tt.fields.Included,
-				Rules:       tt.fields.Rules,
-				Tags:        tt.fields.Tags,
-				Version:     tt.fields.Version,
+				Identifier:  val.fields.Identifier,
+				Name:        val.fields.Name,
+				CreatedAt:   val.fields.CreatedAt,
+				ModifiedAt:  val.fields.ModifiedAt,
+				Environment: val.fields.Environment,
+				Excluded:    val.fields.Excluded,
+				Included:    val.fields.Included,
+				Rules:       val.fields.Rules,
+				Tags:        val.fields.Tags,
+				Version:     val.fields.Version,
 			}
-			if got := s.Evaluate(tt.args.target); got != tt.want {
-				t.Errorf("Evaluate() = %v, want %v", got, tt.want)
+			if got := s.Evaluate(val.args.target); got != val.want {
+				t.Errorf("Evaluate() = %v, want %v", got, val.want)
 			}
 		})
 	}

@@ -161,4 +161,3 @@ type AuthenticateJSONBody AuthenticationRequest
 
 // AuthenticateRequestBody defines body for Authenticate for application/json ContentType.
 type AuthenticateJSONRequestBody AuthenticateJSONBody
-

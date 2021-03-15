@@ -2,7 +2,9 @@ package evaluation
 
 import (
 	"encoding/json"
-	"github.com/drone/ff-golang-server-sdk/types"
+
+	"github.com/drone/ff-golang-server-sdk.v1/types"
+
 	"reflect"
 	"strconv"
 )
@@ -18,19 +20,23 @@ const (
 	equalSensitiveOperator = "equal_sensitive"
 )
 
+// Evaluation object is in most cases returned value from evaluation
+// methods and contains results of evaluated feature flag for target object
 type Evaluation struct {
 	Flag  string
 	Value interface{}
 }
 
+// Clause object
 type Clause struct {
 	Attribute string
-	Id        string
+	ID        string
 	Negate    bool
 	Op        string
 	Value     []string
 }
 
+// Evaluate clause using target but it can be used also with segments if Op field is segmentMach
 func (c *Clause) Evaluate(target *Target, segments Segments, operator types.ValueType) bool {
 	switch c.Op {
 	case segmentMatchOperator:
@@ -44,7 +50,7 @@ func (c *Clause) Evaluate(target *Target, segments Segments, operator types.Valu
 	case startsWithOperator:
 		return operator.StartsWith(c.Value)
 	case endsWithOperator:
-		return operator.EndWith(c.Value)
+		return operator.EndsWith(c.Value)
 	case containsOperator:
 		return operator.Contains(c.Value)
 	case equalSensitiveOperator:
@@ -63,8 +69,10 @@ func (c *Clause) segmentMatch(target *Target, segments Segments) bool {
 	return segments.Evaluate(target)
 }
 
+// Clauses slice
 type Clauses []Clause
 
+// Evaluate clauses using target but it can be used also with segments if Op field is segmentMach
 func (c Clauses) Evaluate(target *Target, segments Segments) bool {
 	for _, clause := range c {
 		// AND operation
@@ -78,11 +86,13 @@ func (c Clauses) Evaluate(target *Target, segments Segments) bool {
 	return true
 }
 
+// Distribution object used for Percentage Rollout evaluations
 type Distribution struct {
 	BucketBy   string
 	Variations []WeightedVariation
 }
 
+// GetKeyName returns variation identifier based on target
 func (d *Distribution) GetKeyName(target *Target) string {
 	variation := ""
 	for _, tdVariation := range d.Variations {
@@ -105,10 +115,12 @@ func (d *Distribution) isEnabled(target *Target, percentage int) bool {
 		return false
 	}
 
-	bucketId := GetNormalizedNumber(identifier, d.BucketBy)
-	return percentage > 0 && bucketId <= percentage
+	bucketID := GetNormalizedNumber(identifier, d.BucketBy)
+	return percentage > 0 && bucketID <= percentage
 }
 
+// FeatureConfig object is actually where feature flag evaluation
+// happens. It contains all data like rules, default values, variations and segments
 type FeatureConfig struct {
 	DefaultServe         Serve
 	Environment          string
@@ -124,6 +136,7 @@ type FeatureConfig struct {
 	Segments             map[string]*Segment `json:"-"`
 }
 
+// GetSegmentIdentifiers returns all segments
 func (fc FeatureConfig) GetSegmentIdentifiers() StrSlice {
 	slice := make(StrSlice, 0)
 	for _, rule := range fc.Rules {
@@ -138,6 +151,7 @@ func (fc FeatureConfig) GetSegmentIdentifiers() StrSlice {
 	return slice
 }
 
+// GetKind returns kind of feature flag
 func (fc *FeatureConfig) GetKind() reflect.Kind {
 	switch fc.Kind {
 	case "boolean":
@@ -155,6 +169,7 @@ func (fc *FeatureConfig) GetKind() reflect.Kind {
 	}
 }
 
+// Evaluate feature flag and return Evaluation object
 func (fc FeatureConfig) Evaluate(target *Target) *Evaluation {
 	var value interface{}
 	switch fc.GetKind() {
@@ -162,12 +177,18 @@ func (fc FeatureConfig) Evaluate(target *Target) *Evaluation {
 		value = fc.BoolVariation(target, false) // need more info
 	case reflect.String:
 		value = fc.StringVariation(target, "") // need more info
-	case reflect.Int:
+	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8, reflect.Uint, reflect.Uint16,
+		reflect.Uint32, reflect.Uint64, reflect.Uint8:
 		value = fc.IntVariation(target, 0)
-	case reflect.Float64:
+	case reflect.Float64, reflect.Float32:
 		value = fc.NumberVariation(target, 0)
 	case reflect.Map:
-		value = fc.JsonVariation(target, map[string]interface{}{})
+		value = fc.JSONVariation(target, map[string]interface{}{})
+	case reflect.Array, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Func, reflect.Interface,
+		reflect.Invalid, reflect.Ptr, reflect.Slice, reflect.Struct, reflect.Uintptr, reflect.UnsafePointer:
+		return nil
+	default:
+		value = nil
 	}
 	return &Evaluation{
 		Flag:  fc.Feature,
@@ -175,27 +196,29 @@ func (fc FeatureConfig) Evaluate(target *Target) *Evaluation {
 	}
 }
 
+// GetVariationName returns variation identifier for target
 func (fc FeatureConfig) GetVariationName(target *Target) string {
 	if fc.State == FeatureStateOff {
 		return fc.OffVariation
-	} else {
-		// TODO: variation to target
-		if fc.VariationToTargetMap != nil && len(fc.VariationToTargetMap) > 0 {
-			for _, variationMap := range fc.VariationToTargetMap {
-				if variationMap.Targets != nil {
-					for _, t := range variationMap.Targets {
-						if target.Identifier == t {
-							return variationMap.Variation
-						}
+	}
+	// TODO: variation to target
+	if fc.VariationToTargetMap != nil && len(fc.VariationToTargetMap) > 0 {
+		for _, variationMap := range fc.VariationToTargetMap {
+			if variationMap.Targets != nil {
+				for _, t := range variationMap.Targets {
+					if target.Identifier == t {
+						return variationMap.Variation
 					}
 				}
 			}
 		}
-
-		return fc.Rules.GetVariationName(target, fc.Segments, fc.DefaultServe)
 	}
+
+	return fc.Rules.GetVariationName(target, fc.Segments, fc.DefaultServe)
+
 }
 
+// BoolVariation returns boolean evaluation for target
 func (fc *FeatureConfig) BoolVariation(target *Target, defaultValue bool) bool {
 	if fc.GetKind() != reflect.Bool {
 		return defaultValue
@@ -203,6 +226,7 @@ func (fc *FeatureConfig) BoolVariation(target *Target, defaultValue bool) bool {
 	return fc.Variations.FindByIdentifier(fc.GetVariationName(target)).Bool(defaultValue)
 }
 
+// StringVariation returns string evaluation for target
 func (fc *FeatureConfig) StringVariation(target *Target, defaultValue string) string {
 	if fc.GetKind() != reflect.String {
 		return defaultValue
@@ -210,6 +234,7 @@ func (fc *FeatureConfig) StringVariation(target *Target, defaultValue string) st
 	return fc.Variations.FindByIdentifier(fc.GetVariationName(target)).String(defaultValue)
 }
 
+// IntVariation returns int evaluation for target
 func (fc *FeatureConfig) IntVariation(target *Target, defaultValue int64) int64 {
 	if fc.GetKind() != reflect.Int {
 		return defaultValue
@@ -217,6 +242,7 @@ func (fc *FeatureConfig) IntVariation(target *Target, defaultValue int64) int64 
 	return fc.Variations.FindByIdentifier(fc.GetVariationName(target)).Int(defaultValue)
 }
 
+// NumberVariation returns number evaluation for target
 func (fc *FeatureConfig) NumberVariation(target *Target, defaultValue float64) float64 {
 	if fc.GetKind() != reflect.Float64 {
 		return defaultValue
@@ -224,39 +250,48 @@ func (fc *FeatureConfig) NumberVariation(target *Target, defaultValue float64) f
 	return fc.Variations.FindByIdentifier(fc.GetVariationName(target)).Number(defaultValue)
 }
 
-func (fc *FeatureConfig) JsonVariation(target *Target, defaultValue types.JSON) types.JSON {
+// JSONVariation returns json evaluation for target
+func (fc *FeatureConfig) JSONVariation(target *Target, defaultValue types.JSON) types.JSON {
 	if fc.GetKind() != reflect.Map {
 		return defaultValue
 	}
 	return fc.Variations.FindByIdentifier(fc.GetVariationName(target)).JSON(defaultValue)
 }
 
+// FeatureState represents feature flag ON or OFF state
 type FeatureState string
 
 const (
+	// FeatureStateOff represents OFF state
 	FeatureStateOff FeatureState = "off"
-	FeatureStateOn  FeatureState = "on"
+	// FeatureStateOn represents ON state
+	FeatureStateOn FeatureState = "on"
 )
 
+// Prerequisite object
 type Prerequisite struct {
 	Feature    string
 	Variations []string
 }
 
+// Serve object
 type Serve struct {
 	Distribution *Distribution
 	Variation    *string
 }
 
+// ServingRule object
 type ServingRule struct {
 	Clauses  Clauses
 	Priority int
-	RuleId   string
+	RuleID   string
 	Serve    Serve
 }
 
+// ServingRules slice of ServingRule
 type ServingRules []ServingRule
 
+// GetVariationName returns variation identifier or defaultServe
 func (sr ServingRules) GetVariationName(target *Target, segments Segments, defaultServe Serve) string {
 RULES:
 	for _, rule := range sr {
@@ -284,11 +319,13 @@ RULES:
 	return "" // need defaultServe
 }
 
+// Tag object
 type Tag struct {
 	Name  string
 	Value *string
 }
 
+// Variation object
 type Variation struct {
 	Description *string
 	Identifier  string
@@ -296,6 +333,7 @@ type Variation struct {
 	Value       string
 }
 
+// Bool returns variation value as bool type
 func (v *Variation) Bool(defaultValue bool) bool {
 	if v == nil {
 		return defaultValue
@@ -304,6 +342,7 @@ func (v *Variation) Bool(defaultValue bool) bool {
 	return boolValue
 }
 
+// String returns variation value as string type
 func (v *Variation) String(defaultValue string) string {
 	if v == nil {
 		return defaultValue
@@ -311,6 +350,7 @@ func (v *Variation) String(defaultValue string) string {
 	return v.Value
 }
 
+// Number returns variation value as float
 func (v *Variation) Number(defaultValue float64) float64 {
 	if v == nil {
 		return defaultValue
@@ -319,6 +359,7 @@ func (v *Variation) Number(defaultValue float64) float64 {
 	return number
 }
 
+// Int returns variation value as integer value
 func (v *Variation) Int(defaultValue int64) int64 {
 	if v == nil {
 		return defaultValue
@@ -327,6 +368,7 @@ func (v *Variation) Int(defaultValue int64) int64 {
 	return intVal
 }
 
+// JSON returns variation value as JSON value
 func (v *Variation) JSON(defaultValue types.JSON) types.JSON {
 	if v == nil {
 		return defaultValue
@@ -338,8 +380,10 @@ func (v *Variation) JSON(defaultValue types.JSON) types.JSON {
 	return result
 }
 
+// Variations slice of variation
 type Variations []Variation
 
+// FindByIdentifier returns Variation with identifier if exist in variations
 func (v Variations) FindByIdentifier(identifier string) *Variation {
 	for _, val := range v {
 		if val.Identifier == identifier {
@@ -349,12 +393,14 @@ func (v Variations) FindByIdentifier(identifier string) *Variation {
 	return nil
 }
 
+// VariationMap object is variation which belongs to segments and targets
 type VariationMap struct {
 	TargetSegments []string
 	Targets        []string
 	Variation      string
 }
 
+// WeightedVariation represents Percentage Rollout data
 type WeightedVariation struct {
 	Variation string
 	Weight    int

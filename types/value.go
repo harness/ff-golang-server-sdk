@@ -1,8 +1,9 @@
 package types
 
+// ValueType interface used for different clause types
 type ValueType interface {
 	StartsWith(value interface{}) bool
-	EndWith(value interface{}) bool
+	EndsWith(value interface{}) bool
 	Match(value interface{}) bool
 	Contains(value interface{}) bool
 	EqualSensitive(value interface{}) bool

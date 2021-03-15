@@ -1,13 +1,13 @@
 package storage
 
 import (
-	"fmt"
-	"github.com/drone/ff-golang-server-sdk/logger"
-	"github.com/mitchellh/go-homedir"
 	"log"
 	"os"
 	"path"
 	"time"
+
+	"github.com/drone/ff-golang-server-sdk.v1/logger"
+	"github.com/mitchellh/go-homedir"
 )
 
 // Storage is an interface that can be implemented in order to have control over how
@@ -39,10 +39,11 @@ type Storage interface {
 	SetLogger(logger logger.Logger)
 }
 
+// GetHarnessDir returns home folder for harness ff server files
 func GetHarnessDir() string {
 	home, err := homedir.Dir()
 	if err != nil {
-		fmt.Errorf("error while getting home dir: %w", err)
+		log.Printf("error while getting home dir: %v", err)
 		return ""
 	}
 	harnessDir := path.Join(home, "harness")

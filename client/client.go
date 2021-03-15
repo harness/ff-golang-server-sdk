@@ -5,30 +5,39 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/drone/ff-golang-server-sdk"
-	"github.com/drone/ff-golang-server-sdk/cache"
-	"github.com/drone/ff-golang-server-sdk/dto"
-	"github.com/drone/ff-golang-server-sdk/evaluation"
-	"github.com/drone/ff-golang-server-sdk/rest"
-	"github.com/drone/ff-golang-server-sdk/stream"
-	"github.com/drone/ff-golang-server-sdk/types"
-	"github.com/hashicorp/go-retryablehttp"
-	"github.com/r3labs/sse"
 	"log"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
+	"github.com/dgrijalva/jwt-go"
+	"github.com/drone/ff-golang-server-sdk.v1/cache"
+	"github.com/drone/ff-golang-server-sdk.v1/dto"
+	"github.com/drone/ff-golang-server-sdk.v1/evaluation"
+	"github.com/drone/ff-golang-server-sdk.v1/rest"
+	"github.com/drone/ff-golang-server-sdk.v1/stream"
+	"github.com/drone/ff-golang-server-sdk.v1/types"
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/r3labs/sse"
 )
 
+// CfClient is the Feature Flag client.
+//
+// This object evaluates feature flags and communicates with Feature Flag services.
+// Applications should instantiate a single instance for the lifetime of their application
+// and share it wherever feature flags need to be evaluated.
+//
+// When an application is shutting down or no longer needs to use the CfClient instance, it
+// should call Close() to ensure that all of its connections and goroutines are shut down and
+// that any pending analytics events have been delivered.
+//
 type CfClient struct {
 	mux             sync.RWMutex
 	api             rest.ClientWithResponsesInterface
 	sdkKey          string
-	config          *Config
-	project         string
-	environmentId   string
+	config          *config
+	environmentID   string
 	token           string
 	persistence     cache.Persistence
 	cancelFunc      context.CancelFunc
@@ -36,6 +45,8 @@ type CfClient struct {
 	authenticated   chan struct{}
 }
 
+// NewCfClient creates a new client instance that connects to CF with the default configuration.
+// For advanced configuration options use ConfigOptions functions
 func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 
 	var (
@@ -44,7 +55,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	)
 
 	//  functional options for config
-	config := NewDefaultConfig()
+	config := newDefaultConfig()
 	for _, opt := range options {
 		opt(config)
 	}
@@ -57,7 +68,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	ctx, client.cancelFunc = context.WithCancel(context.Background())
 
 	if sdkKey == "" {
-		return client, ff_golang_server_sdk.ErrSdkCantBeEmpty
+		return client, types.ErrSdkCantBeEmpty
 	}
 
 	client.persistence = cache.NewPersistence(config.Store, config.Cache, config.Logger)
@@ -70,7 +81,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 
 	go client.retrieve(ctx)
 
-	go client.streamConnect(ctx)
+	go client.streamConnect()
 
 	go client.pullCronJob(ctx)
 
@@ -104,7 +115,7 @@ func (c *CfClient) retrieve(ctx context.Context) {
 	c.config.Logger.Info("Sync run finished")
 }
 
-func (c *CfClient) streamConnect(ctx context.Context) {
+func (c *CfClient) streamConnect() {
 	if !c.config.enableStream {
 		return
 	}
@@ -116,19 +127,22 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	c.config.Logger.Info("Registering SSE consumer")
 	sseClient := sse.NewClient(fmt.Sprintf("%s/stream", c.config.url))
 	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.config.Cache, c.api)
-	err := conn.Connect(c.environmentId)
+	err := conn.Connect(c.environmentID)
 	if err != nil {
 		c.streamConnected = false
 		return
 	}
 
 	c.streamConnected = true
-	conn.OnDisconnect(func() error {
+	err = conn.OnDisconnect(func() error {
 		c.mux.RLock()
 		defer c.mux.RUnlock()
 		c.streamConnected = false
 		return nil
 	})
+	if err != nil {
+		c.config.Logger.Errorf("error disconnecting the stream, err: %v", err)
+	}
 }
 
 func (c *CfClient) authenticate(ctx context.Context) {
@@ -176,7 +190,7 @@ func (c *CfClient) authenticate(ctx context.Context) {
 	}
 
 	var ok bool
-	c.environmentId, ok = claims["environment"].(string)
+	c.environmentID, ok = claims["environment"].(string)
 	if !ok {
 		c.config.Logger.Error(errors.New("environment uuid not present"))
 		return
@@ -232,7 +246,7 @@ func (c *CfClient) persistCronJob(ctx context.Context) {
 		case <-persistingTicker.C:
 			err := c.persistence.SaveToStore()
 			if err != nil {
-				// log
+				c.config.Logger.Errorf("error while persisting data, err: %v", err)
 			}
 		}
 	}
@@ -245,7 +259,7 @@ func (c *CfClient) retrieveFlags(ctx context.Context) error {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 	c.config.Logger.Info("Retrieving flags started")
-	flags, err := c.api.GetFeatureConfigWithResponse(ctx, c.environmentId)
+	flags, err := c.api.GetFeatureConfigWithResponse(ctx, c.environmentID)
 	if err != nil {
 		// log
 		return err
@@ -259,7 +273,7 @@ func (c *CfClient) retrieveFlags(ctx context.Context) error {
 		c.config.Cache.Set(dto.Key{
 			Type: dto.KeyFeature,
 			Name: flag.Feature,
-		}, *flag.DomainEntity()) // dereference for holding object in cache instead of address
+		}, *flag.Convert()) // dereference for holding object in cache instead of address
 	}
 	c.config.Logger.Info("Retrieving flags finished")
 	return nil
@@ -272,7 +286,7 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 	c.config.Logger.Info("Retrieving segments started")
-	segments, err := c.api.GetAllSegmentsWithResponse(ctx, c.environmentId)
+	segments, err := c.api.GetAllSegmentsWithResponse(ctx, c.environmentID)
 	if err != nil {
 		// log
 		return err
@@ -318,6 +332,9 @@ func (c *CfClient) getSegmentsFromCache(fc *evaluation.FeatureConfig) {
 	}
 }
 
+// BoolVariation returns the value of a boolean feature flag for a given target.
+//
+// Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultValue bool) (bool, error) {
 	fc := c.getFlagFromCache(key)
 	if fc != nil {
@@ -328,6 +345,9 @@ func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultV
 	return defaultValue, nil
 }
 
+// StringVariation returns the value of a string feature flag for a given target.
+//
+// Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaultValue string) (string, error) {
 	fc := c.getFlagFromCache(key)
 	if fc != nil {
@@ -338,6 +358,9 @@ func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaul
 	return defaultValue, nil
 }
 
+// IntVariation returns the value of a integer feature flag for a given target.
+//
+// Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultValue int64) (int64, error) {
 	fc := c.getFlagFromCache(key)
 	if fc != nil {
@@ -348,6 +371,9 @@ func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultVa
 	return defaultValue, nil
 }
 
+// NumberVariation returns the value of a float64 feature flag for a given target.
+//
+// Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaultValue float64) (float64, error) {
 	fc := c.getFlagFromCache(key)
 	if fc != nil {
@@ -358,16 +384,22 @@ func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaul
 	return defaultValue, nil
 }
 
-func (c *CfClient) JsonVariation(key string, target *evaluation.Target, defaultValue types.JSON) (types.JSON, error) {
+// JSONVariation returns the value of a feature flag for the given target, allowing the value to be
+// of any JSON type.
+//
+// Returns defaultValue if there is an error or if the flag doesn't exist
+func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultValue types.JSON) (types.JSON, error) {
 	fc := c.getFlagFromCache(key)
 	if fc != nil {
 		// load segments dep
 		c.getSegmentsFromCache(fc)
-		return fc.JsonVariation(target, defaultValue), nil
+		return fc.JSONVariation(target, defaultValue), nil
 	}
 	return defaultValue, nil
 }
 
+// Close shuts down the Feature Flag client. After calling this, the client
+// should no longer be used
 func (c *CfClient) Close() error {
 	err := c.persistence.SaveToStore()
 	if err != nil {
@@ -377,6 +409,7 @@ func (c *CfClient) Close() error {
 	return nil
 }
 
+// Environment returns environment based on authenticated SDK key
 func (c *CfClient) Environment() string {
-	return c.environmentId
+	return c.environmentID
 }

@@ -1,13 +1,14 @@
 package client
 
 import (
-	"github.com/drone/ff-golang-server-sdk/cache"
-	"github.com/drone/ff-golang-server-sdk/logger"
-	"github.com/drone/ff-golang-server-sdk/storage"
 	"log"
+
+	"github.com/drone/ff-golang-server-sdk.v1/cache"
+	"github.com/drone/ff-golang-server-sdk.v1/logger"
+	"github.com/drone/ff-golang-server-sdk.v1/storage"
 )
 
-type Config struct {
+type config struct {
 	url          string
 	pullInterval uint // in minutes
 	Cache        cache.Cache
@@ -16,7 +17,7 @@ type Config struct {
 	enableStream bool
 }
 
-func NewDefaultConfig() *Config {
+func newDefaultConfig() *config {
 	defaultLogger, err := logger.NewZapLogger(false)
 	if err != nil {
 		log.Printf("Error creating zap logger instance, %v", err)
@@ -24,7 +25,7 @@ func NewDefaultConfig() *Config {
 	defaultCache, _ := cache.NewLruCache(10000, defaultLogger) // size of cache
 	defaultStore := storage.NewFileStore("defaultProject", storage.GetHarnessDir(), defaultLogger)
 
-	return &Config{
+	return &config{
 		url:          "http://localhost:7999/api/1.0",
 		pullInterval: 1,
 		Cache:        defaultCache,
