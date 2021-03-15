@@ -32,6 +32,8 @@ format:
 	@echo "Checking that go fmt does not make any changes..."
 	@test -z $$(go fmt $(go list ./...)) || (echo "go fmt would make a change. Please verify and commit the proposed changes"; exit 1)
 	@echo "Checking go fmt complete"
+	@echo "Running goimports"
+	@test -z $$(goimports -w ./..) || (echo "goimports would make a change. Please verify and commit the proposed changes"; exit 1)
 
 PHONY+= lint
 lint: $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint
@@ -43,9 +45,7 @@ lint: $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint
 		-E bodyclose \
 		-E exhaustive \
 		-E exportloopref \
-		-E gci \
 		-E gofmt \
-		-E goimports \
 		-E goimports \
 		-E gosec \
 		-E noctx \
@@ -75,21 +75,27 @@ $(GOPATH)/bin/golint:
 	@echo "🔘 Installing golint ... (`date '+%H:%M:%S'`)"
 	@GO111MODULE=off go get -u golang.org/x/lint/golint
 
+$(GOPATH)/bin/goimports:
+	@echo "🔘 Installing goimports ... (`date '+%H:%M:%S'`)"
+	@GO111MODULE=off go get -u golang.org/x/tools/cmd/goimports
+
 $(GOPATH)/bin/gosec:
 	@echo "🔘 Installing gosec ... (`date '+%H:%M:%S'`)"
 	@curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b $(GOPATH)/bin
 
 
 PHONY+= tools
-tools: $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint $(GOPATH)/bin/gosec
+tools: $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint $(GOPATH)/bin/gosec $(GOPATH)/bin/goimports
 
 PHONY+= update-tools
-update-tools: delete-tools $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint $(GOPATH)/bin/gosec
+update-tools: delete-tools $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint $(GOPATH)/bin/gosec $(GOPATH)/bin/goimports
 
 PHONY+= delete-tools
 delete-tools:
 	@rm $(GOPATH)/bin/golangci-lint
 	@rm $(GOPATH)/bin/gosec
 	@rm $(GOPATH)/bin/golint
+	@rm $(GOPATH)/bin/goimports
+
 
 .PHONY: all tidy generate build clean test lint

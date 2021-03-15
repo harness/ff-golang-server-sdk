@@ -1,23 +1,27 @@
 package cache
 
 import (
-	"github.com/drone/ff-golang-server-sdk/dto"
-	"github.com/drone/ff-golang-server-sdk/evaluation"
-	"github.com/drone/ff-golang-server-sdk/logger"
-	"github.com/drone/ff-golang-server-sdk/storage"
+	"github.com/drone/ff-golang-server-sdk.v1/dto"
+	"github.com/drone/ff-golang-server-sdk.v1/evaluation"
+	"github.com/drone/ff-golang-server-sdk.v1/logger"
+	"github.com/drone/ff-golang-server-sdk.v1/storage"
 	"github.com/mitchellh/mapstructure"
 )
 
+// Persistence persist cache data to a storage
 type Persistence struct {
 	store  storage.Storage
 	cache  Cache
 	logger logger.Logger
 }
 
+// NewPersistence creates a new instance for persisting data
 func NewPersistence(store storage.Storage, cache Cache, logger logger.Logger) Persistence {
 	return Persistence{store: store, cache: cache, logger: logger}
 }
 
+// SaveToStore saves data to declared storage only if last update
+// is greater than persisted time
 func (p Persistence) SaveToStore() error {
 	if p.cache.Updated().Before(p.store.PersistedAt()) {
 		return nil
@@ -39,7 +43,9 @@ func (p Persistence) SaveToStore() error {
 	}
 
 	for key, val := range temp {
-		p.store.Set(key, val)
+		if err := p.store.Set(key, val); err != nil {
+			p.logger.Debugf("error while storing data, err: %v", err)
+		}
 	}
 	err := p.store.Persist()
 	if err != nil {
@@ -48,6 +54,7 @@ func (p Persistence) SaveToStore() error {
 	return nil
 }
 
+// LoadFromStore loads all stored data into specified cache
 func (p *Persistence) LoadFromStore() error {
 	p.logger.Info("Loading cache data from store")
 	err := p.store.Load()

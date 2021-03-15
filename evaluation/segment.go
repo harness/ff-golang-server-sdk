@@ -2,17 +2,31 @@ package evaluation
 
 import "strings"
 
+// StrSlice helper type used for string slice operations
 type StrSlice []string
 
-func (slice StrSlice) Contains(identifier string) bool {
+// Contains checks if slice contains string (case insensitive)
+func (slice StrSlice) Contains(s string) bool {
 	for _, val := range slice {
-		if strings.ToLower(val) == strings.ToLower(identifier) {
+		if strings.EqualFold(val, s) {
 			return true
 		}
 	}
 	return false
 }
 
+// ContainsSensitive checks if slice contains string
+func (slice StrSlice) ContainsSensitive(s string) bool {
+	for _, val := range slice {
+		if val == s {
+			return true
+		}
+	}
+	return false
+}
+
+// Segment object used in feature flag evaluation.
+// Examples: beta users, premium customers
 type Segment struct {
 	// Unique identifier for the target segment.
 	Identifier string
@@ -32,8 +46,9 @@ type Segment struct {
 	Version int64
 }
 
+// Evaluate segment based on target input
 func (s Segment) Evaluate(target *Target) bool {
-	if s.Included.Contains(target.Identifier) {
+	if s.Included.ContainsSensitive(target.Identifier) {
 		return true
 	}
 
@@ -41,14 +56,16 @@ func (s Segment) Evaluate(target *Target) bool {
 		return true
 	}
 
-	if s.Excluded.Contains(target.Identifier) {
+	if s.Excluded.ContainsSensitive(target.Identifier) {
 		return true
 	}
 	return false
 }
 
+// Segments represents all segments with identifier as a key
 type Segments map[string]*Segment
 
+// Evaluate through all segments based on target input
 func (s Segments) Evaluate(target *Target) bool {
 	for _, segment := range s {
 		if !segment.Evaluate(target) {

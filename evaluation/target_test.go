@@ -1,9 +1,10 @@
 package evaluation
 
 import (
-	"github.com/drone/ff-golang-server-sdk/types"
 	"reflect"
 	"testing"
+
+	"github.com/drone/ff-golang-server-sdk.v1/types"
 )
 
 func TestTarget_GetOperator(t1 *testing.T) {
@@ -57,15 +58,16 @@ func TestTarget_GetOperator(t1 *testing.T) {
 			args: struct{ attr string }{attr: "weight"}, want: types.Number(99.99)},
 	}
 	for _, tt := range tests {
-		t1.Run(tt.name, func(t1 *testing.T) {
+		val := tt
+		t1.Run(val.name, func(t1 *testing.T) {
 			t := Target{
-				Identifier: tt.fields.Identifier,
-				Name:       tt.fields.Name,
-				Anonymous:  tt.fields.Anonymous,
-				Attributes: tt.fields.Attributes,
+				Identifier: val.fields.Identifier,
+				Name:       val.fields.Name,
+				Anonymous:  val.fields.Anonymous,
+				Attributes: val.fields.Attributes,
 			}
-			if got := t.GetOperator(tt.args.attr); !reflect.DeepEqual(got, tt.want) {
-				t1.Errorf("GetOperator() = %v, want %v", got, tt.want)
+			if got := t.GetOperator(val.args.attr); !reflect.DeepEqual(got, val.want) {
+				t1.Errorf("GetOperator() = %v, want %v", got, val.want)
 			}
 		})
 	}
@@ -106,15 +108,16 @@ func TestTarget_GetAttrValue(t1 *testing.T) {
 			args: struct{ attr string }{attr: "email"}, want: reflect.ValueOf("john@doe.com")},
 	}
 	for _, tt := range tests {
-		t1.Run(tt.name, func(t1 *testing.T) {
+		val := tt
+		t1.Run(val.name, func(t1 *testing.T) {
 			t := Target{
-				Identifier: tt.fields.Identifier,
-				Name:       tt.fields.Name,
-				Anonymous:  tt.fields.Anonymous,
-				Attributes: tt.fields.Attributes,
+				Identifier: val.fields.Identifier,
+				Name:       val.fields.Name,
+				Anonymous:  val.fields.Anonymous,
+				Attributes: val.fields.Attributes,
 			}
-			if got := t.GetAttrValue(tt.args.attr); got == tt.want {
-				t1.Errorf("GetAttrValue() = %v, want %v", got, tt.want)
+			if got := t.GetAttrValue(val.args.attr); got == val.want {
+				t1.Errorf("GetAttrValue() = %v, want %v", got, val.want)
 			}
 		})
 	}
@@ -172,15 +175,16 @@ func TestTarget_GetOperator1(t1 *testing.T) {
 			args: struct{ attr string }{attr: "zip"}, want: types.Integer(90210)},
 	}
 	for _, tt := range tests {
-		t1.Run(tt.name, func(t1 *testing.T) {
+		val := tt
+		t1.Run(val.name, func(t1 *testing.T) {
 			t := Target{
-				Identifier: tt.fields.Identifier,
-				Name:       tt.fields.Name,
-				Anonymous:  tt.fields.Anonymous,
-				Attributes: tt.fields.Attributes,
+				Identifier: val.fields.Identifier,
+				Name:       val.fields.Name,
+				Anonymous:  val.fields.Anonymous,
+				Attributes: val.fields.Attributes,
 			}
-			if got := t.GetOperator(tt.args.attr); !reflect.DeepEqual(got, tt.want) {
-				t1.Errorf("GetOperator() = %v, want %v", got, tt.want)
+			if got := t.GetOperator(val.args.attr); !reflect.DeepEqual(got, val.want) {
+				t1.Errorf("GetOperator() = %v, want %v", got, val.want)
 			}
 		})
 	}

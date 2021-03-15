@@ -3,15 +3,17 @@ package stream
 import (
 	"context"
 	"fmt"
-	"github.com/drone/ff-golang-server-sdk/cache"
-	"github.com/drone/ff-golang-server-sdk/dto"
-	"github.com/drone/ff-golang-server-sdk/rest"
-	jsoniter "github.com/json-iterator/go"
-	"github.com/r3labs/sse"
 	"log"
 	"time"
+
+	"github.com/drone/ff-golang-server-sdk.v1/cache"
+	"github.com/drone/ff-golang-server-sdk.v1/dto"
+	"github.com/drone/ff-golang-server-sdk.v1/rest"
+	jsoniter "github.com/json-iterator/go"
+	"github.com/r3labs/sse"
 )
 
+// SSEClient is Server Send Event object
 type SSEClient struct {
 	api    rest.ClientWithResponsesInterface
 	client *sse.Client
@@ -20,6 +22,7 @@ type SSEClient struct {
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
+// NewSSEClient creates an object for stream interactions
 func NewSSEClient(
 	apiKey string,
 	token string,
@@ -36,6 +39,7 @@ func NewSSEClient(
 	}
 }
 
+// Connect will subscribe to SSE stream
 func (c *SSEClient) Connect(environment string) error {
 	log.Println("Start subscribing to Stream")
 	// it is blocking operation, it needs to go in go routine
@@ -65,7 +69,7 @@ func (c *SSEClient) Connect(environment string) error {
 						c.cache.Set(dto.Key{
 							Type: dto.KeyFeature,
 							Name: cfMsg.Identifier,
-						}, *response.JSON200.DomainEntity())
+						}, *response.JSON200.Convert())
 					}
 					cancel()
 				}(environment, cfMsg.Identifier)
@@ -80,9 +84,12 @@ func (c *SSEClient) Connect(environment string) error {
 	return nil
 }
 
+// OnDisconnect will trigger func f when stream disconnects
 func (c SSEClient) OnDisconnect(f func() error) error {
 	c.client.OnDisconnect(func(c *sse.Client) {
-		f()
+		if err := f(); err != nil {
+			log.Printf("error invoking func on stream disconnect, err: %v", err)
+		}
 	})
 	return nil
 }

@@ -2,11 +2,14 @@ package evaluation
 
 import (
 	"encoding/json"
-	"github.com/drone/ff-golang-server-sdk/types"
-	"github.com/google/uuid"
+
+	"github.com/drone/ff-golang-server-sdk.v1/types"
+
 	"reflect"
 	"strconv"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 func TestFeatureConfig_JsonVariation(t *testing.T) {
@@ -109,22 +112,23 @@ func TestFeatureConfig_JsonVariation(t *testing.T) {
 		}}, want: v2Value},
 	}
 	for _, tt := range tests {
+		val := tt
 		t.Run(tt.name, func(t *testing.T) {
 			fc := &FeatureConfig{
-				DefaultServe:         tt.fields.DefaultServe,
-				Environment:          tt.fields.Environment,
-				Feature:              tt.fields.Feature,
-				Kind:                 tt.fields.Kind,
-				OffVariation:         tt.fields.OffVariation,
-				Prerequisites:        tt.fields.Prerequisites,
-				Project:              tt.fields.Project,
-				Rules:                tt.fields.Rules,
-				State:                tt.fields.State,
-				VariationToTargetMap: tt.fields.VariationToTargetMap,
-				Variations:           tt.fields.Variations,
+				DefaultServe:         val.fields.DefaultServe,
+				Environment:          val.fields.Environment,
+				Feature:              val.fields.Feature,
+				Kind:                 val.fields.Kind,
+				OffVariation:         val.fields.OffVariation,
+				Prerequisites:        val.fields.Prerequisites,
+				Project:              val.fields.Project,
+				Rules:                val.fields.Rules,
+				State:                val.fields.State,
+				VariationToTargetMap: val.fields.VariationToTargetMap,
+				Variations:           val.fields.Variations,
 			}
-			if got := fc.JsonVariation(tt.args.target, tt.args.defaultValue); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("JsonVariation() = %v, want %v", got, tt.want)
+			if got := fc.JSONVariation(val.args.target, val.args.defaultValue); !reflect.DeepEqual(got, val.want) {
+				t.Errorf("JSONVariation() = %v, want %v", got, val.want)
 			}
 		})
 	}
@@ -208,22 +212,23 @@ func TestFeatureConfig_StringVariation(t *testing.T) {
 		}{target: nil, defaultValue: "v1"}, want: v2Value},
 	}
 	for _, tt := range tests {
+		val := tt
 		t.Run(tt.name, func(t *testing.T) {
 			fc := &FeatureConfig{
-				DefaultServe:         tt.fields.DefaultServe,
-				Environment:          tt.fields.Environment,
-				Feature:              tt.fields.Feature,
-				Kind:                 tt.fields.Kind,
-				OffVariation:         tt.fields.OffVariation,
-				Prerequisites:        tt.fields.Prerequisites,
-				Project:              tt.fields.Project,
-				Rules:                tt.fields.Rules,
-				State:                tt.fields.State,
-				VariationToTargetMap: tt.fields.VariationToTargetMap,
-				Variations:           tt.fields.Variations,
+				DefaultServe:         val.fields.DefaultServe,
+				Environment:          val.fields.Environment,
+				Feature:              val.fields.Feature,
+				Kind:                 val.fields.Kind,
+				OffVariation:         val.fields.OffVariation,
+				Prerequisites:        val.fields.Prerequisites,
+				Project:              val.fields.Project,
+				Rules:                val.fields.Rules,
+				State:                val.fields.State,
+				VariationToTargetMap: val.fields.VariationToTargetMap,
+				Variations:           val.fields.Variations,
 			}
-			if got := fc.StringVariation(tt.args.target, tt.args.defaultValue); got != tt.want {
-				t.Errorf("StringVariation() = %v, want %v", got, tt.want)
+			if got := fc.StringVariation(val.args.target, val.args.defaultValue); got != val.want {
+				t.Errorf("StringVariation() = %v, want %v", got, val.want)
 			}
 		})
 	}
@@ -307,22 +312,23 @@ func TestFeatureConfig_NumberVariation(t *testing.T) {
 		}{target: nil, defaultValue: 1.0}, want: v2Value},
 	}
 	for _, tt := range tests {
+		val := tt
 		t.Run(tt.name, func(t *testing.T) {
 			fc := &FeatureConfig{
-				DefaultServe:         tt.fields.DefaultServe,
-				Environment:          tt.fields.Environment,
-				Feature:              tt.fields.Feature,
-				Kind:                 tt.fields.Kind,
-				OffVariation:         tt.fields.OffVariation,
-				Prerequisites:        tt.fields.Prerequisites,
-				Project:              tt.fields.Project,
-				Rules:                tt.fields.Rules,
-				State:                tt.fields.State,
-				VariationToTargetMap: tt.fields.VariationToTargetMap,
-				Variations:           tt.fields.Variations,
+				DefaultServe:         val.fields.DefaultServe,
+				Environment:          val.fields.Environment,
+				Feature:              val.fields.Feature,
+				Kind:                 val.fields.Kind,
+				OffVariation:         val.fields.OffVariation,
+				Prerequisites:        val.fields.Prerequisites,
+				Project:              val.fields.Project,
+				Rules:                val.fields.Rules,
+				State:                val.fields.State,
+				VariationToTargetMap: val.fields.VariationToTargetMap,
+				Variations:           val.fields.Variations,
 			}
-			if got := fc.NumberVariation(tt.args.target, tt.args.defaultValue); got != tt.want {
-				t.Errorf("NumberVariation() = %v, want %v", got, tt.want)
+			if got := fc.NumberVariation(val.args.target, val.args.defaultValue); got != val.want {
+				t.Errorf("NumberVariation() = %v, want %v", got, val.want)
 			}
 		})
 	}
@@ -406,22 +412,23 @@ func TestFeatureConfig_IntVariation(t *testing.T) {
 		}{target: nil, defaultValue: 1.0}, want: int64(v2Value)},
 	}
 	for _, tt := range tests {
+		val := tt
 		t.Run(tt.name, func(t *testing.T) {
 			fc := &FeatureConfig{
-				DefaultServe:         tt.fields.DefaultServe,
-				Environment:          tt.fields.Environment,
-				Feature:              tt.fields.Feature,
-				Kind:                 tt.fields.Kind,
-				OffVariation:         tt.fields.OffVariation,
-				Prerequisites:        tt.fields.Prerequisites,
-				Project:              tt.fields.Project,
-				Rules:                tt.fields.Rules,
-				State:                tt.fields.State,
-				VariationToTargetMap: tt.fields.VariationToTargetMap,
-				Variations:           tt.fields.Variations,
+				DefaultServe:         val.fields.DefaultServe,
+				Environment:          val.fields.Environment,
+				Feature:              val.fields.Feature,
+				Kind:                 val.fields.Kind,
+				OffVariation:         val.fields.OffVariation,
+				Prerequisites:        val.fields.Prerequisites,
+				Project:              val.fields.Project,
+				Rules:                val.fields.Rules,
+				State:                val.fields.State,
+				VariationToTargetMap: val.fields.VariationToTargetMap,
+				Variations:           val.fields.Variations,
 			}
-			if got := fc.IntVariation(tt.args.target, tt.args.defaultValue); got != tt.want {
-				t.Errorf("IntVariation() = %v, want %v", got, tt.want)
+			if got := fc.IntVariation(val.args.target, val.args.defaultValue); got != val.want {
+				t.Errorf("IntVariation() = %v, want %v", got, val.want)
 			}
 		})
 	}
@@ -452,10 +459,10 @@ func TestServingRules_GetVariationName(t *testing.T) {
 	}{
 		{name: "equalOperator", sr: []ServingRule{
 			{Clauses: []Clause{
-				{Attribute: "identifier", Id: "id", Negate: false, Op: equalOperator, Value: []string{
+				{Attribute: "identifier", ID: "id", Negate: false, Op: equalOperator, Value: []string{
 					harness,
 				}},
-			}, Priority: 0, RuleId: uuid.New().String(), Serve: struct {
+			}, Priority: 0, RuleID: uuid.New().String(), Serve: struct {
 				Distribution *Distribution
 				Variation    *string
 			}{Distribution: nil, Variation: &onVariationIdentifier}},
@@ -469,10 +476,10 @@ func TestServingRules_GetVariationName(t *testing.T) {
 		}{Distribution: nil, Variation: &onVariationIdentifier}}, want: onVariationIdentifier},
 		{name: "equal with rules", sr: []ServingRule{
 			{Clauses: []Clause{
-				{Attribute: "identifier", Id: "id", Negate: false, Op: equalOperator, Value: []string{
+				{Attribute: "identifier", ID: "id", Negate: false, Op: equalOperator, Value: []string{
 					harness,
 				}},
-			}, Priority: 0, RuleId: uuid.NewString(), Serve: struct {
+			}, Priority: 0, RuleID: uuid.NewString(), Serve: struct {
 				Distribution *Distribution
 				Variation    *string
 			}{Distribution: nil, Variation: &offVariationIdentifier}},
@@ -486,9 +493,10 @@ func TestServingRules_GetVariationName(t *testing.T) {
 		}{Distribution: nil, Variation: &onVariationIdentifier}}, want: offVariationIdentifier},
 	}
 	for _, tt := range tests {
+		val := tt
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.sr.GetVariationName(tt.args.target, tt.args.segments, tt.args.defaultServe); got != tt.want {
-				t.Errorf("GetVariationName() = %v, want %v", got, tt.want)
+			if got := val.sr.GetVariationName(val.args.target, val.args.segments, val.args.defaultServe); got != val.want {
+				t.Errorf("GetVariationName() = %v, want %v", got, val.want)
 			}
 		})
 	}
@@ -544,10 +552,10 @@ func TestFeatureConfig_Evaluate(t *testing.T) {
 		}{Distribution: nil, Variation: &v1}, Environment: "dev", Feature: "flag", Kind: "boolean",
 			OffVariation: v2, Prerequisites: nil, Project: "default", Rules: []ServingRule{
 				{Clauses: []Clause{
-					{Attribute: "identifier", Id: "id", Negate: false, Op: equalOperator, Value: []string{
+					{Attribute: "identifier", ID: "id", Negate: false, Op: equalOperator, Value: []string{
 						harness,
 					}},
-				}, Priority: 0, RuleId: uuid.NewString(), Serve: struct {
+				}, Priority: 0, RuleID: uuid.NewString(), Serve: struct {
 					Distribution *Distribution
 					Variation    *string
 				}{Distribution: nil, Variation: &v2}},
@@ -560,22 +568,23 @@ func TestFeatureConfig_Evaluate(t *testing.T) {
 		}},
 	}
 	for _, tt := range tests {
+		val := tt
 		t.Run(tt.name, func(t *testing.T) {
 			fc := FeatureConfig{
-				DefaultServe:         tt.fields.DefaultServe,
-				Environment:          tt.fields.Environment,
-				Feature:              tt.fields.Feature,
-				Kind:                 tt.fields.Kind,
-				OffVariation:         tt.fields.OffVariation,
-				Prerequisites:        tt.fields.Prerequisites,
-				Project:              tt.fields.Project,
-				Rules:                tt.fields.Rules,
-				State:                tt.fields.State,
-				VariationToTargetMap: tt.fields.VariationToTargetMap,
-				Variations:           tt.fields.Variations,
+				DefaultServe:         val.fields.DefaultServe,
+				Environment:          val.fields.Environment,
+				Feature:              val.fields.Feature,
+				Kind:                 val.fields.Kind,
+				OffVariation:         val.fields.OffVariation,
+				Prerequisites:        val.fields.Prerequisites,
+				Project:              val.fields.Project,
+				Rules:                val.fields.Rules,
+				State:                val.fields.State,
+				VariationToTargetMap: val.fields.VariationToTargetMap,
+				Variations:           val.fields.Variations,
 			}
-			if got := fc.Evaluate(tt.args.target); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Evaluate() = %v, want %v", got, tt.want)
+			if got := fc.Evaluate(val.args.target); !reflect.DeepEqual(got, val.want) {
+				t.Errorf("Evaluate() = %v, want %v", got, val.want)
 			}
 		})
 	}
@@ -584,7 +593,7 @@ func TestFeatureConfig_Evaluate(t *testing.T) {
 func TestClause_Evaluate(t *testing.T) {
 	type fields struct {
 		Attribute string
-		Id        string
+		ID        string
 		Negate    bool
 		Op        string
 		Value     []string
@@ -611,11 +620,11 @@ func TestClause_Evaluate(t *testing.T) {
 	}{
 		{name: "segment match operator", fields: struct {
 			Attribute string
-			Id        string
+			ID        string
 			Negate    bool
 			Op        string
 			Value     []string
-		}{Attribute: "identifier", Id: uuid.New().String(), Negate: false, Op: segmentMatchOperator, Value: []string{"beta"}},
+		}{Attribute: "identifier", ID: uuid.New().String(), Negate: false, Op: segmentMatchOperator, Value: []string{"beta"}},
 			args: struct {
 				target   *Target
 				segments Segments
@@ -636,16 +645,17 @@ func TestClause_Evaluate(t *testing.T) {
 			}, operator: types.String("john@doe.com")}, want: true},
 	}
 	for _, tt := range tests {
+		val := tt
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Clause{
-				Attribute: tt.fields.Attribute,
-				Id:        tt.fields.Id,
-				Negate:    tt.fields.Negate,
-				Op:        tt.fields.Op,
-				Value:     tt.fields.Value,
+				Attribute: val.fields.Attribute,
+				ID:        val.fields.ID,
+				Negate:    val.fields.Negate,
+				Op:        val.fields.Op,
+				Value:     val.fields.Value,
 			}
-			if got := c.Evaluate(tt.args.target, tt.args.segments, tt.args.operator); got != tt.want {
-				t.Errorf("Evaluate() = %v, want %v", got, tt.want)
+			if got := c.Evaluate(val.args.target, val.args.segments, val.args.operator); got != val.want {
+				t.Errorf("Evaluate() = %v, want %v", got, val.want)
 			}
 		})
 	}

@@ -1,5 +1,6 @@
 package logger
 
+// Logger is basic interface for integrating custom logger
 type Logger interface {
 	Debug(args ...interface{})
 	Debugf(template string, args ...interface{})

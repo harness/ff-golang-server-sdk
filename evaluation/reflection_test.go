@@ -43,9 +43,10 @@ func TestGetStructFieldValue(t *testing.T) {
 		}{target: target, attr: "attributes"}, want: reflect.ValueOf(target.Attributes)},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := GetStructFieldValue(tt.args.target, tt.args.attr); got == tt.want {
-				t.Errorf("GetStructFieldValue() = %v, want %v", got, tt.want)
+		val := tt
+		t.Run(val.name, func(t *testing.T) {
+			if got := GetStructFieldValue(val.args.target, val.args.attr); got == val.want {
+				t.Errorf("GetStructFieldValue() = %v, want %v", got, val.want)
 			}
 		})
 	}
@@ -81,9 +82,10 @@ func Test_caseInsensitiveFieldByName(t *testing.T) {
 		}{v: reflect.ValueOf("Identifier"), name: "identifier"}, want: reflect.ValueOf("Identifier")},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := caseInsensitiveFieldByName(tt.args.v, tt.args.name); got == tt.want {
-				t.Errorf("caseInsensitiveFieldByName() = %v, want %v", got, tt.want)
+		val := tt
+		t.Run(val.name, func(t *testing.T) {
+			if got := caseInsensitiveFieldByName(val.args.v, val.args.name); got == val.want {
+				t.Errorf("caseInsensitiveFieldByName() = %v, want %v", got, val.want)
 			}
 		})
 	}
