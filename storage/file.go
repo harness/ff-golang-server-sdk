@@ -3,7 +3,7 @@ package storage
 import (
 	"fmt"
 
-	"github.com/drone/ff-golang-server-sdk.v1/logger"
+	"github.com/drone/ff-golang-server-sdk.v0/logger"
 
 	jsoniter "github.com/json-iterator/go"
 
