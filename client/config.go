@@ -3,9 +3,9 @@ package client
 import (
 	"log"
 
-	"github.com/drone/ff-golang-server-sdk.v1/cache"
-	"github.com/drone/ff-golang-server-sdk.v1/logger"
-	"github.com/drone/ff-golang-server-sdk.v1/storage"
+	"github.com/drone/ff-golang-server-sdk.v0/cache"
+	"github.com/drone/ff-golang-server-sdk.v0/logger"
+	"github.com/drone/ff-golang-server-sdk.v0/storage"
 )
 
 type config struct {

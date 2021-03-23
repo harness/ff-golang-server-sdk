@@ -12,12 +12,12 @@ import (
 
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/drone/ff-golang-server-sdk.v1/cache"
-	"github.com/drone/ff-golang-server-sdk.v1/dto"
-	"github.com/drone/ff-golang-server-sdk.v1/evaluation"
-	"github.com/drone/ff-golang-server-sdk.v1/rest"
-	"github.com/drone/ff-golang-server-sdk.v1/stream"
-	"github.com/drone/ff-golang-server-sdk.v1/types"
+	"github.com/drone/ff-golang-server-sdk.v0/cache"
+	"github.com/drone/ff-golang-server-sdk.v0/dto"
+	"github.com/drone/ff-golang-server-sdk.v0/evaluation"
+	"github.com/drone/ff-golang-server-sdk.v0/rest"
+	"github.com/drone/ff-golang-server-sdk.v0/stream"
+	"github.com/drone/ff-golang-server-sdk.v0/types"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/r3labs/sse"
 )
@@ -300,7 +300,7 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 		c.config.Cache.Set(dto.Key{
 			Type: dto.KeySegment,
 			Name: segment.Identifier,
-		}, segment)
+		}, segment.Convert())
 	}
 	c.config.Logger.Info("Retrieving segments finished")
 	return nil
@@ -327,6 +327,9 @@ func (c *CfClient) getSegmentsFromCache(fc *evaluation.FeatureConfig) {
 		})
 		segment, ok := value.(evaluation.Segment)
 		if ok {
+			if fc.Segments == nil {
+				fc.Segments = make(map[string]*evaluation.Segment)
+			}
 			fc.Segments[segmentIdentifier] = &segment
 		}
 	}

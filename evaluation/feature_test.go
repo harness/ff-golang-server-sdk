@@ -3,7 +3,7 @@ package evaluation
 import (
 	"encoding/json"
 
-	"github.com/drone/ff-golang-server-sdk.v1/types"
+	"github.com/drone/ff-golang-server-sdk.v0/types"
 
 	"reflect"
 	"strconv"
@@ -436,9 +436,20 @@ func TestFeatureConfig_IntVariation(t *testing.T) {
 
 func TestServingRules_GetVariationName(t *testing.T) {
 
+	dev := "dev"
 	harness := "Harness"
 	onVariationIdentifier := "v1"
 	offVariationIdentifier := "v2"
+
+	segment := &Segment{
+		Identifier:  "beta",
+		Name:        "beta",
+		Environment: &dev,
+		Included:    []string{harness},
+		Rules:       nil,
+		Tags:        nil,
+		Version:     1,
+	}
 
 	target := &Target{
 		Identifier: harness,
@@ -488,6 +499,24 @@ func TestServingRules_GetVariationName(t *testing.T) {
 			segments     Segments
 			defaultServe Serve
 		}{target: target, defaultServe: struct {
+			Distribution *Distribution
+			Variation    *string
+		}{Distribution: nil, Variation: &onVariationIdentifier}}, want: offVariationIdentifier},
+		//
+		{name: "segment match", sr: []ServingRule{
+			{Clauses: []Clause{
+				{Op: segmentMatchOperator, Value: []string{
+					segment.Identifier,
+				}},
+			}, Priority: 0, RuleID: uuid.NewString(), Serve: struct {
+				Distribution *Distribution
+				Variation    *string
+			}{Distribution: nil, Variation: &offVariationIdentifier}},
+		}, args: struct {
+			target       *Target
+			segments     Segments
+			defaultServe Serve
+		}{target: target, segments: Segments{segment.Identifier: segment}, defaultServe: struct {
 			Distribution *Distribution
 			Variation    *string
 		}{Distribution: nil, Variation: &onVariationIdentifier}}, want: offVariationIdentifier},
@@ -618,31 +647,24 @@ func TestClause_Evaluate(t *testing.T) {
 		args   args
 		want   bool
 	}{
-		{name: "segment match operator", fields: struct {
+		{name: "segment match operator (include)", fields: struct {
 			Attribute string
 			ID        string
 			Negate    bool
 			Op        string
 			Value     []string
-		}{Attribute: "identifier", ID: uuid.New().String(), Negate: false, Op: segmentMatchOperator, Value: []string{"beta"}},
+		}{Op: segmentMatchOperator, Value: []string{"beta"}},
 			args: struct {
 				target   *Target
 				segments Segments
 				operator types.ValueType
 			}{target: &target, segments: map[string]*Segment{
 				"beta": {
-					Identifier:  "beta",
-					Name:        "Beta users",
-					CreatedAt:   nil,
-					ModifiedAt:  nil,
-					Environment: nil,
-					Excluded:    nil,
-					Included:    []string{target.Identifier},
-					Rules:       nil,
-					Tags:        nil,
-					Version:     0,
+					Identifier: "beta",
+					Name:       "Beta users",
+					Included:   []string{target.Identifier},
 				},
-			}, operator: types.String("john@doe.com")}, want: true},
+			}, operator: nil}, want: true},
 	}
 	for _, tt := range tests {
 		val := tt

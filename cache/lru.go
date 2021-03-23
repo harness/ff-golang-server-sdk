@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"github.com/drone/ff-golang-server-sdk.v1/logger"
+	"github.com/drone/ff-golang-server-sdk.v0/logger"
 	lru "github.com/hashicorp/golang-lru"
 
 	"reflect"
