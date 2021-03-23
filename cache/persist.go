@@ -1,10 +1,10 @@
 package cache
 
 import (
-	"github.com/drone/ff-golang-server-sdk.v1/dto"
-	"github.com/drone/ff-golang-server-sdk.v1/evaluation"
-	"github.com/drone/ff-golang-server-sdk.v1/logger"
-	"github.com/drone/ff-golang-server-sdk.v1/storage"
+	"github.com/drone/ff-golang-server-sdk.v0/dto"
+	"github.com/drone/ff-golang-server-sdk.v0/evaluation"
+	"github.com/drone/ff-golang-server-sdk.v0/logger"
+	"github.com/drone/ff-golang-server-sdk.v0/storage"
 	"github.com/mitchellh/mapstructure"
 )
 

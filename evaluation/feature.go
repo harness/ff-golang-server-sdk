@@ -3,7 +3,7 @@ package evaluation
 import (
 	"encoding/json"
 
-	"github.com/drone/ff-golang-server-sdk.v1/types"
+	"github.com/drone/ff-golang-server-sdk.v0/types"
 
 	"reflect"
 	"strconv"
@@ -40,7 +40,10 @@ type Clause struct {
 func (c *Clause) Evaluate(target *Target, segments Segments, operator types.ValueType) bool {
 	switch c.Op {
 	case segmentMatchOperator:
-		return c.segmentMatch(target, segments)
+		if segments == nil {
+			return false
+		}
+		return segments.Evaluate(target)
 	case inOperator:
 		return operator.In(c.Value)
 	case equalOperator:
@@ -59,25 +62,16 @@ func (c *Clause) Evaluate(target *Target, segments Segments, operator types.Valu
 	return false
 }
 
-// segmentMatch should expect array of string (targetSegment key)
-// segment match should process Segment rules
-func (c *Clause) segmentMatch(target *Target, segments Segments) bool {
-	if c.Op != segmentMatchOperator || segments == nil {
-		return false // should we return error ?
-	}
-
-	return segments.Evaluate(target)
-}
-
 // Clauses slice
 type Clauses []Clause
 
 // Evaluate clauses using target but it can be used also with segments if Op field is segmentMach
 func (c Clauses) Evaluate(target *Target, segments Segments) bool {
+	// AND operation
 	for _, clause := range c {
-		// AND operation
+		// operator should be evaluated based on type of attribute
 		op := target.GetOperator(clause.Attribute)
-		if op == nil || !clause.Evaluate(target, segments, op) {
+		if !clause.Evaluate(target, segments, op) {
 			return false
 		}
 		// continue on next clause

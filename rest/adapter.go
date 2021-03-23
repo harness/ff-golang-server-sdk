@@ -1,6 +1,6 @@
 package rest
 
-import "github.com/drone/ff-golang-server-sdk.v1/evaluation"
+import "github.com/drone/ff-golang-server-sdk.v0/evaluation"
 
 func (wv WeightedVariation) convert() *evaluation.WeightedVariation {
 	return &evaluation.WeightedVariation{
@@ -110,5 +110,67 @@ func (fc FeatureConfig) Convert() *evaluation.FeatureConfig {
 		State:                evaluation.FeatureState(fc.State),
 		VariationToTargetMap: nil,
 		Variations:           vars,
+	}
+}
+
+// Convert REST segment response to evaluation segment object
+func (s Segment) Convert() evaluation.Segment {
+	// need openspec change: included, excluded and rules should be required in response
+	excluded := make(evaluation.StrSlice, 0)
+	if s.Excluded != nil {
+		excluded = make(evaluation.StrSlice, len(*s.Excluded))
+		for i, excl := range *s.Excluded {
+			excluded[i] = excl
+		}
+	}
+
+	included := make(evaluation.StrSlice, 0)
+	if s.Included != nil {
+		included = make(evaluation.StrSlice, len(*s.Included))
+		for i, incl := range *s.Included {
+			included[i] = incl
+		}
+	}
+
+	rules := make(evaluation.Clauses, 0)
+	if s.Rules != nil {
+		rules = make(evaluation.Clauses, len(*s.Rules))
+		for i, rule := range *s.Rules {
+			rules[i] = evaluation.Clause{
+				Attribute: rule.Attribute,
+				ID:        rule.Id,
+				Negate:    rule.Negate,
+				Op:        rule.Op,
+				Value:     rule.Values,
+			}
+		}
+	}
+
+	tags := make([]evaluation.Tag, 0)
+	if s.Rules != nil {
+		tags = make([]evaluation.Tag, len(*s.Tags))
+		for i, tag := range *s.Tags {
+			tags[i] = evaluation.Tag{
+				Name:  tag.Name,
+				Value: tag.Value,
+			}
+		}
+	}
+
+	var version int64
+	if s.Version != nil {
+		version = *s.Version
+	}
+	return evaluation.Segment{
+		Identifier:  s.Identifier,
+		Name:        s.Name,
+		CreatedAt:   s.CreatedAt,
+		ModifiedAt:  s.ModifiedAt,
+		Environment: s.Environment,
+		Excluded:    excluded,
+		Included:    included,
+		Rules:       rules,
+		Tags:        tags,
+		Version:     version,
 	}
 }
