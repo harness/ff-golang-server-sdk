@@ -120,7 +120,7 @@ func (s Segment) Convert() evaluation.Segment {
 	if s.Excluded != nil {
 		excluded = make(evaluation.StrSlice, len(*s.Excluded))
 		for i, excl := range *s.Excluded {
-			excluded[i] = excl
+			excluded[i] = excl.Name
 		}
 	}
 
@@ -128,7 +128,7 @@ func (s Segment) Convert() evaluation.Segment {
 	if s.Included != nil {
 		included = make(evaluation.StrSlice, len(*s.Included))
 		for i, incl := range *s.Included {
-			included[i] = incl
+			included[i] = incl.Name
 		}
 	}
 

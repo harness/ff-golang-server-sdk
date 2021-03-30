@@ -92,6 +92,41 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  '/client/env/{environmentUUID}/target-segments/{identifier}':
+    get:
+      summary: Retrieve a segment by identifier
+      description: Used to retrieve a segment for a certain account id by identifier
+      operationId: GetSegmentByIdentifier
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          description: Unique identifier for the segment object in the API
+          schema:
+            type: string
+        - name: environmentUUID
+          in: path
+          required: true
+          description: Unique identifier for the environment object in the API
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Segment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /client/auth:
     post:
       summary: Authenticate with the admin server.
@@ -173,17 +208,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Evaluation'
-  '/stream/environments/{environmentId}':
+  /stream:
     get:
       summary: Stream endpoint.
       operationId: Stream
       parameters:
-        - name: environmentId
-          in: path
-          required: true
-          description: Unique UUID for the environemnt object in the API.
+        - in: header
+          name: API-Key
           schema:
             type: string
+          required: true
       security:
         - BearerAuth: []
       responses:
@@ -309,6 +343,16 @@ components:
       required:
         - feature
         - variations
+    TargetMap:
+      type: object
+      properties:
+        identifier:
+          type: string
+        name:
+          type: string
+      required:
+        - idenfifier
+        - name
     VariationMap:
       type: object
       properties:
@@ -317,7 +361,7 @@ components:
         targets:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/TargetMap'
         targetSegments:
           type: array
           items:
@@ -405,11 +449,11 @@ components:
         included:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/Target'
         excluded:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/Target'
         rules:
           type: array
           items:
@@ -429,6 +473,39 @@ components:
       required:
         - identifier
         - name
+    Target:
+      type: object
+      properties:
+        identifier:
+          type: string
+        account:
+          type: string
+        org:
+          type: string
+        environment:
+          type: string
+        project:
+          type: string
+        name:
+          type: string
+        anonymous:
+          type: boolean
+        attributes:
+          type: object
+        createdAt:
+          type: integer
+          format: int64
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Segment'
+      required:
+        - identifier
+        - name
+        - environment
+        - project
+        - account
+        - org
     Error:
       type: object
       properties:
@@ -445,6 +522,19 @@ components:
         apiKey:
           type: string
           example: 896045f3-42ee-4e73-9154-086644768b96
+        target:
+          type: object
+          properties:
+            identifier:
+              type: string
+            name:
+              type: string
+            anonymous:
+              type: boolean
+            attributes:
+              type: object
+          required:
+            - identifier
       required:
         - apiKey
     AuthenticationResponse:
@@ -482,11 +572,7 @@ components:
         flag:
           type: string
         value:
-          anyOf:
-            - type: boolean
-            - type: string
-            - type: integer
-            - type: object
+          type: string
       required:
         - flag
         - value
