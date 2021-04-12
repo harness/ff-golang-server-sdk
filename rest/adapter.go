@@ -69,6 +69,7 @@ func (p Prerequisite) convert() *evaluation.Prerequisite {
 	}
 }
 
+//convert converts variation map to evaluation object
 func (v VariationMap) convert() *evaluation.VariationMap {
 	return &evaluation.VariationMap{
 		TargetSegments: *v.TargetSegments,
