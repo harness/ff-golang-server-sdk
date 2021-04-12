@@ -69,6 +69,22 @@ func (p Prerequisite) convert() *evaluation.Prerequisite {
 	}
 }
 
+func (v VariationMap) convert() *evaluation.VariationMap {
+	return &evaluation.VariationMap{
+		TargetSegments: *v.TargetSegments,
+		Targets:        convertTargetToIdentifier(*v.Targets),
+		Variation:      v.Variation,
+	}
+}
+
+func convertTargetToIdentifier(tm []TargetMap) []string {
+	result := make([]string, 0)
+	for j := range tm {
+		result = append(result, *tm[j].Identifier)
+	}
+	return result
+}
+
 // Convert feature flag from ff server to evaluation object
 func (fc FeatureConfig) Convert() *evaluation.FeatureConfig {
 	vars := make(evaluation.Variations, len(fc.Variations))
