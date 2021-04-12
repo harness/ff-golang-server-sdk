@@ -114,6 +114,13 @@ func (fc FeatureConfig) Convert() *evaluation.FeatureConfig {
 	if fc.DefaultServe.Variation != nil {
 		defaultServe.Variation = fc.DefaultServe.Variation
 	}
+	var vtm []evaluation.VariationMap
+	if fc.VariationToTargetMap != nil {
+		vtm = make([]evaluation.VariationMap, len(*fc.VariationToTargetMap))
+		for i, val := range *fc.VariationToTargetMap {
+			vtm[i] = *val.convert()
+		}
+	}
 	return &evaluation.FeatureConfig{
 		DefaultServe:         defaultServe,
 		Environment:          fc.Environment,
@@ -124,7 +131,7 @@ func (fc FeatureConfig) Convert() *evaluation.FeatureConfig {
 		Project:              fc.Project,
 		Rules:                rules,
 		State:                evaluation.FeatureState(fc.State),
-		VariationToTargetMap: nil,
+		VariationToTargetMap: vtm,
 		Variations:           vars,
 	}
 }

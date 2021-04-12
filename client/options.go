@@ -58,3 +58,10 @@ func WithStreamEnabled(val bool) ConfigOption {
 		config.enableStream = val
 	}
 }
+
+// WithTarget sets target
+func WithTarget(target evaluation.Target) ConfigOption {
+	return func(config *config) {
+		config.target = target
+	}
+}

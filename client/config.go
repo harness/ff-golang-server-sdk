@@ -16,6 +16,7 @@ type config struct {
 	Store        storage.Storage
 	Logger       logger.Logger
 	enableStream bool
+	target       evaluation.Target
 }
 
 func newDefaultConfig() *config {
