@@ -79,7 +79,7 @@ func (v VariationMap) convert() *evaluation.VariationMap {
 }
 
 func convertTargetToIdentifier(tm []TargetMap) []string {
-	result := make([]string, 0)
+	result := make([]string, 0, len(tm))
 	for j := range tm {
 		result = append(result, *tm[j].Identifier)
 	}
