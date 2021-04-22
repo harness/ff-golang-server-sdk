@@ -1,6 +1,6 @@
 package rest
 
-import "github.com/drone/ff-golang-server-sdk.v0/evaluation"
+import "github.com/drone/ff-golang-server-sdk/evaluation"
 
 func (wv WeightedVariation) convert() *evaluation.WeightedVariation {
 	return &evaluation.WeightedVariation{

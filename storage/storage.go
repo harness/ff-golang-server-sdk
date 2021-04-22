@@ -6,7 +6,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/drone/ff-golang-server-sdk.v0/logger"
+	"github.com/drone/ff-golang-server-sdk/logger"
 	"github.com/mitchellh/go-homedir"
 )
 

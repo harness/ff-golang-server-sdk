@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/drone/ff-golang-server-sdk.v0/cache"
-	"github.com/drone/ff-golang-server-sdk.v0/dto"
-	"github.com/drone/ff-golang-server-sdk.v0/rest"
+	"github.com/drone/ff-golang-server-sdk/cache"
+	"github.com/drone/ff-golang-server-sdk/dto"
+	"github.com/drone/ff-golang-server-sdk/rest"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/r3labs/sse"
 )

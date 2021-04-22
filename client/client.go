@@ -12,12 +12,12 @@ import (
 
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/drone/ff-golang-server-sdk.v0/cache"
-	"github.com/drone/ff-golang-server-sdk.v0/dto"
-	"github.com/drone/ff-golang-server-sdk.v0/evaluation"
-	"github.com/drone/ff-golang-server-sdk.v0/rest"
-	"github.com/drone/ff-golang-server-sdk.v0/stream"
-	"github.com/drone/ff-golang-server-sdk.v0/types"
+	"github.com/drone/ff-golang-server-sdk/cache"
+	"github.com/drone/ff-golang-server-sdk/dto"
+	"github.com/drone/ff-golang-server-sdk/evaluation"
+	"github.com/drone/ff-golang-server-sdk/rest"
+	"github.com/drone/ff-golang-server-sdk/stream"
+	"github.com/drone/ff-golang-server-sdk/types"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/r3labs/sse"
 )
