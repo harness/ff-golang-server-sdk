@@ -3,7 +3,7 @@ package evaluation
 import (
 	"encoding/json"
 
-	"github.com/drone/ff-golang-server-sdk.v0/types"
+	"github.com/drone/ff-golang-server-sdk/types"
 
 	"reflect"
 	"strconv"
