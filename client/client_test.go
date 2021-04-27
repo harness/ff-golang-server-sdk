@@ -145,7 +145,7 @@ func target() *evaluation.Target {
 		Lastname("Doe").
 		Email("john@doe.com").
 		Build()
-	return target
+	return &target
 }
 
 var ValidAuthResponse = func(req *http.Request) (*http.Response, error) {
