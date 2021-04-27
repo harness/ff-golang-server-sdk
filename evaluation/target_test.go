@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/drone/ff-golang-server-sdk.v0/types"
+	"github.com/drone/ff-golang-server-sdk/types"
 )
 
 func TestTarget_GetOperator(t1 *testing.T) {
