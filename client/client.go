@@ -18,7 +18,7 @@ import (
 	"github.com/drone/ff-golang-server-sdk/rest"
 	"github.com/drone/ff-golang-server-sdk/stream"
 	"github.com/drone/ff-golang-server-sdk/types"
-	"github.com/hashicorp/go-retryablehttp"
+
 	"github.com/r3labs/sse"
 )
 
@@ -43,6 +43,7 @@ type CfClient struct {
 	cancelFunc      context.CancelFunc
 	streamConnected bool
 	authenticated   chan struct{}
+	initialized     chan bool
 }
 
 // NewCfClient creates a new client instance that connects to CF with the default configuration.
@@ -64,6 +65,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		sdkKey:        sdkKey,
 		config:        config,
 		authenticated: make(chan struct{}),
+		initialized: make(chan bool),
 	}
 	ctx, client.cancelFunc = context.WithCancel(context.Background())
 
@@ -73,8 +75,10 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 
 	client.persistence = cache.NewPersistence(config.Store, config.Cache, config.Logger)
 	// load from storage
-	if err = client.persistence.LoadFromStore(); err != nil {
-		log.Printf("error loading from store err: %s", err)
+	if config.enableStore {
+		if err = client.persistence.LoadFromStore(); err != nil {
+			log.Printf("error loading from store err: %s", err)
+		}
 	}
 
 	go client.authenticate(ctx)
@@ -88,6 +92,16 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	go client.persistCronJob(ctx)
 
 	return client, nil
+}
+
+func (c *CfClient) IsInitialized() (bool, error) {
+	select {
+	case <-c.initialized:
+		return true, nil
+	case <-time.After(30*time.Second):
+		break
+	}
+	return false, fmt.Errorf("Timeout waiting to initialize\n")
 }
 
 func (c *CfClient) retrieve(ctx context.Context) {
@@ -112,6 +126,7 @@ func (c *CfClient) retrieve(ctx context.Context) {
 		}
 	}()
 	wg.Wait()
+	c.initialized<-true
 	c.config.Logger.Info("Sync run finished")
 }
 
@@ -150,11 +165,9 @@ func (c *CfClient) authenticate(ctx context.Context) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 
-	retryClient := retryablehttp.NewClient()
-	retryClient.RetryMax = 10
 
 	// dont check err just retry
-	httpClient, err := rest.NewClientWithResponses(c.config.url, rest.WithHTTPClient(retryClient.StandardClient()))
+	httpClient, err := rest.NewClientWithResponses(c.config.url, rest.WithHTTPClient(c.config.httpClient))
 	if err != nil {
 		c.config.Logger.Error(err)
 		return
@@ -204,7 +217,7 @@ func (c *CfClient) authenticate(ctx context.Context) {
 	}
 	restClient, err := rest.NewClientWithResponses(c.config.url,
 		rest.WithRequestEditorFn(bearerTokenProvider.Intercept),
-		rest.WithHTTPClient(retryClient.StandardClient()),
+		rest.WithHTTPClient(c.config.httpClient),
 	)
 	if err != nil {
 		c.config.Logger.Error(err)
@@ -343,6 +356,11 @@ func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultV
 	if fc != nil {
 		// load segments dep
 		c.getSegmentsFromCache(fc)
+
+		result := checkPreRequisite(c, fc, target)
+		if !result {
+			return fc.Variations.FindByIdentifier(fc.OffVariation).Bool(defaultValue), nil
+		}
 		return fc.BoolVariation(target, defaultValue), nil
 	}
 	return defaultValue, nil
@@ -356,6 +374,11 @@ func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaul
 	if fc != nil {
 		// load segments dep
 		c.getSegmentsFromCache(fc)
+
+		result := checkPreRequisite(c, fc, target)
+		if !result {
+			return fc.Variations.FindByIdentifier(fc.OffVariation).String(defaultValue), nil
+		}
 		return fc.StringVariation(target, defaultValue), nil
 	}
 	return defaultValue, nil
@@ -369,6 +392,11 @@ func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultVa
 	if fc != nil {
 		// load segments dep
 		c.getSegmentsFromCache(fc)
+
+		result := checkPreRequisite(c, fc, target)
+		if !result {
+			return fc.Variations.FindByIdentifier(fc.OffVariation).Int(defaultValue), nil
+		}
 		return fc.IntVariation(target, defaultValue), nil
 	}
 	return defaultValue, nil
@@ -382,6 +410,11 @@ func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaul
 	if fc != nil {
 		// load segments dep
 		c.getSegmentsFromCache(fc)
+
+		result := checkPreRequisite(c, fc, target)
+		if !result {
+			return fc.Variations.FindByIdentifier(fc.OffVariation).Number(defaultValue), nil
+		}
 		return fc.NumberVariation(target, defaultValue), nil
 	}
 	return defaultValue, nil
@@ -396,6 +429,11 @@ func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultV
 	if fc != nil {
 		// load segments dep
 		c.getSegmentsFromCache(fc)
+
+		result := checkPreRequisite(c, fc, target)
+		if !result {
+			return fc.Variations.FindByIdentifier(fc.OffVariation).JSON(defaultValue), nil
+		}
 		return fc.JSONVariation(target, defaultValue), nil
 	}
 	return defaultValue, nil
@@ -415,4 +453,48 @@ func (c *CfClient) Close() error {
 // Environment returns environment based on authenticated SDK key
 func (c *CfClient) Environment() string {
 	return c.environmentID
+}
+
+// contains determines if the string variation is in the slice of variations.
+// returns true if found, otherwise false.
+func contains(variations []string, variation string) bool {
+	for _, x := range variations {
+		if x == variation {
+			return true
+		}
+	}
+	return false
+}
+
+func checkPreRequisite(client *CfClient, featureConfig *evaluation.FeatureConfig, target *evaluation.Target) bool {
+	result := true
+
+	for _, preReq := range featureConfig.Prerequisites {
+		preReqFeature := client.getFlagFromCache(preReq.Feature)
+		if preReqFeature == nil {
+			client.config.Logger.Errorf("Could not retrieve the pre requisite details of feature flag :[%s]", preReq.Feature)
+			continue
+		}
+
+		// Get Variation (this performs evaluation and returns the current variation to be served to this target)
+		preReqVariationName := preReqFeature.GetVariationName(target)
+		preReqVariation := preReqFeature.Variations.FindByIdentifier(preReqVariationName)
+		if preReqVariation == nil {
+			client.config.Logger.Infof("Could not retrieve the pre requisite variation: %s", preReqVariationName)
+			continue
+		}
+		client.config.Logger.Debugf("Pre requisite flag %s has variation %s for target %s", preReq.Feature, preReqVariation.Value, target.Identifier)
+
+		if !contains(preReq.Variations, preReqVariation.Value) {
+			return false
+		}
+
+		// Check this pre-requisites, own pre-requisite.  If we get a false anywhere we need to stop
+		result = checkPreRequisite(client, preReqFeature, target)
+		if !result {
+			return false
+		}
+	}
+
+	return result
 }
