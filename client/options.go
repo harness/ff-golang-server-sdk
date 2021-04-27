@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/drone/ff-golang-server-sdk/cache"
+	"github.com/drone/ff-golang-server-sdk/evaluation"
 	"github.com/drone/ff-golang-server-sdk/logger"
 	"github.com/drone/ff-golang-server-sdk/storage"
 )
@@ -71,5 +72,12 @@ func WithStoreEnabled(val bool) ConfigOption {
 func WithHTTPClient(client *http.Client) ConfigOption {
 	return func(config *config) {
 		config.httpClient = client
+	}
+}
+
+// WithTarget sets target
+func WithTarget(target evaluation.Target) ConfigOption {
+	return func(config *config) {
+		config.target = target
 	}
 }

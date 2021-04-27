@@ -69,6 +69,23 @@ func (p Prerequisite) convert() *evaluation.Prerequisite {
 	}
 }
 
+//convert converts variation map to evaluation object
+func (v VariationMap) convert() *evaluation.VariationMap {
+	return &evaluation.VariationMap{
+		TargetSegments: *v.TargetSegments,
+		Targets:        convertTargetToIdentifier(*v.Targets),
+		Variation:      v.Variation,
+	}
+}
+
+func convertTargetToIdentifier(tm []TargetMap) []string {
+	result := make([]string, 0, len(tm))
+	for j := range tm {
+		result = append(result, *tm[j].Identifier)
+	}
+	return result
+}
+
 // Convert feature flag from ff server to evaluation object
 func (fc FeatureConfig) Convert() *evaluation.FeatureConfig {
 	vars := make(evaluation.Variations, len(fc.Variations))
@@ -98,6 +115,13 @@ func (fc FeatureConfig) Convert() *evaluation.FeatureConfig {
 	if fc.DefaultServe.Variation != nil {
 		defaultServe.Variation = fc.DefaultServe.Variation
 	}
+	var vtm []evaluation.VariationMap
+	if fc.VariationToTargetMap != nil {
+		vtm = make([]evaluation.VariationMap, len(*fc.VariationToTargetMap))
+		for i, val := range *fc.VariationToTargetMap {
+			vtm[i] = *val.convert()
+		}
+	}
 	return &evaluation.FeatureConfig{
 		DefaultServe:         defaultServe,
 		Environment:          fc.Environment,
@@ -108,7 +132,7 @@ func (fc FeatureConfig) Convert() *evaluation.FeatureConfig {
 		Project:              fc.Project,
 		Rules:                rules,
 		State:                evaluation.FeatureState(fc.State),
-		VariationToTargetMap: nil,
+		VariationToTargetMap: vtm,
 		Variations:           vars,
 	}
 }

@@ -14,7 +14,7 @@ type TargetBuilderInterface interface {
 	Name(string) TargetBuilderInterface
 	Anonymous(bool) TargetBuilderInterface
 	Custom(name string, value interface{}) TargetBuilderInterface
-	Build() *evaluation.Target
+	Build() evaluation.Target
 }
 
 // TargetBuilder structure for building targets
@@ -84,6 +84,6 @@ func (b *targetBuilder) Custom(key string, value interface{}) TargetBuilderInter
 }
 
 // Build returns target object
-func (b *targetBuilder) Build() *evaluation.Target {
-	return b.Target
+func (b *targetBuilder) Build() evaluation.Target {
+	return *b.Target
 }

@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/drone/ff-golang-server-sdk/evaluation"
+
 	"github.com/drone/ff-golang-server-sdk/cache"
 	"github.com/drone/ff-golang-server-sdk/logger"
 	"github.com/drone/ff-golang-server-sdk/storage"
@@ -19,6 +21,7 @@ type config struct {
 	httpClient   *http.Client
 	enableStream bool
 	enableStore  bool
+	target       evaluation.Target
 }
 
 func newDefaultConfig() *config {
