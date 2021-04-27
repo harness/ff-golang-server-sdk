@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/drone/ff-golang-server-sdk.v0/evaluation"
+	"github.com/drone/ff-golang-server-sdk/evaluation"
 
 	"github.com/drone/ff-golang-server-sdk/cache"
 	"github.com/drone/ff-golang-server-sdk/logger"
