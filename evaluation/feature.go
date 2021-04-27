@@ -2,6 +2,7 @@ package evaluation
 
 import (
 	"encoding/json"
+
 	"github.com/drone/ff-golang-server-sdk/types"
 
 	"reflect"

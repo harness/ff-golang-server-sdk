@@ -65,7 +65,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		sdkKey:        sdkKey,
 		config:        config,
 		authenticated: make(chan struct{}),
-		initialized: make(chan bool),
+		initialized:   make(chan bool),
 	}
 	ctx, client.cancelFunc = context.WithCancel(context.Background())
 
@@ -94,14 +94,16 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	return client, nil
 }
 
+// IsInitialized determines if the client is ready to be used.  This is true if it has both authenticated
+// and successfully retrived flags.  If it takes longer than 30 seconds the call will timeout and return an error.
 func (c *CfClient) IsInitialized() (bool, error) {
 	select {
 	case <-c.initialized:
 		return true, nil
-	case <-time.After(30*time.Second):
+	case <-time.After(30 * time.Second):
 		break
 	}
-	return false, fmt.Errorf("Timeout waiting to initialize\n")
+	return false, fmt.Errorf("timeout waiting to initialize")
 }
 
 func (c *CfClient) retrieve(ctx context.Context) {
@@ -126,7 +128,7 @@ func (c *CfClient) retrieve(ctx context.Context) {
 		}
 	}()
 	wg.Wait()
-	c.initialized<-true
+	c.initialized <- true
 	c.config.Logger.Info("Sync run finished")
 }
 
@@ -164,7 +166,6 @@ func (c *CfClient) authenticate(ctx context.Context) {
 
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-
 
 	// dont check err just retry
 	httpClient, err := rest.NewClientWithResponses(c.config.url, rest.WithHTTPClient(c.config.httpClient))

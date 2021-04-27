@@ -1,10 +1,11 @@
 package client
 
 import (
+	"net/http"
+
 	"github.com/drone/ff-golang-server-sdk/cache"
 	"github.com/drone/ff-golang-server-sdk/logger"
 	"github.com/drone/ff-golang-server-sdk/storage"
-	"net/http"
 )
 
 // ConfigOption is used as return value for advanced client configuration
@@ -65,7 +66,6 @@ func WithStoreEnabled(val bool) ConfigOption {
 		config.enableStore = val
 	}
 }
-
 
 // WithHTTPClient set http client for use in interactions with ff server
 func WithHTTPClient(client *http.Client) ConfigOption {

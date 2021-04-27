@@ -2,9 +2,10 @@ package client_test
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/drone/ff-golang-server-sdk/rest"
 	"github.com/jarcoal/httpmock"
-	"net/http"
 )
 
 func MakeBoolFeatureConfigs(name, defaultVariation, offVariation, state string, preReqs ...rest.Prerequisite) []rest.FeatureConfig {
@@ -12,7 +13,7 @@ func MakeBoolFeatureConfigs(name, defaultVariation, offVariation, state string, 
 	featureConfig = append(featureConfig, MakeBoolFeatureConfig(name, defaultVariation, offVariation, state, preReqs))
 
 	// If there are any PreReqs then we need to store them as flags as well.
-	for _, x := range preReqs{
+	for _, x := range preReqs {
 		featureConfig = append(featureConfig, MakeBoolFeatureConfig(x.Feature, "true", "false", x.Variations[0], nil))
 	}
 
@@ -24,24 +25,24 @@ func MakeBoolFeatureConfig(name, defaultVariation, offVariation, state string, p
 		DefaultServe: rest.Serve{
 			Variation: &defaultVariation,
 		},
-		Environment: "PreProduction",
-		Feature: name,
-		Kind: "boolean",
+		Environment:  "PreProduction",
+		Feature:      name,
+		Kind:         "boolean",
 		OffVariation: offVariation,
-		State: rest.FeatureState(state),
+		State:        rest.FeatureState(state),
 		Variations: []rest.Variation{
 			{Identifier: "true", Name: strPtr("True"), Value: "true"},
 			{Identifier: "false", Name: strPtr("False"), Value: "false"},
 		},
 		Prerequisites: &preReqs,
-		Version: intPtr(1),
+		Version:       intPtr(1),
 	}
 }
 
 func MakeBoolPreRequisite(name string, state string) rest.Prerequisite {
 	return rest.Prerequisite{
-			Feature: name,
-			Variations: []string{state},
+		Feature:    name,
+		Variations: []string{state},
 	}
 }
 
@@ -50,13 +51,12 @@ func MakeStringFeatureConfigs(name, defaultVariation, offVariation, state string
 	featureConfig = append(featureConfig, MakeStringFeatureConfig(name, defaultVariation, offVariation, state, preReqs))
 
 	// If there are any PreReqs then we need to store them as flags as well.
-	for _, x := range preReqs{
+	for _, x := range preReqs {
 		featureConfig = append(featureConfig, MakeBoolFeatureConfig(x.Feature, "true", "false", x.Variations[0], nil))
 	}
 
 	return featureConfig
 }
-
 
 /*
 {
@@ -85,24 +85,24 @@ func MakeStringFeatureConfigs(name, defaultVariation, offVariation, state string
 		],
 		"version": 1
 	}
- */
+*/
 
 func MakeStringFeatureConfig(name, defaultVariation, offVariation, state string, preReqs []rest.Prerequisite) rest.FeatureConfig {
 	return rest.FeatureConfig{
 		DefaultServe: rest.Serve{
 			Variation: &defaultVariation,
 		},
-		Environment: "PreProduction",
-		Feature: name,
-		Kind: "string",
+		Environment:  "PreProduction",
+		Feature:      name,
+		Kind:         "string",
 		OffVariation: offVariation,
-		State: rest.FeatureState(state),
+		State:        rest.FeatureState(state),
 		Variations: []rest.Variation{
 			{Identifier: "Alpha", Name: strPtr("Alpha"), Value: "A"},
 			{Identifier: "Bravo", Name: strPtr("Bravo"), Value: "B"},
 		},
 		Prerequisites: &preReqs,
-		Version: intPtr(1),
+		Version:       intPtr(1),
 	}
 }
 
@@ -114,6 +114,6 @@ func strPtr(value string) *string {
 	return &value
 }
 
-func jsonError(err error)  (*http.Response, error) {
+func jsonError(err error) (*http.Response, error) {
 	return httpmock.NewJsonResponse(500, fmt.Errorf(`{"error" : "%s"}`, err))
 }

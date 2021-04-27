@@ -16,9 +16,9 @@ type config struct {
 	Cache        cache.Cache
 	Store        storage.Storage
 	Logger       logger.Logger
-	httpClient	 *http.Client
+	httpClient   *http.Client
 	enableStream bool
-	enableStore bool
+	enableStore  bool
 }
 
 func newDefaultConfig() *config {
@@ -28,7 +28,6 @@ func newDefaultConfig() *config {
 	}
 	defaultCache, _ := cache.NewLruCache(10000, defaultLogger) // size of cache
 	defaultStore := storage.NewFileStore("defaultProject", storage.GetHarnessDir(), defaultLogger)
-
 
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = 10
@@ -41,6 +40,6 @@ func newDefaultConfig() *config {
 		Logger:       defaultLogger,
 		httpClient:   retryClient.StandardClient(),
 		enableStream: true,
-		enableStore: true,
+		enableStore:  true,
 	}
 }
