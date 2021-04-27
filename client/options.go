@@ -1,6 +1,8 @@
 package client
 
 import (
+	"net/http"
+
 	"github.com/drone/ff-golang-server-sdk/cache"
 	"github.com/drone/ff-golang-server-sdk/logger"
 	"github.com/drone/ff-golang-server-sdk/storage"
@@ -55,5 +57,19 @@ func WithLogger(logger logger.Logger) ConfigOption {
 func WithStreamEnabled(val bool) ConfigOption {
 	return func(config *config) {
 		config.enableStream = val
+	}
+}
+
+// WithStoreEnabled set store on or off
+func WithStoreEnabled(val bool) ConfigOption {
+	return func(config *config) {
+		config.enableStore = val
+	}
+}
+
+// WithHTTPClient set http client for use in interactions with ff server
+func WithHTTPClient(client *http.Client) ConfigOption {
+	return func(config *config) {
+		config.httpClient = client
 	}
 }
