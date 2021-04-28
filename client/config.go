@@ -21,7 +21,7 @@ type config struct {
 	httpClient   *http.Client
 	enableStream bool
 	enableStore  bool
-	target       *evaluation.Target
+	target       evaluation.Target
 }
 
 func newDefaultConfig() *config {

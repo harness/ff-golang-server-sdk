@@ -163,7 +163,7 @@ func (c *CfClient) streamConnect() {
 	}
 }
 
-func (c *CfClient) authenticate(ctx context.Context, target *evaluation.Target) {
+func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) {
 	t := struct {
 		Anonymous  *bool                   `json:"anonymous,omitempty"`
 		Attributes *map[string]interface{} `json:"attributes,omitempty"`
