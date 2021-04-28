@@ -69,17 +69,18 @@ func (b *targetBuilder) Name(name string) TargetBuilderInterface {
 
 // Anonymous target object
 func (b *targetBuilder) Anonymous(value bool) TargetBuilderInterface {
-	b.Target.Anonymous = value
+	b.Target.Anonymous = &value
 	return b
 }
 
 // Custom object
 func (b *targetBuilder) Custom(key string, value interface{}) TargetBuilderInterface {
+	m := make(map[string]interface{})
 	if b.Target.Attributes == nil {
-		b.Target.Attributes = make(map[string]interface{})
+		b.Target.Attributes = &m
 	}
-
-	b.Target.Attributes[key] = value
+	m[key] = value
+	b.Target.Attributes = &m
 	return b
 }
 

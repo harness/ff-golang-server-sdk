@@ -78,6 +78,6 @@ func WithHTTPClient(client *http.Client) ConfigOption {
 // WithTarget sets target
 func WithTarget(target evaluation.Target) ConfigOption {
 	return func(config *config) {
-		config.target = target
+		config.target = &target
 	}
 }

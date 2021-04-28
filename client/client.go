@@ -36,6 +36,7 @@ type CfClient struct {
 	mux             sync.RWMutex
 	api             rest.ClientWithResponsesInterface
 	sdkKey          string
+	auth            rest.AuthenticationRequest
 	config          *config
 	environmentID   string
 	token           string
@@ -81,7 +82,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		}
 	}
 
-	go client.authenticate(ctx)
+	go client.authenticate(ctx, client.config.target)
 
 	go client.retrieve(ctx)
 
@@ -162,8 +163,19 @@ func (c *CfClient) streamConnect() {
 	}
 }
 
-func (c *CfClient) authenticate(ctx context.Context) {
-
+func (c *CfClient) authenticate(ctx context.Context, target *evaluation.Target) {
+	t := struct {
+		Anonymous  *bool                   `json:"anonymous,omitempty"`
+		Attributes *map[string]interface{} `json:"attributes,omitempty"`
+		Identifier string                  `json:"identifier"`
+		Name       *string                 `json:"name,omitempty"`
+	}{
+		target.Anonymous,
+		target.Attributes,
+		target.Identifier,
+		target.Name,
+	}
+	c.auth.Target = &t
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 
@@ -176,6 +188,7 @@ func (c *CfClient) authenticate(ctx context.Context) {
 
 	response, err := httpClient.AuthenticateWithResponse(ctx, rest.AuthenticateJSONRequestBody{
 		ApiKey: c.sdkKey,
+		Target: c.auth.Target,
 	})
 	if err != nil {
 		c.config.Logger.Error(err)

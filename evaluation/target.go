@@ -10,14 +10,15 @@ import (
 type Target struct {
 	Identifier string
 	Name       *string
-	Anonymous  bool
-	Attributes map[string]interface{}
+	Anonymous  *bool
+	Attributes *map[string]interface{}
 }
 
 // GetAttrValue returns value from target with specified attribute
 func (t Target) GetAttrValue(attr string) reflect.Value {
 	var value reflect.Value
-	attrVal, ok := t.Attributes[attr] // first check custom attributes
+	attrs := *t.Attributes
+	attrVal, ok := attrs[attr] // first check custom attributes
 	if ok {
 		value = reflect.ValueOf(attrVal)
 	} else {
