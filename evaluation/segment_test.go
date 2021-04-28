@@ -23,7 +23,7 @@ func TestSegment_Evaluate(t *testing.T) {
 		target *Target
 	}
 	f := false
-	m := make(map[string]interface{}, 0)
+	m := make(map[string]interface{})
 	m["email"] = "john@doe.com"
 	target := Target{
 		Identifier: "john",

@@ -9,7 +9,7 @@ import (
 
 func TestTarget_GetOperator(t1 *testing.T) {
 	harness := "Harness"
-	m := make(map[string]interface{}, 0)
+	m := make(map[string]interface{})
 	m["anonymous"] = false
 	type fields struct {
 		Identifier string
@@ -128,7 +128,7 @@ func TestTarget_GetAttrValue(t1 *testing.T) {
 }
 
 func TestTarget_GetOperator1(t1 *testing.T) {
-	m := make(map[string]interface{}, 0)
+	m := make(map[string]interface{})
 	m["anonymous"] = false
 	type fields struct {
 		Identifier string

@@ -6,7 +6,7 @@ import (
 )
 
 func TestGetStructFieldValue(t *testing.T) {
-	m := make(map[string]interface{}, 0)
+	m := make(map[string]interface{})
 	m["email"] = "john@doe.com"
 	identifier := "john"
 	name := "John"
@@ -56,7 +56,7 @@ func TestGetStructFieldValue(t *testing.T) {
 func Test_caseInsensitiveFieldByName(t *testing.T) {
 	identifier := "john"
 	name := "John"
-	m := make(map[string]interface{}, 0)
+	m := make(map[string]interface{})
 	m["email"] = "john@doe.com"
 	f := false
 	target := Target{
