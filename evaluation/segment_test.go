@@ -22,14 +22,14 @@ func TestSegment_Evaluate(t *testing.T) {
 	type args struct {
 		target *Target
 	}
-
+	f := false
+	m := make(map[string]interface{}, 0)
+	m["email"] = "john@doe.com"
 	target := Target{
 		Identifier: "john",
 		Name:       nil,
-		Anonymous:  false,
-		Attributes: map[string]interface{}{
-			"email": "john@doe.com",
-		},
+		Anonymous:  &f,
+		Attributes: &m,
 	}
 
 	tests := []struct {

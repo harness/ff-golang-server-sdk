@@ -6,15 +6,16 @@ import (
 )
 
 func TestGetStructFieldValue(t *testing.T) {
+	m := make(map[string]interface{}, 0)
+	m["email"] = "john@doe.com"
 	identifier := "john"
 	name := "John"
+	f := false
 	target := Target{
 		Identifier: identifier,
 		Name:       &name,
-		Anonymous:  false,
-		Attributes: map[string]interface{}{
-			"email": "john@doe.com",
-		},
+		Anonymous:  &f,
+		Attributes: &m,
 	}
 	type args struct {
 		target interface{}
@@ -55,13 +56,14 @@ func TestGetStructFieldValue(t *testing.T) {
 func Test_caseInsensitiveFieldByName(t *testing.T) {
 	identifier := "john"
 	name := "John"
+	m := make(map[string]interface{}, 0)
+	m["email"] = "john@doe.com"
+	f := false
 	target := Target{
 		Identifier: identifier,
 		Name:       &name,
-		Anonymous:  false,
-		Attributes: map[string]interface{}{
-			"email": "john@doe.com",
-		},
+		Anonymous:  &f,
+		Attributes: &m,
 	}
 	type args struct {
 		v    reflect.Value
