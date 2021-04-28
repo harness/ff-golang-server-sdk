@@ -440,7 +440,7 @@ func TestServingRules_GetVariationName(t *testing.T) {
 	harness := "Harness"
 	onVariationIdentifier := "v1"
 	offVariationIdentifier := "v2"
-	m := make(map[string]interface{}, 0)
+	m := make(map[string]interface{})
 	m["email"] = "john@doe.com"
 	segment := &Segment{
 		Identifier:  "beta",
@@ -536,7 +536,7 @@ func TestFeatureConfig_Evaluate(t *testing.T) {
 	harness := "Harness"
 	v1 := "v1"
 	v2 := "v2"
-	m := make(map[string]interface{}, 0)
+	m := make(map[string]interface{})
 	m["email"] = "john@doe.com"
 	target := Target{
 		Identifier: harness,
@@ -636,7 +636,7 @@ func TestClause_Evaluate(t *testing.T) {
 		segments Segments
 		operator types.ValueType
 	}
-	m := make(map[string]interface{}, 0)
+	m := make(map[string]interface{})
 	m["email"] = "john@doe.com"
 	target := Target{
 		Identifier: "john",
