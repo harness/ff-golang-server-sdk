@@ -435,12 +435,13 @@ func TestFeatureConfig_IntVariation(t *testing.T) {
 }
 
 func TestServingRules_GetVariationName(t *testing.T) {
-
+	f := false
 	dev := "dev"
 	harness := "Harness"
 	onVariationIdentifier := "v1"
 	offVariationIdentifier := "v2"
-
+	m := make(map[string]interface{})
+	m["email"] = "john@doe.com"
 	segment := &Segment{
 		Identifier:  "beta",
 		Name:        "beta",
@@ -450,12 +451,11 @@ func TestServingRules_GetVariationName(t *testing.T) {
 		Tags:        nil,
 		Version:     1,
 	}
-
 	target := &Target{
 		Identifier: harness,
 		Name:       &harness,
-		Anonymous:  false,
-		Attributes: nil,
+		Anonymous:  &f,
+		Attributes: &m,
 	}
 	type args struct {
 		target       *Target
@@ -532,14 +532,17 @@ func TestServingRules_GetVariationName(t *testing.T) {
 }
 
 func TestFeatureConfig_Evaluate(t *testing.T) {
+	f := false
 	harness := "Harness"
 	v1 := "v1"
 	v2 := "v2"
+	m := make(map[string]interface{})
+	m["email"] = "john@doe.com"
 	target := Target{
 		Identifier: harness,
 		Name:       nil,
-		Anonymous:  false,
-		Attributes: nil,
+		Anonymous:  &f,
+		Attributes: &m,
 	}
 	type fields struct {
 		DefaultServe         Serve
@@ -620,6 +623,7 @@ func TestFeatureConfig_Evaluate(t *testing.T) {
 }
 
 func TestClause_Evaluate(t *testing.T) {
+	f := false
 	type fields struct {
 		Attribute string
 		ID        string
@@ -632,14 +636,13 @@ func TestClause_Evaluate(t *testing.T) {
 		segments Segments
 		operator types.ValueType
 	}
-
+	m := make(map[string]interface{})
+	m["email"] = "john@doe.com"
 	target := Target{
 		Identifier: "john",
 		Name:       nil,
-		Anonymous:  false,
-		Attributes: map[string]interface{}{
-			"email": "john@doe.com",
-		},
+		Anonymous:  &f,
+		Attributes: &m,
 	}
 	tests := []struct {
 		name   string

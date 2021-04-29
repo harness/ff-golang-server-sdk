@@ -9,6 +9,8 @@ import (
 
 func TestTarget_GetOperator(t1 *testing.T) {
 	harness := "Harness"
+	m := make(map[string]interface{})
+	m["anonymous"] = false
 	type fields struct {
 		Identifier string
 		Name       *string
@@ -29,7 +31,7 @@ func TestTarget_GetOperator(t1 *testing.T) {
 			Name       *string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "harness", Name: &harness, Anonymous: false, Attributes: nil},
+		}{Identifier: "harness", Name: &harness, Anonymous: false, Attributes: m},
 			args: struct{ attr string }{attr: "anonymous"}, want: types.Boolean(false)},
 		{name: "string operator", fields: struct {
 			Identifier string
@@ -63,8 +65,8 @@ func TestTarget_GetOperator(t1 *testing.T) {
 			t := Target{
 				Identifier: val.fields.Identifier,
 				Name:       val.fields.Name,
-				Anonymous:  val.fields.Anonymous,
-				Attributes: val.fields.Attributes,
+				Anonymous:  &val.fields.Anonymous,
+				Attributes: &val.fields.Attributes,
 			}
 			if got := t.GetOperator(val.args.attr); !reflect.DeepEqual(got, val.want) {
 				t1.Errorf("GetOperator() = %v, want %v", got, val.want)
@@ -115,8 +117,8 @@ func TestTarget_GetAttrValue(t1 *testing.T) {
 			t := Target{
 				Identifier: val.fields.Identifier,
 				Name:       val.fields.Name,
-				Anonymous:  val.fields.Anonymous,
-				Attributes: val.fields.Attributes,
+				Anonymous:  &val.fields.Anonymous,
+				Attributes: &val.fields.Attributes,
 			}
 			if got := t.GetAttrValue(val.args.attr); !reflect.DeepEqual(got.Interface(), val.want.Interface()) {
 				t1.Errorf("GetAttrValue() = %v, want %v", got, val.want)
@@ -126,6 +128,8 @@ func TestTarget_GetAttrValue(t1 *testing.T) {
 }
 
 func TestTarget_GetOperator1(t1 *testing.T) {
+	m := make(map[string]interface{})
+	m["anonymous"] = false
 	type fields struct {
 		Identifier string
 		Name       *string
@@ -148,7 +152,7 @@ func TestTarget_GetOperator1(t1 *testing.T) {
 			Name       *string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "john", Name: &name, Anonymous: false, Attributes: types.JSON{}},
+		}{Identifier: "john", Name: &name, Anonymous: false, Attributes: types.JSON{"anonymous": false}},
 			args: struct{ attr string }{attr: "anonymous"}, want: types.Boolean(false)},
 		{name: "string operator", fields: struct {
 			Identifier string
@@ -182,8 +186,8 @@ func TestTarget_GetOperator1(t1 *testing.T) {
 			t := Target{
 				Identifier: val.fields.Identifier,
 				Name:       val.fields.Name,
-				Anonymous:  val.fields.Anonymous,
-				Attributes: val.fields.Attributes,
+				Anonymous:  &val.fields.Anonymous,
+				Attributes: &val.fields.Attributes,
 			}
 			if got := t.GetOperator(val.args.attr); !reflect.DeepEqual(got, val.want) {
 				t1.Errorf("GetOperator() = %v, want %v", got, val.want)
