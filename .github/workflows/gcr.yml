@@ -1,0 +1,43 @@
+# This workflow will build a docker container, publish it to Google Container Registry,
+
+name: Build and Save to GCR
+
+on:
+  release:
+    types: [created]
+
+env:
+  PROJECT_ID: ${{ secrets.GCR_PROJECT }}
+  IMAGE: ${{ secrets.GCR_IMAGE }}
+
+jobs:
+  setup-build-publish:
+    name: Setup, Build, and Publish
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    # Setup gcloud CLI
+    - uses: google-github-actions/setup-gcloud@v0.2.0
+      with:
+        service_account_key: ${{ secrets.GCR_KEY }}
+        project_id: ${{ secrets.GCR_PROJECT }}
+
+    # Configure Docker to use the gcloud command-line tool as a credential
+    # helper for authentication
+    - run: |-
+        gcloud --quiet auth configure-docker
+
+    # Build the Docker image
+    - name: Build
+      run: make build-test-wrapper
+
+    # Push the Docker image to Google Container Registry
+    - name: Publish
+      run: |-
+        docker tag "us.gcr.io/$PROJECT_ID/$IMAGE:latest" "us.gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA"
+        docker push "us.gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA"
+

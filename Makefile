@@ -25,6 +25,8 @@ clean:
 test:
 	go test -race -v --cover ./...
 
+build-test-wrapper:
+	$(MAKE) -C test_wrapper build
 
 # Format go code and error if any changes are made
 PHONY+= format
