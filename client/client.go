@@ -420,7 +420,7 @@ func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultVa
 		if !result {
 			return fc.Variations.FindByIdentifier(fc.OffVariation).Int(defaultValue), nil
 		}
-		variation, err :=  fc.IntVariation(target)
+		variation, err := fc.IntVariation(target)
 		if err != nil {
 			return defaultValue, err
 		}

@@ -22,14 +22,13 @@ const (
 )
 
 var (
-	unexpectedType = fmt.Errorf("unexpected type")
-	nillTarget = fmt.Errorf("unable to get variation - target is null")
+	errUnexpectedType = fmt.Errorf("unexpected type")
 )
 
 // Evaluation object is in most cases returned value from evaluation
 // methods and contains results of evaluated feature flag for target object
 type Evaluation struct {
-	Flag  string
+	Flag      string
 	Variation Variation
 }
 
@@ -192,7 +191,7 @@ func (fc FeatureConfig) Evaluate(target *Target) (Evaluation, error) {
 	}
 
 	return Evaluation{
-		Flag:  fc.Feature,
+		Flag:      fc.Feature,
 		Variation: variation,
 	}, err
 }
@@ -235,7 +234,7 @@ func getVariation(fc FeatureConfig, target *Target) (Variation, error) {
 // BoolVariation returns boolean evaluation for target
 func (fc *FeatureConfig) BoolVariation(target *Target) (Variation, error) {
 	if fc.GetKind() != reflect.Bool {
-		return Variation{}, unexpectedType
+		return Variation{}, errUnexpectedType
 	}
 	return getVariation(*fc, target)
 }
@@ -243,7 +242,7 @@ func (fc *FeatureConfig) BoolVariation(target *Target) (Variation, error) {
 // StringVariation returns string evaluation for target
 func (fc *FeatureConfig) StringVariation(target *Target) (Variation, error) {
 	if fc.GetKind() != reflect.String {
-		return Variation{}, unexpectedType
+		return Variation{}, errUnexpectedType
 	}
 	return getVariation(*fc, target)
 }
@@ -251,7 +250,7 @@ func (fc *FeatureConfig) StringVariation(target *Target) (Variation, error) {
 // IntVariation returns int evaluation for target
 func (fc *FeatureConfig) IntVariation(target *Target) (Variation, error) {
 	if fc.GetKind() != reflect.Int {
-		return Variation{}, unexpectedType
+		return Variation{}, errUnexpectedType
 	}
 	return getVariation(*fc, target)
 }
@@ -259,7 +258,7 @@ func (fc *FeatureConfig) IntVariation(target *Target) (Variation, error) {
 // NumberVariation returns number evaluation for target
 func (fc *FeatureConfig) NumberVariation(target *Target) (Variation, error) {
 	if fc.GetKind() != reflect.Float64 {
-		return Variation{}, unexpectedType
+		return Variation{}, errUnexpectedType
 	}
 	return getVariation(*fc, target)
 }
@@ -267,7 +266,7 @@ func (fc *FeatureConfig) NumberVariation(target *Target) (Variation, error) {
 // JSONVariation returns json evaluation for target
 func (fc *FeatureConfig) JSONVariation(target *Target) (Variation, error) {
 	if fc.GetKind() != reflect.Map {
-		return Variation{}, unexpectedType
+		return Variation{}, errUnexpectedType
 	}
 	return getVariation(*fc, target)
 }

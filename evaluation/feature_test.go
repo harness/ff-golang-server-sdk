@@ -2,6 +2,7 @@ package evaluation
 
 import (
 	"encoding/json"
+
 	"github.com/stretchr/testify/assert"
 
 	"github.com/drone/ff-golang-server-sdk/types"
@@ -13,15 +14,14 @@ import (
 )
 
 const (
-	boolKind = "boolean"
+	boolKind   = "boolean"
 	stringKind = "string"
 	numberKind = "number"
-	intKind = "int"
-	jsonKind = "json"
+	intKind    = "int"
+	jsonKind   = "json"
 )
 
 func TestFeatureConfig_JsonVariation(t *testing.T) {
-
 
 	v1Value, err := json.Marshal(map[string]interface{}{
 		"name":    "sdk",
@@ -30,8 +30,6 @@ func TestFeatureConfig_JsonVariation(t *testing.T) {
 	if err != nil {
 		t.Fail()
 	}
-
-
 
 	v2Value, err := json.Marshal(map[string]interface{}{
 		"name":    "sdk",
@@ -44,46 +42,46 @@ func TestFeatureConfig_JsonVariation(t *testing.T) {
 	jsonflagName := "SimpleJSON"
 
 	on := Variation{
-		Name: stringPtr("On"),
-		Value: string(v1Value),
+		Name:       stringPtr("On"),
+		Value:      string(v1Value),
 		Identifier: "on",
 	}
 
 	off := Variation{
-		Name: stringPtr("Off"),
-		Value: string(v2Value),
+		Name:       stringPtr("Off"),
+		Value:      string(v2Value),
 		Identifier: "off",
 	}
 
 	other := Variation{
-		Name: stringPtr("Other"),
-		Value: "",
+		Name:       stringPtr("Other"),
+		Value:      "",
 		Identifier: "other",
 	}
 
 	tests := []struct {
-		name   string
+		name          string
 		featureConfig FeatureConfig
-		want   Variation
-		wantErr bool
+		want          Variation
+		wantErr       bool
 	}{
 		{
-			name: "Test on variation returned when flag is on",
+			name:          "Test on variation returned when flag is on",
 			featureConfig: makeFeatureConfig(jsonflagName, jsonKind, on, off, on, FeatureStateOn, nil),
-			want: on,
-			wantErr: false,
+			want:          on,
+			wantErr:       false,
 		},
 		{
-			name: "Test off variation returned when flag is off",
+			name:          "Test off variation returned when flag is off",
 			featureConfig: makeFeatureConfig(jsonflagName, jsonKind, on, off, on, FeatureStateOff, nil),
-			want: off,
-			wantErr: false,
+			want:          off,
+			wantErr:       false,
 		},
 		{
-			name: "Test error returned when invalid default serve is provided",
+			name:          "Test error returned when invalid default serve is provided",
 			featureConfig: makeFeatureConfig(jsonflagName, jsonKind, on, off, other, FeatureStateOn, nil),
-			want: Variation{},
-			wantErr: true,
+			want:          Variation{},
+			wantErr:       true,
 		},
 	}
 	for _, tt := range tests {
@@ -104,46 +102,46 @@ func TestFeatureConfig_StringVariation(t *testing.T) {
 	stringflagName := "SimpleString"
 
 	on := Variation{
-		Name: stringPtr("On"),
-		Value: "v1",
+		Name:       stringPtr("On"),
+		Value:      "v1",
 		Identifier: "on",
 	}
 
 	off := Variation{
-		Name: stringPtr("Off"),
-		Value: "v2",
+		Name:       stringPtr("Off"),
+		Value:      "v2",
 		Identifier: "off",
 	}
 
 	other := Variation{
-		Name: stringPtr("Other"),
-		Value: "v3",
+		Name:       stringPtr("Other"),
+		Value:      "v3",
 		Identifier: "other",
 	}
 
 	tests := []struct {
-		name   string
+		name          string
 		featureConfig FeatureConfig
-		want   Variation
-		wantErr bool
+		want          Variation
+		wantErr       bool
 	}{
 		{
-			name: "Test on variation returned when flag is on",
+			name:          "Test on variation returned when flag is on",
 			featureConfig: makeFeatureConfig(stringflagName, stringKind, on, off, on, FeatureStateOn, nil),
-			want: on,
-			wantErr: false,
+			want:          on,
+			wantErr:       false,
 		},
 		{
-			name: "Test off variation returned when flag is off",
+			name:          "Test off variation returned when flag is off",
 			featureConfig: makeFeatureConfig(stringflagName, stringKind, on, off, on, FeatureStateOff, nil),
-			want: off,
-			wantErr: false,
+			want:          off,
+			wantErr:       false,
 		},
 		{
-			name: "Test error returned when invalid default serve is provided",
+			name:          "Test error returned when invalid default serve is provided",
 			featureConfig: makeFeatureConfig(stringflagName, stringKind, on, off, other, FeatureStateOn, nil),
-			want: Variation{},
-			wantErr: true,
+			want:          Variation{},
+			wantErr:       true,
 		},
 	}
 	for _, tt := range tests {
@@ -164,46 +162,46 @@ func TestFeatureConfig_NumberVariation(t *testing.T) {
 	numberflagName := "SimpleNumber"
 
 	on := Variation{
-		Name: stringPtr("On"),
-		Value: strconv.FormatFloat(1.0, 'f', -1, 64),
+		Name:       stringPtr("On"),
+		Value:      strconv.FormatFloat(1.0, 'f', -1, 64),
 		Identifier: "on",
 	}
 
 	off := Variation{
-		Name: stringPtr("Off"),
-		Value: strconv.FormatFloat(2.0, 'f', -1, 64),
+		Name:       stringPtr("Off"),
+		Value:      strconv.FormatFloat(2.0, 'f', -1, 64),
 		Identifier: "off",
 	}
 
 	other := Variation{
-		Name: stringPtr("Other"),
-		Value: strconv.FormatFloat(3.0, 'f', -1, 64),
+		Name:       stringPtr("Other"),
+		Value:      strconv.FormatFloat(3.0, 'f', -1, 64),
 		Identifier: "other",
 	}
 
 	tests := []struct {
-		name   string
+		name          string
 		featureConfig FeatureConfig
-		want   Variation
-		wantErr bool
+		want          Variation
+		wantErr       bool
 	}{
 		{
-			name: "Test on variation returned when flag is on",
+			name:          "Test on variation returned when flag is on",
 			featureConfig: makeFeatureConfig(numberflagName, numberKind, on, off, on, FeatureStateOn, nil),
-			want: on,
-			wantErr: false,
+			want:          on,
+			wantErr:       false,
 		},
 		{
-			name: "Test off variation returned when flag is off",
+			name:          "Test off variation returned when flag is off",
 			featureConfig: makeFeatureConfig(numberflagName, numberKind, on, off, on, FeatureStateOff, nil),
-			want: off,
-			wantErr: false,
+			want:          off,
+			wantErr:       false,
 		},
 		{
-			name: "Test error returned when invalid default serve is provided",
+			name:          "Test error returned when invalid default serve is provided",
 			featureConfig: makeFeatureConfig(numberflagName, numberKind, on, off, other, FeatureStateOn, nil),
-			want: Variation{},
-			wantErr: true,
+			want:          Variation{},
+			wantErr:       true,
 		},
 	}
 	for _, tt := range tests {
@@ -224,46 +222,46 @@ func TestFeatureConfig_IntVariation(t *testing.T) {
 	intflagName := "SimpleInt"
 
 	on := Variation{
-		Name: stringPtr("On"),
-		Value: strconv.FormatInt(4, 10),
+		Name:       stringPtr("On"),
+		Value:      strconv.FormatInt(4, 10),
 		Identifier: "on",
 	}
 
 	off := Variation{
-		Name: stringPtr("Off"),
-		Value: strconv.FormatInt(9, 10),
+		Name:       stringPtr("Off"),
+		Value:      strconv.FormatInt(9, 10),
 		Identifier: "off",
 	}
 
 	other := Variation{
-		Name: stringPtr("Other"),
-		Value: strconv.FormatInt(19, 10),
+		Name:       stringPtr("Other"),
+		Value:      strconv.FormatInt(19, 10),
 		Identifier: "other",
 	}
 
 	tests := []struct {
-		name   string
+		name          string
 		featureConfig FeatureConfig
-		want   Variation
-		wantErr bool
+		want          Variation
+		wantErr       bool
 	}{
 		{
-			name: "Test on variation returned when flag is on",
+			name:          "Test on variation returned when flag is on",
 			featureConfig: makeFeatureConfig(intflagName, intKind, on, off, on, FeatureStateOn, nil),
-			want: on,
-			wantErr: false,
+			want:          on,
+			wantErr:       false,
 		},
 		{
-			name: "Test off variation returned when flag is off",
+			name:          "Test off variation returned when flag is off",
 			featureConfig: makeFeatureConfig(intflagName, intKind, on, off, on, FeatureStateOff, nil),
-			want: off,
-			wantErr: false,
+			want:          off,
+			wantErr:       false,
 		},
 		{
-			name: "Test error returned when invalid default serve is provided",
+			name:          "Test error returned when invalid default serve is provided",
 			featureConfig: makeFeatureConfig(intflagName, intKind, on, off, other, FeatureStateOn, nil),
-			want: Variation{},
-			wantErr: true,
+			want:          Variation{},
+			wantErr:       true,
 		},
 	}
 	for _, tt := range tests {
@@ -383,7 +381,7 @@ func TestServingRules_GetVariationName(t *testing.T) {
 func makeIdentifierRule(values []string, operator, variationToServe string) []ServingRule {
 	rule := ServingRule{
 		Priority: 0,
-		RuleID: uuid.NewString(),
+		RuleID:   uuid.NewString(),
 		Clauses: []Clause{
 			{Attribute: "identifier", ID: "id", Negate: false, Op: operator, Value: values},
 		},
@@ -400,14 +398,14 @@ func makeFeatureConfig(name, kind string, variation1, variation2, defaultServe V
 		DefaultServe: Serve{
 			Variation: &defaultServe.Identifier,
 		},
-		Environment:   "dev",
-		Feature:       name,
-		Kind:          kind,
-		OffVariation:  variation2.Identifier,
-		Rules: rules,
-		Prerequisites: nil,
-		Project:       "default",
-		State:         state,
+		Environment:          "dev",
+		Feature:              name,
+		Kind:                 kind,
+		OffVariation:         variation2.Identifier,
+		Rules:                rules,
+		Prerequisites:        nil,
+		Project:              "default",
+		State:                state,
 		VariationToTargetMap: nil,
 		Variations: []Variation{
 			{Description: nil, Identifier: variation1.Identifier, Name: variation1.Name, Value: variation1.Value},
@@ -429,14 +427,14 @@ func TestFeatureConfig_Evaluate(t *testing.T) {
 	boolFlagName := "SimpleBool"
 
 	onBool := Variation{
-		Name: stringPtr("On"),
-		Value: "true",
+		Name:       stringPtr("On"),
+		Value:      "true",
 		Identifier: "on",
 	}
 
 	offBool := Variation{
-		Name: stringPtr("Off"),
-		Value: "false",
+		Name:       stringPtr("Off"),
+		Value:      "false",
 		Identifier: "off",
 	}
 
@@ -451,42 +449,42 @@ func TestFeatureConfig_Evaluate(t *testing.T) {
 		target *Target
 	}
 	tests := []struct {
-		name   string
+		name          string
 		featureConfig FeatureConfig
-		args   args
-		want   Evaluation
-		wantErr bool
+		args          args
+		want          Evaluation
+		wantErr       bool
 	}{
 		{
-			name: "Test Bool FeatureConfig with no rules serves variation onBool when on",
+			name:          "Test Bool FeatureConfig with no rules serves variation onBool when on",
 			featureConfig: makeFeatureConfig(boolFlagName, boolKind, onBool, offBool, onBool, FeatureStateOn, nil),
-			args: args{&target},
-			want: Evaluation{Flag:  boolFlagName, Variation: onBool},
-			wantErr: false},
+			args:          args{&target},
+			want:          Evaluation{Flag: boolFlagName, Variation: onBool},
+			wantErr:       false},
 		{
-			name: "Test Bool FeatureConfig Evaluate with no rules serves variation offBool when off",
-			featureConfig: makeFeatureConfig(boolFlagName, boolKind, onBool,offBool, onBool, FeatureStateOff, nil),
-			args: args{&target},
-			want: Evaluation{Flag:  boolFlagName, Variation: offBool},
-			wantErr: false},
+			name:          "Test Bool FeatureConfig Evaluate with no rules serves variation offBool when off",
+			featureConfig: makeFeatureConfig(boolFlagName, boolKind, onBool, offBool, onBool, FeatureStateOff, nil),
+			args:          args{&target},
+			want:          Evaluation{Flag: boolFlagName, Variation: offBool},
+			wantErr:       false},
 		{
-			name: "Test Bool FeatureConfig Evaluate with 'attribute equals rule' serves offBool on match when flag on",
-			featureConfig: makeFeatureConfig(boolFlagName, boolKind, onBool, offBool, onBool, FeatureStateOn, makeIdentifierRule([]string{harness},equalOperator, offBool.Identifier)),
-		    args: args{&target},
-			want: Evaluation{Flag:  boolFlagName, Variation: offBool},
-			wantErr: false},
+			name:          "Test Bool FeatureConfig Evaluate with 'attribute equals rule' serves offBool on match when flag on",
+			featureConfig: makeFeatureConfig(boolFlagName, boolKind, onBool, offBool, onBool, FeatureStateOn, makeIdentifierRule([]string{harness}, equalOperator, offBool.Identifier)),
+			args:          args{&target},
+			want:          Evaluation{Flag: boolFlagName, Variation: offBool},
+			wantErr:       false},
 		{
-			name: "Test Bool FeatureConfig Evaluate with 'attribute equals rule' serves onBool on non-match when flag on",
-			featureConfig: makeFeatureConfig(boolFlagName, boolKind, onBool, offBool, onBool, FeatureStateOn, makeIdentifierRule([]string{"foobar"},equalOperator, offBool.Identifier)),
-			args: args{&target},
-			want: Evaluation{Flag:  boolFlagName, Variation: onBool},
-			wantErr: false},
+			name:          "Test Bool FeatureConfig Evaluate with 'attribute equals rule' serves onBool on non-match when flag on",
+			featureConfig: makeFeatureConfig(boolFlagName, boolKind, onBool, offBool, onBool, FeatureStateOn, makeIdentifierRule([]string{"foobar"}, equalOperator, offBool.Identifier)),
+			args:          args{&target},
+			want:          Evaluation{Flag: boolFlagName, Variation: onBool},
+			wantErr:       false},
 	}
 	for _, tt := range tests {
 		tc := tt
 		t.Run(tc.name, func(t *testing.T) {
 			fc := tc.featureConfig
-			got, err := fc.Evaluate(tc.args.target);
+			got, err := fc.Evaluate(tc.args.target)
 			if (err != nil) != tc.wantErr {
 				t.Errorf("BoolVariation() error = %v, wantErr %v", err, tc.wantErr)
 				return
