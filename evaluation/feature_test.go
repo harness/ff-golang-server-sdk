@@ -2,434 +2,280 @@ package evaluation
 
 import (
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/drone/ff-golang-server-sdk/types"
 
-	"reflect"
 	"strconv"
 	"testing"
 
 	"github.com/google/uuid"
 )
 
+const (
+	boolKind = "boolean"
+	stringKind = "string"
+	numberKind = "number"
+	intKind = "int"
+	jsonKind = "json"
+)
+
 func TestFeatureConfig_JsonVariation(t *testing.T) {
-	v1 := "v1"
-	v1Value := map[string]interface{}{
+
+
+	v1Value, err := json.Marshal(map[string]interface{}{
 		"name":    "sdk",
 		"version": "1.0",
-	}
-
-	body, err := json.Marshal(v1Value)
+	})
 	if err != nil {
 		t.Fail()
 	}
-	v1Str := string(body)
 
-	v2 := "v2"
-	v2Value := map[string]interface{}{}
-	body, err = json.Marshal(v2Value)
+
+
+	v2Value, err := json.Marshal(map[string]interface{}{
+		"name":    "sdk",
+		"version": "2.0",
+	})
 	if err != nil {
 		t.Fail()
 	}
-	v2Str := string(body)
 
-	type fields struct {
-		DefaultServe         Serve
-		Environment          string
-		Feature              string
-		Kind                 string
-		OffVariation         string
-		Prerequisites        []Prerequisite
-		Project              string
-		Rules                ServingRules
-		State                FeatureState
-		VariationToTargetMap []VariationMap
-		Variations           Variations
+	jsonflagName := "SimpleJSON"
+
+	on := Variation{
+		Name: stringPtr("On"),
+		Value: string(v1Value),
+		Identifier: "on",
 	}
-	type args struct {
-		target       *Target
-		defaultValue types.JSON
+
+	off := Variation{
+		Name: stringPtr("Off"),
+		Value: string(v2Value),
+		Identifier: "off",
 	}
+
+	other := Variation{
+		Name: stringPtr("Other"),
+		Value: "",
+		Identifier: "other",
+	}
+
 	tests := []struct {
 		name   string
-		fields fields
-		args   args
-		want   types.JSON
+		featureConfig FeatureConfig
+		want   Variation
+		wantErr bool
 	}{
-		{name: "on state", fields: struct {
-			DefaultServe         Serve
-			Environment          string
-			Feature              string
-			Kind                 string
-			OffVariation         string
-			Prerequisites        []Prerequisite
-			Project              string
-			Rules                ServingRules
-			State                FeatureState
-			VariationToTargetMap []VariationMap
-			Variations           Variations
-		}{DefaultServe: struct {
-			Distribution *Distribution
-			Variation    *string
-		}{Distribution: nil, Variation: &v1}, Environment: "dev", Feature: "flag", Kind: "json",
-			OffVariation: v2, Prerequisites: nil, Project: "default", Rules: []ServingRule{}, State: "on",
-			VariationToTargetMap: nil, Variations: []Variation{
-				{Description: nil, Identifier: v1, Name: &v1, Value: v1Str},
-				{Description: nil, Identifier: v2, Name: &v2, Value: v2Str},
-			}}, args: struct {
-			target       *Target
-			defaultValue types.JSON
-		}{target: nil, defaultValue: map[string]interface{}{
-			"name":    "cf server",
-			"version": "1.0",
-		}}, want: v1Value},
-		{name: "off state", fields: struct {
-			DefaultServe         Serve
-			Environment          string
-			Feature              string
-			Kind                 string
-			OffVariation         string
-			Prerequisites        []Prerequisite
-			Project              string
-			Rules                ServingRules
-			State                FeatureState
-			VariationToTargetMap []VariationMap
-			Variations           Variations
-		}{DefaultServe: struct {
-			Distribution *Distribution
-			Variation    *string
-		}{Distribution: nil, Variation: &v2}, Environment: "dev", Feature: "flag", Kind: "json",
-			OffVariation: v2, Prerequisites: nil, Project: "default", Rules: []ServingRule{}, State: "off",
-			VariationToTargetMap: nil, Variations: []Variation{
-				{Description: nil, Identifier: v1, Name: &v1, Value: v1Str},
-				{Description: nil, Identifier: v2, Name: &v2, Value: v2Str},
-			}}, args: struct {
-			target       *Target
-			defaultValue types.JSON
-		}{target: nil, defaultValue: map[string]interface{}{
-			"name":    "cf server",
-			"version": "1.0",
-		}}, want: v2Value},
+		{
+			name: "Test on variation returned when flag is on",
+			featureConfig: makeFeatureConfig(jsonflagName, jsonKind, on, off, on, FeatureStateOn, nil),
+			want: on,
+			wantErr: false,
+		},
+		{
+			name: "Test off variation returned when flag is off",
+			featureConfig: makeFeatureConfig(jsonflagName, jsonKind, on, off, on, FeatureStateOff, nil),
+			want: off,
+			wantErr: false,
+		},
+		{
+			name: "Test error returned when invalid default serve is provided",
+			featureConfig: makeFeatureConfig(jsonflagName, jsonKind, on, off, other, FeatureStateOn, nil),
+			want: Variation{},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		val := tt
 		t.Run(tt.name, func(t *testing.T) {
-			fc := &FeatureConfig{
-				DefaultServe:         val.fields.DefaultServe,
-				Environment:          val.fields.Environment,
-				Feature:              val.fields.Feature,
-				Kind:                 val.fields.Kind,
-				OffVariation:         val.fields.OffVariation,
-				Prerequisites:        val.fields.Prerequisites,
-				Project:              val.fields.Project,
-				Rules:                val.fields.Rules,
-				State:                val.fields.State,
-				VariationToTargetMap: val.fields.VariationToTargetMap,
-				Variations:           val.fields.Variations,
+			fc := val.featureConfig
+			got, err := fc.JSONVariation(nil)
+			if (err != nil) != val.wantErr {
+				t.Errorf("JSONVariation() error = %v, wantErr %v", err, val.wantErr)
+				return
 			}
-			if got := fc.JSONVariation(val.args.target, val.args.defaultValue); !reflect.DeepEqual(got, val.want) {
-				t.Errorf("JSONVariation() = %v, want %v", got, val.want)
-			}
+			assert.Equal(t, val.want, got, "JSONVariation() = %v, want %v", got, val.want)
 		})
 	}
 }
 
 func TestFeatureConfig_StringVariation(t *testing.T) {
-	v1Id := "v1"
-	v1Value := "v1"
-	v2Id := "v2"
-	v2Value := "v2"
-	type fields struct {
-		DefaultServe         Serve
-		Environment          string
-		Feature              string
-		Kind                 string
-		OffVariation         string
-		Prerequisites        []Prerequisite
-		Project              string
-		Rules                ServingRules
-		State                FeatureState
-		VariationToTargetMap []VariationMap
-		Variations           Variations
+	stringflagName := "SimpleString"
+
+	on := Variation{
+		Name: stringPtr("On"),
+		Value: "v1",
+		Identifier: "on",
 	}
-	type args struct {
-		target       *Target
-		defaultValue string
+
+	off := Variation{
+		Name: stringPtr("Off"),
+		Value: "v2",
+		Identifier: "off",
 	}
+
+	other := Variation{
+		Name: stringPtr("Other"),
+		Value: "v3",
+		Identifier: "other",
+	}
+
 	tests := []struct {
 		name   string
-		fields fields
-		args   args
-		want   string
+		featureConfig FeatureConfig
+		want   Variation
+		wantErr bool
 	}{
-		{name: "on variation", fields: struct {
-			DefaultServe         Serve
-			Environment          string
-			Feature              string
-			Kind                 string
-			OffVariation         string
-			Prerequisites        []Prerequisite
-			Project              string
-			Rules                ServingRules
-			State                FeatureState
-			VariationToTargetMap []VariationMap
-			Variations           Variations
-		}{DefaultServe: struct {
-			Distribution *Distribution
-			Variation    *string
-		}{Distribution: nil, Variation: &v1Id}, Environment: "dev", Feature: "flag", Kind: "string",
-			OffVariation: "v2", Prerequisites: nil, Project: "default", Rules: []ServingRule{}, State: "on",
-			VariationToTargetMap: nil, Variations: []Variation{
-				{Description: nil, Identifier: v1Id, Name: &v1Id, Value: v1Value},
-				{Description: nil, Identifier: v2Id, Name: &v2Id, Value: v2Value},
-			}}, args: struct {
-			target       *Target
-			defaultValue string
-		}{target: nil, defaultValue: "v1"}, want: v1Value},
-		{name: "off variation", fields: struct {
-			DefaultServe         Serve
-			Environment          string
-			Feature              string
-			Kind                 string
-			OffVariation         string
-			Prerequisites        []Prerequisite
-			Project              string
-			Rules                ServingRules
-			State                FeatureState
-			VariationToTargetMap []VariationMap
-			Variations           Variations
-		}{DefaultServe: struct {
-			Distribution *Distribution
-			Variation    *string
-		}{Distribution: nil, Variation: &v1Id}, Environment: "dev", Feature: "flag", Kind: "string",
-			OffVariation: "v2", Prerequisites: nil, Project: "default", Rules: []ServingRule{}, State: "off",
-			VariationToTargetMap: nil, Variations: []Variation{
-				{Description: nil, Identifier: v1Id, Name: &v1Id, Value: v1Value},
-				{Description: nil, Identifier: v2Id, Name: &v2Id, Value: v2Value},
-			}}, args: struct {
-			target       *Target
-			defaultValue string
-		}{target: nil, defaultValue: "v1"}, want: v2Value},
+		{
+			name: "Test on variation returned when flag is on",
+			featureConfig: makeFeatureConfig(stringflagName, stringKind, on, off, on, FeatureStateOn, nil),
+			want: on,
+			wantErr: false,
+		},
+		{
+			name: "Test off variation returned when flag is off",
+			featureConfig: makeFeatureConfig(stringflagName, stringKind, on, off, on, FeatureStateOff, nil),
+			want: off,
+			wantErr: false,
+		},
+		{
+			name: "Test error returned when invalid default serve is provided",
+			featureConfig: makeFeatureConfig(stringflagName, stringKind, on, off, other, FeatureStateOn, nil),
+			want: Variation{},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		val := tt
 		t.Run(tt.name, func(t *testing.T) {
-			fc := &FeatureConfig{
-				DefaultServe:         val.fields.DefaultServe,
-				Environment:          val.fields.Environment,
-				Feature:              val.fields.Feature,
-				Kind:                 val.fields.Kind,
-				OffVariation:         val.fields.OffVariation,
-				Prerequisites:        val.fields.Prerequisites,
-				Project:              val.fields.Project,
-				Rules:                val.fields.Rules,
-				State:                val.fields.State,
-				VariationToTargetMap: val.fields.VariationToTargetMap,
-				Variations:           val.fields.Variations,
+			fc := val.featureConfig
+			got, err := fc.StringVariation(nil)
+			if (err != nil) != val.wantErr {
+				t.Errorf("StringVariation() error = %v, wantErr %v", err, val.wantErr)
+				return
 			}
-			if got := fc.StringVariation(val.args.target, val.args.defaultValue); got != val.want {
-				t.Errorf("StringVariation() = %v, want %v", got, val.want)
-			}
+			assert.Equal(t, val.want, got, "StringVariation() = %v, want %v", got, val.want)
 		})
 	}
 }
 
 func TestFeatureConfig_NumberVariation(t *testing.T) {
-	v1Id := "v1"
-	v1Value := 1.0
-	v2Id := "v2"
-	v2Value := 2.0
-	type fields struct {
-		DefaultServe         Serve
-		Environment          string
-		Feature              string
-		Kind                 string
-		OffVariation         string
-		Prerequisites        []Prerequisite
-		Project              string
-		Rules                ServingRules
-		State                FeatureState
-		VariationToTargetMap []VariationMap
-		Variations           Variations
+	numberflagName := "SimpleNumber"
+
+	on := Variation{
+		Name: stringPtr("On"),
+		Value: strconv.FormatFloat(1.0, 'f', -1, 64),
+		Identifier: "on",
 	}
-	type args struct {
-		target       *Target
-		defaultValue float64
+
+	off := Variation{
+		Name: stringPtr("Off"),
+		Value: strconv.FormatFloat(2.0, 'f', -1, 64),
+		Identifier: "off",
 	}
+
+	other := Variation{
+		Name: stringPtr("Other"),
+		Value: strconv.FormatFloat(3.0, 'f', -1, 64),
+		Identifier: "other",
+	}
+
 	tests := []struct {
 		name   string
-		fields fields
-		args   args
-		want   float64
+		featureConfig FeatureConfig
+		want   Variation
+		wantErr bool
 	}{
-		{name: "on variation", fields: struct {
-			DefaultServe         Serve
-			Environment          string
-			Feature              string
-			Kind                 string
-			OffVariation         string
-			Prerequisites        []Prerequisite
-			Project              string
-			Rules                ServingRules
-			State                FeatureState
-			VariationToTargetMap []VariationMap
-			Variations           Variations
-		}{DefaultServe: struct {
-			Distribution *Distribution
-			Variation    *string
-		}{Distribution: nil, Variation: &v1Id}, Environment: "dev", Feature: "flag", Kind: "number",
-			OffVariation: "v2", Prerequisites: nil, Project: "default", Rules: []ServingRule{}, State: "on",
-			VariationToTargetMap: nil, Variations: []Variation{
-				{Description: nil, Identifier: v1Id, Name: &v1Id, Value: strconv.FormatFloat(v1Value, 'f', -1, 64)},
-				{Description: nil, Identifier: v2Id, Name: &v2Id, Value: strconv.FormatFloat(v2Value, 'f', -1, 64)},
-			}}, args: struct {
-			target       *Target
-			defaultValue float64
-		}{target: nil, defaultValue: 1.0}, want: v1Value},
-		{name: "off variation", fields: struct {
-			DefaultServe         Serve
-			Environment          string
-			Feature              string
-			Kind                 string
-			OffVariation         string
-			Prerequisites        []Prerequisite
-			Project              string
-			Rules                ServingRules
-			State                FeatureState
-			VariationToTargetMap []VariationMap
-			Variations           Variations
-		}{DefaultServe: struct {
-			Distribution *Distribution
-			Variation    *string
-		}{Distribution: nil, Variation: &v1Id}, Environment: "dev", Feature: "flag", Kind: "number",
-			OffVariation: "v2", Prerequisites: nil, Project: "default", Rules: []ServingRule{}, State: "off",
-			VariationToTargetMap: nil, Variations: []Variation{
-				{Description: nil, Identifier: v1Id, Name: &v1Id, Value: strconv.FormatFloat(v1Value, 'f', -1, 64)},
-				{Description: nil, Identifier: v2Id, Name: &v2Id, Value: strconv.FormatFloat(v2Value, 'f', -1, 64)},
-			}}, args: struct {
-			target       *Target
-			defaultValue float64
-		}{target: nil, defaultValue: 1.0}, want: v2Value},
+		{
+			name: "Test on variation returned when flag is on",
+			featureConfig: makeFeatureConfig(numberflagName, numberKind, on, off, on, FeatureStateOn, nil),
+			want: on,
+			wantErr: false,
+		},
+		{
+			name: "Test off variation returned when flag is off",
+			featureConfig: makeFeatureConfig(numberflagName, numberKind, on, off, on, FeatureStateOff, nil),
+			want: off,
+			wantErr: false,
+		},
+		{
+			name: "Test error returned when invalid default serve is provided",
+			featureConfig: makeFeatureConfig(numberflagName, numberKind, on, off, other, FeatureStateOn, nil),
+			want: Variation{},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		val := tt
 		t.Run(tt.name, func(t *testing.T) {
-			fc := &FeatureConfig{
-				DefaultServe:         val.fields.DefaultServe,
-				Environment:          val.fields.Environment,
-				Feature:              val.fields.Feature,
-				Kind:                 val.fields.Kind,
-				OffVariation:         val.fields.OffVariation,
-				Prerequisites:        val.fields.Prerequisites,
-				Project:              val.fields.Project,
-				Rules:                val.fields.Rules,
-				State:                val.fields.State,
-				VariationToTargetMap: val.fields.VariationToTargetMap,
-				Variations:           val.fields.Variations,
+			fc := val.featureConfig
+			got, err := fc.NumberVariation(nil)
+			if (err != nil) != val.wantErr {
+				t.Errorf("NumberVariation() error = %v, wantErr %v", err, val.wantErr)
+				return
 			}
-			if got := fc.NumberVariation(val.args.target, val.args.defaultValue); got != val.want {
-				t.Errorf("NumberVariation() = %v, want %v", got, val.want)
-			}
+			assert.Equal(t, val.want, got, "NumberVariation() = %v, want %v", got, val.want)
 		})
 	}
 }
 
 func TestFeatureConfig_IntVariation(t *testing.T) {
-	v1Id := "v1"
-	v1Value := 5
-	v2Id := "v2"
-	v2Value := 9
-	type fields struct {
-		DefaultServe         Serve
-		Environment          string
-		Feature              string
-		Kind                 string
-		OffVariation         string
-		Prerequisites        []Prerequisite
-		Project              string
-		Rules                ServingRules
-		State                FeatureState
-		VariationToTargetMap []VariationMap
-		Variations           Variations
+	intflagName := "SimpleInt"
+
+	on := Variation{
+		Name: stringPtr("On"),
+		Value: strconv.FormatInt(4, 10),
+		Identifier: "on",
 	}
-	type args struct {
-		target       *Target
-		defaultValue int64
+
+	off := Variation{
+		Name: stringPtr("Off"),
+		Value: strconv.FormatInt(9, 10),
+		Identifier: "off",
 	}
+
+	other := Variation{
+		Name: stringPtr("Other"),
+		Value: strconv.FormatInt(19, 10),
+		Identifier: "other",
+	}
+
 	tests := []struct {
 		name   string
-		fields fields
-		args   args
-		want   int64
+		featureConfig FeatureConfig
+		want   Variation
+		wantErr bool
 	}{
-		{name: "on variation", fields: struct {
-			DefaultServe         Serve
-			Environment          string
-			Feature              string
-			Kind                 string
-			OffVariation         string
-			Prerequisites        []Prerequisite
-			Project              string
-			Rules                ServingRules
-			State                FeatureState
-			VariationToTargetMap []VariationMap
-			Variations           Variations
-		}{DefaultServe: struct {
-			Distribution *Distribution
-			Variation    *string
-		}{Distribution: nil, Variation: &v1Id}, Environment: "dev", Feature: "flag", Kind: "int",
-			OffVariation: "v2", Prerequisites: nil, Project: "default", Rules: []ServingRule{}, State: "on",
-			VariationToTargetMap: nil, Variations: []Variation{
-				{Description: nil, Identifier: v1Id, Name: &v1Id, Value: strconv.Itoa(v1Value)},
-				{Description: nil, Identifier: v2Id, Name: &v2Id, Value: strconv.Itoa(v2Value)},
-			}}, args: struct {
-			target       *Target
-			defaultValue int64
-		}{target: nil, defaultValue: 1.0}, want: int64(v1Value)},
-		{name: "off variation", fields: struct {
-			DefaultServe         Serve
-			Environment          string
-			Feature              string
-			Kind                 string
-			OffVariation         string
-			Prerequisites        []Prerequisite
-			Project              string
-			Rules                ServingRules
-			State                FeatureState
-			VariationToTargetMap []VariationMap
-			Variations           Variations
-		}{DefaultServe: struct {
-			Distribution *Distribution
-			Variation    *string
-		}{Distribution: nil, Variation: &v1Id}, Environment: "dev", Feature: "flag", Kind: "int",
-			OffVariation: "v2", Prerequisites: nil, Project: "default", Rules: []ServingRule{}, State: "off",
-			VariationToTargetMap: nil, Variations: []Variation{
-				{Description: nil, Identifier: v1Id, Name: &v1Id, Value: strconv.Itoa(v1Value)},
-				{Description: nil, Identifier: v2Id, Name: &v2Id, Value: strconv.Itoa(v2Value)},
-			}}, args: struct {
-			target       *Target
-			defaultValue int64
-		}{target: nil, defaultValue: 1.0}, want: int64(v2Value)},
+		{
+			name: "Test on variation returned when flag is on",
+			featureConfig: makeFeatureConfig(intflagName, intKind, on, off, on, FeatureStateOn, nil),
+			want: on,
+			wantErr: false,
+		},
+		{
+			name: "Test off variation returned when flag is off",
+			featureConfig: makeFeatureConfig(intflagName, intKind, on, off, on, FeatureStateOff, nil),
+			want: off,
+			wantErr: false,
+		},
+		{
+			name: "Test error returned when invalid default serve is provided",
+			featureConfig: makeFeatureConfig(intflagName, intKind, on, off, other, FeatureStateOn, nil),
+			want: Variation{},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		val := tt
 		t.Run(tt.name, func(t *testing.T) {
-			fc := &FeatureConfig{
-				DefaultServe:         val.fields.DefaultServe,
-				Environment:          val.fields.Environment,
-				Feature:              val.fields.Feature,
-				Kind:                 val.fields.Kind,
-				OffVariation:         val.fields.OffVariation,
-				Prerequisites:        val.fields.Prerequisites,
-				Project:              val.fields.Project,
-				Rules:                val.fields.Rules,
-				State:                val.fields.State,
-				VariationToTargetMap: val.fields.VariationToTargetMap,
-				Variations:           val.fields.Variations,
+			fc := val.featureConfig
+			got, err := fc.IntVariation(nil)
+			if (err != nil) != val.wantErr {
+				t.Errorf("IntVariation() error = %v, wantErr %v", err, val.wantErr)
+				return
 			}
-			if got := fc.IntVariation(val.args.target, val.args.defaultValue); got != val.want {
-				t.Errorf("IntVariation() = %v, want %v", got, val.want)
-			}
+			assert.Equal(t, val.want, got, "IntVariation() = %v, want %v", got, val.want)
 		})
 	}
 }
@@ -531,93 +377,121 @@ func TestServingRules_GetVariationName(t *testing.T) {
 	}
 }
 
+// Creates a slice of ServingRule. This slice will contain one clause, that
+// states the 'identifier' attribute must be evaluated using the operator parameter against
+// the list of values, and if successful return the varation specified in the variationToServe parameter.
+func makeIdentifierRule(values []string, operator, variationToServe string) []ServingRule {
+	rule := ServingRule{
+		Priority: 0,
+		RuleID: uuid.NewString(),
+		Clauses: []Clause{
+			{Attribute: "identifier", ID: "id", Negate: false, Op: operator, Value: values},
+		},
+		Serve: Serve{
+			Variation: &variationToServe,
+		},
+	}
+	return []ServingRule{rule}
+}
+
+func makeFeatureConfig(name, kind string, variation1, variation2, defaultServe Variation, state FeatureState, rules []ServingRule) FeatureConfig {
+
+	return FeatureConfig{
+		DefaultServe: Serve{
+			Variation: &defaultServe.Identifier,
+		},
+		Environment:   "dev",
+		Feature:       name,
+		Kind:          kind,
+		OffVariation:  variation2.Identifier,
+		Rules: rules,
+		Prerequisites: nil,
+		Project:       "default",
+		State:         state,
+		VariationToTargetMap: nil,
+		Variations: []Variation{
+			{Description: nil, Identifier: variation1.Identifier, Name: variation1.Name, Value: variation1.Value},
+			{Description: nil, Identifier: variation2.Identifier, Name: variation2.Name, Value: variation2.Value},
+		},
+	}
+}
+
+func stringPtr(value string) *string {
+	return &value
+}
+
 func TestFeatureConfig_Evaluate(t *testing.T) {
 	f := false
 	harness := "Harness"
-	v1 := "v1"
-	v2 := "v2"
 	m := make(map[string]interface{})
 	m["email"] = "john@doe.com"
+
+	boolFlagName := "SimpleBool"
+
+	onBool := Variation{
+		Name: stringPtr("On"),
+		Value: "true",
+		Identifier: "on",
+	}
+
+	offBool := Variation{
+		Name: stringPtr("Off"),
+		Value: "false",
+		Identifier: "off",
+	}
+
 	target := Target{
 		Identifier: harness,
 		Name:       nil,
 		Anonymous:  &f,
 		Attributes: &m,
 	}
-	type fields struct {
-		DefaultServe         Serve
-		Environment          string
-		Feature              string
-		Kind                 string
-		OffVariation         string
-		Prerequisites        []Prerequisite
-		Project              string
-		Rules                ServingRules
-		State                FeatureState
-		VariationToTargetMap []VariationMap
-		Variations           Variations
-	}
+
 	type args struct {
 		target *Target
 	}
 	tests := []struct {
 		name   string
-		fields fields
+		featureConfig FeatureConfig
 		args   args
-		want   *Evaluation
+		want   Evaluation
+		wantErr bool
 	}{
-		{name: "happy path", fields: struct {
-			DefaultServe         Serve
-			Environment          string
-			Feature              string
-			Kind                 string
-			OffVariation         string
-			Prerequisites        []Prerequisite
-			Project              string
-			Rules                ServingRules
-			State                FeatureState
-			VariationToTargetMap []VariationMap
-			Variations           Variations
-		}{DefaultServe: struct {
-			Distribution *Distribution
-			Variation    *string
-		}{Distribution: nil, Variation: &v1}, Environment: "dev", Feature: "flag", Kind: "boolean",
-			OffVariation: v2, Prerequisites: nil, Project: "default", Rules: []ServingRule{
-				{Clauses: []Clause{
-					{Attribute: "identifier", ID: "id", Negate: false, Op: equalOperator, Value: []string{
-						harness,
-					}},
-				}, Priority: 0, RuleID: uuid.NewString(), Serve: struct {
-					Distribution *Distribution
-					Variation    *string
-				}{Distribution: nil, Variation: &v2}},
-			}, State: "on", VariationToTargetMap: nil, Variations: []Variation{
-				{Description: nil, Identifier: v1, Name: &v1, Value: "true"},
-				{Description: nil, Identifier: v2, Name: &v2, Value: "false"},
-			}}, args: struct{ target *Target }{target: &target}, want: &Evaluation{
-			Flag:  "flag",
-			Value: false,
-		}},
+		{
+			name: "Test Bool FeatureConfig with no rules serves variation onBool when on",
+			featureConfig: makeFeatureConfig(boolFlagName, boolKind, onBool, offBool, onBool, FeatureStateOn, nil),
+			args: args{&target},
+			want: Evaluation{Flag:  boolFlagName, Variation: onBool},
+			wantErr: false},
+		{
+			name: "Test Bool FeatureConfig Evaluate with no rules serves variation offBool when off",
+			featureConfig: makeFeatureConfig(boolFlagName, boolKind, onBool,offBool, onBool, FeatureStateOff, nil),
+			args: args{&target},
+			want: Evaluation{Flag:  boolFlagName, Variation: offBool},
+			wantErr: false},
+		{
+			name: "Test Bool FeatureConfig Evaluate with 'attribute equals rule' serves offBool on match when flag on",
+			featureConfig: makeFeatureConfig(boolFlagName, boolKind, onBool, offBool, onBool, FeatureStateOn, makeIdentifierRule([]string{harness},equalOperator, offBool.Identifier)),
+		    args: args{&target},
+			want: Evaluation{Flag:  boolFlagName, Variation: offBool},
+			wantErr: false},
+		{
+			name: "Test Bool FeatureConfig Evaluate with 'attribute equals rule' serves onBool on non-match when flag on",
+			featureConfig: makeFeatureConfig(boolFlagName, boolKind, onBool, offBool, onBool, FeatureStateOn, makeIdentifierRule([]string{"foobar"},equalOperator, offBool.Identifier)),
+			args: args{&target},
+			want: Evaluation{Flag:  boolFlagName, Variation: onBool},
+			wantErr: false},
 	}
 	for _, tt := range tests {
-		val := tt
-		t.Run(tt.name, func(t *testing.T) {
-			fc := FeatureConfig{
-				DefaultServe:         val.fields.DefaultServe,
-				Environment:          val.fields.Environment,
-				Feature:              val.fields.Feature,
-				Kind:                 val.fields.Kind,
-				OffVariation:         val.fields.OffVariation,
-				Prerequisites:        val.fields.Prerequisites,
-				Project:              val.fields.Project,
-				Rules:                val.fields.Rules,
-				State:                val.fields.State,
-				VariationToTargetMap: val.fields.VariationToTargetMap,
-				Variations:           val.fields.Variations,
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			fc := tc.featureConfig
+			got, err := fc.Evaluate(tc.args.target);
+			if (err != nil) != tc.wantErr {
+				t.Errorf("BoolVariation() error = %v, wantErr %v", err, tc.wantErr)
+				return
 			}
-			if got := fc.Evaluate(val.args.target); !reflect.DeepEqual(got, val.want) {
-				t.Errorf("Evaluate() = %v, want %v", got, val.want)
-			}
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
