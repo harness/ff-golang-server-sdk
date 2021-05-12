@@ -2,6 +2,7 @@ package evaluation
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/drone/ff-golang-server-sdk/types"
 
@@ -20,11 +21,15 @@ const (
 	equalSensitiveOperator = "equal_sensitive"
 )
 
+var (
+	errUnexpectedType = fmt.Errorf("unexpected type")
+)
+
 // Evaluation object is in most cases returned value from evaluation
 // methods and contains results of evaluated feature flag for target object
 type Evaluation struct {
-	Flag  string
-	Value interface{}
+	Flag      string
+	Variation Variation
 }
 
 // Clause object
@@ -164,30 +169,31 @@ func (fc *FeatureConfig) GetKind() reflect.Kind {
 }
 
 // Evaluate feature flag and return Evaluation object
-func (fc FeatureConfig) Evaluate(target *Target) *Evaluation {
-	var value interface{}
+func (fc FeatureConfig) Evaluate(target *Target) (Evaluation, error) {
+	var variation Variation
+	var err error
+
 	switch fc.GetKind() {
 	case reflect.Bool:
-		value = fc.BoolVariation(target, false) // need more info
+		variation, err = fc.BoolVariation(target) // need more info
 	case reflect.String:
-		value = fc.StringVariation(target, "") // need more info
+		variation, err = fc.StringVariation(target) // need more info
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8, reflect.Uint, reflect.Uint16,
 		reflect.Uint32, reflect.Uint64, reflect.Uint8:
-		value = fc.IntVariation(target, 0)
+		variation, err = fc.IntVariation(target)
 	case reflect.Float64, reflect.Float32:
-		value = fc.NumberVariation(target, 0)
+		variation, err = fc.NumberVariation(target)
 	case reflect.Map:
-		value = fc.JSONVariation(target, map[string]interface{}{})
+		variation, err = fc.JSONVariation(target)
 	case reflect.Array, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Func, reflect.Interface,
 		reflect.Invalid, reflect.Ptr, reflect.Slice, reflect.Struct, reflect.Uintptr, reflect.UnsafePointer:
-		return nil
-	default:
-		value = nil
+		err = fmt.Errorf("unexpected type: %s for flag %s", fc.GetKind().String(), fc.Feature)
 	}
-	return &Evaluation{
-		Flag:  fc.Feature,
-		Value: value,
-	}
+
+	return Evaluation{
+		Flag:      fc.Feature,
+		Variation: variation,
+	}, err
 }
 
 // GetVariationName returns variation identifier for target
@@ -212,44 +218,57 @@ func (fc FeatureConfig) GetVariationName(target *Target) string {
 
 }
 
-// BoolVariation returns boolean evaluation for target
-func (fc *FeatureConfig) BoolVariation(target *Target, defaultValue bool) bool {
-	if fc.GetKind() != reflect.Bool {
-		return defaultValue
+func getVariation(fc FeatureConfig, target *Target) (Variation, error) {
+	variation := fc.Variations.FindByIdentifier(fc.GetVariationName(target))
+	if variation == nil {
+		var targetID string
+		if target != nil {
+			targetID = target.Identifier
+		}
+
+		return Variation{}, fmt.Errorf("unable to get variation for feature %s and target %s", fc.Feature, targetID)
 	}
-	return fc.Variations.FindByIdentifier(fc.GetVariationName(target)).Bool(defaultValue)
+	return *variation, nil
+}
+
+// BoolVariation returns boolean evaluation for target
+func (fc *FeatureConfig) BoolVariation(target *Target) (Variation, error) {
+	if fc.GetKind() != reflect.Bool {
+		return Variation{}, errUnexpectedType
+	}
+	return getVariation(*fc, target)
 }
 
 // StringVariation returns string evaluation for target
-func (fc *FeatureConfig) StringVariation(target *Target, defaultValue string) string {
+func (fc *FeatureConfig) StringVariation(target *Target) (Variation, error) {
 	if fc.GetKind() != reflect.String {
-		return defaultValue
+		return Variation{}, errUnexpectedType
 	}
-	return fc.Variations.FindByIdentifier(fc.GetVariationName(target)).String(defaultValue)
+	return getVariation(*fc, target)
 }
 
 // IntVariation returns int evaluation for target
-func (fc *FeatureConfig) IntVariation(target *Target, defaultValue int64) int64 {
+func (fc *FeatureConfig) IntVariation(target *Target) (Variation, error) {
 	if fc.GetKind() != reflect.Int {
-		return defaultValue
+		return Variation{}, errUnexpectedType
 	}
-	return fc.Variations.FindByIdentifier(fc.GetVariationName(target)).Int(defaultValue)
+	return getVariation(*fc, target)
 }
 
 // NumberVariation returns number evaluation for target
-func (fc *FeatureConfig) NumberVariation(target *Target, defaultValue float64) float64 {
+func (fc *FeatureConfig) NumberVariation(target *Target) (Variation, error) {
 	if fc.GetKind() != reflect.Float64 {
-		return defaultValue
+		return Variation{}, errUnexpectedType
 	}
-	return fc.Variations.FindByIdentifier(fc.GetVariationName(target)).Number(defaultValue)
+	return getVariation(*fc, target)
 }
 
 // JSONVariation returns json evaluation for target
-func (fc *FeatureConfig) JSONVariation(target *Target, defaultValue types.JSON) types.JSON {
+func (fc *FeatureConfig) JSONVariation(target *Target) (Variation, error) {
 	if fc.GetKind() != reflect.Map {
-		return defaultValue
+		return Variation{}, errUnexpectedType
 	}
-	return fc.Variations.FindByIdentifier(fc.GetVariationName(target)).JSON(defaultValue)
+	return getVariation(*fc, target)
 }
 
 // FeatureState represents feature flag ON or OFF state

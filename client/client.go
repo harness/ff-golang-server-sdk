@@ -375,7 +375,11 @@ func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultV
 		if !result {
 			return fc.Variations.FindByIdentifier(fc.OffVariation).Bool(defaultValue), nil
 		}
-		return fc.BoolVariation(target, defaultValue), nil
+		variation, err := fc.BoolVariation(target)
+		if err != nil {
+			return defaultValue, err
+		}
+		return variation.Bool(defaultValue), nil
 	}
 	return defaultValue, nil
 }
@@ -393,7 +397,12 @@ func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaul
 		if !result {
 			return fc.Variations.FindByIdentifier(fc.OffVariation).String(defaultValue), nil
 		}
-		return fc.StringVariation(target, defaultValue), nil
+		variation, err := fc.StringVariation(target)
+		if err != nil {
+			return defaultValue, err
+		}
+
+		return variation.String(defaultValue), nil
 	}
 	return defaultValue, nil
 }
@@ -411,7 +420,12 @@ func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultVa
 		if !result {
 			return fc.Variations.FindByIdentifier(fc.OffVariation).Int(defaultValue), nil
 		}
-		return fc.IntVariation(target, defaultValue), nil
+		variation, err := fc.IntVariation(target)
+		if err != nil {
+			return defaultValue, err
+		}
+
+		return variation.Int(defaultValue), nil
 	}
 	return defaultValue, nil
 }
@@ -429,7 +443,12 @@ func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaul
 		if !result {
 			return fc.Variations.FindByIdentifier(fc.OffVariation).Number(defaultValue), nil
 		}
-		return fc.NumberVariation(target, defaultValue), nil
+		variation, err := fc.NumberVariation(target)
+		if err != nil {
+			return defaultValue, err
+		}
+
+		return variation.Number(defaultValue), nil
 	}
 	return defaultValue, nil
 }
@@ -448,7 +467,12 @@ func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultV
 		if !result {
 			return fc.Variations.FindByIdentifier(fc.OffVariation).JSON(defaultValue), nil
 		}
-		return fc.JSONVariation(target, defaultValue), nil
+		variation, err := fc.JSONVariation(target)
+		if err != nil {
+			return defaultValue, err
+		}
+
+		return variation.JSON(defaultValue), err
 	}
 	return defaultValue, nil
 }
