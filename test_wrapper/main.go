@@ -28,7 +28,7 @@ func main() {
 	viper.SetDefault("BaseURL", "http://localhost/api/1.0")
 
 	viper.SetDefault("SdkKey", "1bca46aa-0abe-4b22-a5f0-904422db288b")
-	viper.SetDefault("EnableStreaming", false)
+	viper.SetDefault("EnableStreaming", true)
 	viper.BindEnv("WrapperHostname", "WRAPPER_HOSTNAME")
 	viper.BindEnv("WrapperPort", "WRAPPER_PORT")
 	viper.BindEnv("BaseURL", "SDK_BASE_URL")
