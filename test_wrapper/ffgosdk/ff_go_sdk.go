@@ -41,10 +41,11 @@ func (s SDK) GetVariant(kind string, flagKey string, targetMap *map[string]strin
 	out := ""
 	t := &evaluation.Target{}
 	if targetMap != nil {
-		t.Attributes = make(map[string]interface{})
+		att := make(map[string]interface{})
 		for k, v := range *targetMap {
-			t.Attributes[k] = v
+			att[k] = v
 		}
+		t.Attributes = &att
 	}
 
 	var err error
