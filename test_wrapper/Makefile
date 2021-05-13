@@ -11,5 +11,4 @@ generate:
 build:
 	go get -u github.com/drone/ff-golang-server-sdk
 	go mod tidy
-	go mod verify
 	docker build -t us.gcr.io/${PROJECT_ID}/${IMAGE}:latest -f ./docker/Dockerfile .
