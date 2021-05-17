@@ -1,6 +1,8 @@
 package evaluation
 
 import (
+	"fmt"
+
 	"github.com/drone/ff-golang-server-sdk/types"
 
 	"reflect"
@@ -28,22 +30,22 @@ func (t Target) GetAttrValue(attr string) reflect.Value {
 }
 
 // GetOperator returns interface based on attribute value
-func (t Target) GetOperator(attr string) types.ValueType {
+func (t Target) GetOperator(attr string) (types.ValueType, error) {
 	value := t.GetAttrValue(attr)
 	switch value.Kind() {
 	case reflect.Bool:
-		return types.Boolean(value.Bool())
+		return types.Boolean(value.Bool()), nil
 	case reflect.String:
-		return types.String(value.String())
+		return types.String(value.String()), nil
 	case reflect.Float64, reflect.Float32:
-		return types.Number(value.Float())
+		return types.Number(value.Float()), nil
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8, reflect.Uint, reflect.Uint16,
 		reflect.Uint32, reflect.Uint64, reflect.Uint8:
-		return types.Integer(value.Int())
+		return types.Integer(value.Int()), nil
 	case reflect.Array, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Func, reflect.Interface,
 		reflect.Invalid, reflect.Map, reflect.Ptr, reflect.Slice, reflect.Struct, reflect.Uintptr, reflect.UnsafePointer:
-		return nil
+		fallthrough
 	default:
-		return nil
+		return nil, fmt.Errorf("unexpected type: %s", value.Kind().String())
 	}
 }

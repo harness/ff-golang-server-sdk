@@ -3,11 +3,10 @@ package evaluation
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/drone/ff-golang-server-sdk/types"
-
 	"reflect"
 	"strconv"
+
+	"github.com/drone/ff-golang-server-sdk/types"
 )
 
 const (
@@ -43,26 +42,34 @@ type Clause struct {
 
 // Evaluate clause using target but it can be used also with segments if Op field is segmentMach
 func (c *Clause) Evaluate(target *Target, segments Segments, operator types.ValueType) bool {
-	switch c.Op {
-	case segmentMatchOperator:
+
+	// Special case - segment matcher doesn't require a
+	// valid operator.
+	if c.Op == segmentMatchOperator {
 		if segments == nil {
 			return false
 		}
 		return segments.Evaluate(target)
-	case inOperator:
-		return operator.In(c.Value)
-	case equalOperator:
-		return operator.Equal(c.Value)
-	case gtOperator:
-		return operator.GreaterThan(c.Value)
-	case startsWithOperator:
-		return operator.StartsWith(c.Value)
-	case endsWithOperator:
-		return operator.EndsWith(c.Value)
-	case containsOperator:
-		return operator.Contains(c.Value)
-	case equalSensitiveOperator:
-		return operator.EqualSensitive(c.Value)
+	}
+
+	// Ensure operator is valid and not nil
+	if operator != nil {
+		switch c.Op {
+		case inOperator:
+			return operator.In(c.Value)
+		case equalOperator:
+			return operator.Equal(c.Value)
+		case gtOperator:
+			return operator.GreaterThan(c.Value)
+		case startsWithOperator:
+			return operator.StartsWith(c.Value)
+		case endsWithOperator:
+			return operator.EndsWith(c.Value)
+		case containsOperator:
+			return operator.Contains(c.Value)
+		case equalSensitiveOperator:
+			return operator.EqualSensitive(c.Value)
+		}
 	}
 	return false
 }
@@ -71,11 +78,16 @@ func (c *Clause) Evaluate(target *Target, segments Segments, operator types.Valu
 type Clauses []Clause
 
 // Evaluate clauses using target but it can be used also with segments if Op field is segmentMach
+// TODO this func can return false because of an error.  We need a way to indicate to the caller if this is false
+// because it evaluated false, or because it actually failed to work.
 func (c Clauses) Evaluate(target *Target, segments Segments) bool {
 	// AND operation
 	for _, clause := range c {
 		// operator should be evaluated based on type of attribute
-		op := target.GetOperator(clause.Attribute)
+		op, err := target.GetOperator(clause.Attribute)
+		if err != nil {
+			fmt.Print(err)
+		}
 		if !clause.Evaluate(target, segments, op) {
 			return false
 		}
