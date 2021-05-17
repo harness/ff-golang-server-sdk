@@ -3,13 +3,10 @@ package evaluation
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/labstack/gommon/log"
-
-	"github.com/drone/ff-golang-server-sdk/types"
-
 	"reflect"
 	"strconv"
+
+	"github.com/drone/ff-golang-server-sdk/types"
 )
 
 const (
@@ -89,8 +86,7 @@ func (c Clauses) Evaluate(target *Target, segments Segments) bool {
 		// operator should be evaluated based on type of attribute
 		op, err := target.GetOperator(clause.Attribute)
 		if err != nil {
-			log.Warn(err)
-			//return false
+			fmt.Print(err)
 		}
 		if !clause.Evaluate(target, segments, op) {
 			return false
