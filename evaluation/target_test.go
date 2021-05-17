@@ -21,10 +21,11 @@ func TestTarget_GetOperator(t1 *testing.T) {
 		attr string
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   types.ValueType
+		name    string
+		fields  fields
+		args    args
+		want    types.ValueType
+		wantErr bool
 	}{
 		{name: "boolean operator", fields: struct {
 			Identifier string
@@ -68,8 +69,13 @@ func TestTarget_GetOperator(t1 *testing.T) {
 				Anonymous:  &val.fields.Anonymous,
 				Attributes: &val.fields.Attributes,
 			}
-			if got := t.GetOperator(val.args.attr); !reflect.DeepEqual(got, val.want) {
-				t1.Errorf("GetOperator() = %v, want %v", got, val.want)
+			got, err := t.GetOperator(val.args.attr)
+			if (err != nil) != val.wantErr {
+				t1.Errorf("GetOperator() error = %v, wantErr %v", err, val.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, val.want) {
+				t1.Errorf("GetOperator() error = %v, want %v", err, val.want)
 			}
 		})
 	}
@@ -142,10 +148,11 @@ func TestTarget_GetOperator1(t1 *testing.T) {
 
 	name := "John"
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   types.ValueType
+		name    string
+		fields  fields
+		args    args
+		want    types.ValueType
+		wantErr bool
 	}{
 		{name: "bool operator", fields: struct {
 			Identifier string
@@ -189,8 +196,13 @@ func TestTarget_GetOperator1(t1 *testing.T) {
 				Anonymous:  &val.fields.Anonymous,
 				Attributes: &val.fields.Attributes,
 			}
-			if got := t.GetOperator(val.args.attr); !reflect.DeepEqual(got, val.want) {
-				t1.Errorf("GetOperator() = %v, want %v", got, val.want)
+			got, err := t.GetOperator(val.args.attr)
+			if (err != nil) != val.wantErr {
+				t1.Errorf("GetOperator() error = %v, wantErr %v", err, val.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, val.want) {
+				t1.Errorf("GetOperator() error = %v, want %v", err, val.want)
 			}
 		})
 	}
