@@ -39,6 +39,8 @@ jobs:
     - name: Publish
       run: |-
         docker tag "us.gcr.io/$PROJECT_ID/$IMAGE:latest" "us.gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA"
+        docker tag "us.gcr.io/$PROJECT_ID/$IMAGE:latest" "us.gcr.io/$PROJECT_ID/$IMAGE:${{ github.event.release.tag_name }}"
         docker push "us.gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA"
         docker push "us.gcr.io/$PROJECT_ID/$IMAGE:latest"
+        docker push "us.gcr.io/$PROJECT_ID/$IMAGE:${{ github.event.release.tag_name }}"
 
