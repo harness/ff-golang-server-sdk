@@ -33,14 +33,15 @@ func (s *ServerImpl) Ping(ctx echo.Context) error {
 
 // GetFlagValue .
 func (s *ServerImpl) GetFlagValue(ctx echo.Context) error {
-	log.Infof("GetFlagValue %+v", ctx.Request())
+	defer log.Info("--------------")
+	log.Info("GetFlagValue")
 	flagBody := new(restapi.FlagCheckBody)
 	err := ctx.Bind(flagBody)
 	if err != nil {
 		log.Error(err)
 		return ctx.JSON(http.StatusInternalServerError, restapi.ErrorResponse{ErrorMessage: err.Error()})
 	}
-
+	log.Infof("%+v", *flagBody)
 	var targetMap map[string]string
 	if flagBody.Target != nil {
 		if flagBody.Target.Name != nil {

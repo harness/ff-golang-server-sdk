@@ -41,8 +41,8 @@ github.com/deepmap/oapi-codegen v1.6.1/go.mod h1:ryDa9AgbELGeB+YEXE1dR53yAjHwFvE
 github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
-github.com/drone/ff-golang-server-sdk v0.0.8 h1:9LYPnH6C9lLEy1CYJOheXDuvGcx0O97eRCS8EGwed7Q=
-github.com/drone/ff-golang-server-sdk v0.0.8/go.mod h1:YCtLLO0Tq85iH9CMysuzD6WEXk3mmldQF7dYDXInA1Y=
+github.com/drone/ff-golang-server-sdk v0.0.9 h1:Na1+L0k49j51kxJXK0oy912kXcnM+ZmQgXz9lZxd8MQ=
+github.com/drone/ff-golang-server-sdk v0.0.9/go.mod h1:YCtLLO0Tq85iH9CMysuzD6WEXk3mmldQF7dYDXInA1Y=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
