@@ -573,9 +573,14 @@ components:
           type: string
         value:
           type: string
+        kind:
+          type: string
+        identifier:
+          type: string
       required:
         - flag
         - value
+        - kind
     Evaluations:
       type: array
       items:

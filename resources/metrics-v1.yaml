@@ -1,0 +1,141 @@
+openapi: 3.0.0
+info:
+  title: Harness feature flag analytics service
+  version: 1.0.0
+  contact:
+    name: Feature Flag - developers
+    url: 'https://www.harness.io'
+    email: cf@harness.io
+servers:
+  - url: /api/1.0
+    description: no host specified
+  - url: 'http://localhost:3000/api/1.0'
+    description: CfClient description
+paths:
+  '/metrics/{environment}':
+    post:
+      summary: Send metrics to the Analytics server.
+      description: Send metrics to Analytics server
+      operationId: postMetrics
+      parameters:
+        - $ref: '#/components/parameters/environmentPathParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Metrics'
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  schemas:
+    KeyValue:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+      required:
+        - key
+        - value
+    TargetData:
+      type: object
+      properties:
+        identifier:
+          type: string
+        name:
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyValue'
+      required:
+        - name
+        - identifier
+        - attributes
+    MetricsData:
+      type: object
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+          example: 1608175465
+          description: time at when this data was recorded
+        count:
+          type: integer
+        metricsType:
+          type: string
+          enum:
+            - FFMETRICS
+          description: This can be of type FeatureMetrics
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeyValue'
+      required:
+        - attributes
+        - count
+        - timestamp
+        - metricsType
+    Metrics:
+      type: object
+      properties:
+        targetData:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetData'
+        metricsData:
+          type: array
+          items:
+            $ref: '#/components/schemas/MetricsData'
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    environmentPathParam:
+      name: environment
+      in: path
+      required: true
+      description: environment parameter in query.
+      schema:
+        type: string
+  responses:
+    Unauthenticated:
+      description: Unauthenticated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

@@ -6,9 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/drone/ff-golang-server-sdk/analyticsservice"
+	"github.com/drone/ff-golang-server-sdk/metricsclient"
 
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/dgrijalva/jwt-go"
@@ -33,18 +37,20 @@ import (
 // that any pending analytics events have been delivered.
 //
 type CfClient struct {
-	mux             sync.RWMutex
-	api             rest.ClientWithResponsesInterface
-	sdkKey          string
-	auth            rest.AuthenticationRequest
-	config          *config
-	environmentID   string
-	token           string
-	persistence     cache.Persistence
-	cancelFunc      context.CancelFunc
-	streamConnected bool
-	authenticated   chan struct{}
-	initialized     chan bool
+	mux              sync.RWMutex
+	api              rest.ClientWithResponsesInterface
+	metricsapi       metricsclient.ClientWithResponsesInterface
+	sdkKey           string
+	auth             rest.AuthenticationRequest
+	config           *config
+	environmentID    string
+	token            string
+	persistence      cache.Persistence
+	cancelFunc       context.CancelFunc
+	streamConnected  bool
+	authenticated    chan struct{}
+	initialized      chan bool
+	analyticsService *analyticsservice.AnalyticsService
 }
 
 // NewCfClient creates a new client instance that connects to CF with the default configuration.
@@ -62,11 +68,14 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		opt(config)
 	}
 
+	analyticsService := analyticsservice.NewAnalyticsService(time.Minute, config.Logger)
+
 	client := &CfClient{
-		sdkKey:        sdkKey,
-		config:        config,
-		authenticated: make(chan struct{}),
-		initialized:   make(chan bool),
+		sdkKey:           sdkKey,
+		config:           config,
+		authenticated:    make(chan struct{}),
+		initialized:      make(chan bool),
+		analyticsService: analyticsService,
 	}
 	ctx, client.cancelFunc = context.WithCancel(context.Background())
 
@@ -83,6 +92,8 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	}
 
 	go client.authenticate(ctx, client.config.target)
+
+	go client.setAnalyticsServiceClient(ctx)
 
 	go client.retrieve(ctx)
 
@@ -238,7 +249,17 @@ func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) {
 		return
 	}
 
+	merticsClient, err := metricsclient.NewClientWithResponses(c.config.eventsURL,
+		metricsclient.WithRequestEditorFn(bearerTokenProvider.Intercept),
+		metricsclient.WithHTTPClient(http.DefaultClient),
+	)
+	if err != nil {
+		c.config.Logger.Error(err)
+		return
+	}
+
 	c.api = restClient
+	c.metricsapi = merticsClient
 	close(c.authenticated)
 }
 
@@ -362,6 +383,11 @@ func (c *CfClient) getSegmentsFromCache(fc *evaluation.FeatureConfig) {
 	}
 }
 
+func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
+	<-c.authenticated
+	c.analyticsService.Start(ctx, &c.metricsapi, c.environmentID)
+}
+
 // BoolVariation returns the value of a boolean feature flag for a given target.
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
@@ -379,6 +405,8 @@ func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultV
 		if err != nil {
 			return defaultValue, err
 		}
+		c.analyticsService.PushToQueue(target, fc, variation)
+
 		return variation.Bool(defaultValue), nil
 	}
 	return defaultValue, nil
@@ -401,6 +429,8 @@ func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaul
 		if err != nil {
 			return defaultValue, err
 		}
+
+		c.analyticsService.PushToQueue(target, fc, variation)
 
 		return variation.String(defaultValue), nil
 	}
@@ -425,6 +455,8 @@ func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultVa
 			return defaultValue, err
 		}
 
+		c.analyticsService.PushToQueue(target, fc, variation)
+
 		return variation.Int(defaultValue), nil
 	}
 	return defaultValue, nil
@@ -447,6 +479,8 @@ func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaul
 		if err != nil {
 			return defaultValue, err
 		}
+
+		c.analyticsService.PushToQueue(target, fc, variation)
 
 		return variation.Number(defaultValue), nil
 	}
@@ -471,6 +505,7 @@ func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultV
 		if err != nil {
 			return defaultValue, err
 		}
+		c.analyticsService.PushToQueue(target, fc, variation)
 
 		return variation.JSON(defaultValue), err
 	}

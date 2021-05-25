@@ -172,11 +172,13 @@ func (s Segment) Convert() evaluation.Segment {
 
 	tags := make([]evaluation.Tag, 0)
 	if s.Rules != nil {
-		tags = make([]evaluation.Tag, len(*s.Tags))
-		for i, tag := range *s.Tags {
-			tags[i] = evaluation.Tag{
-				Name:  tag.Name,
-				Value: tag.Value,
+		if s.Tags != nil {
+			tags = make([]evaluation.Tag, len(*s.Tags))
+			for i, tag := range *s.Tags {
+				tags[i] = evaluation.Tag{
+					Name:  tag.Name,
+					Value: tag.Value,
+				}
 			}
 		}
 	}

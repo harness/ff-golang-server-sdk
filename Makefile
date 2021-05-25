@@ -8,8 +8,10 @@ endif
 all: tidy generate build check test
 
 generate:
-	oapi-codegen -generate client,spec -package=rest ./api.yaml > rest/services.gen.go
-	oapi-codegen -generate types -package=rest ./api.yaml > rest/types.gen.go
+	oapi-codegen -generate client,spec -package=rest ./resources/client-v1.yaml > rest/services.gen.go
+	oapi-codegen -generate types -package=rest ./resources/client-v1.yaml > rest/types.gen.go
+	oapi-codegen -generate client -package=metricsclient ./resources/metrics-v1.yaml > metricsclient/services.gen.go
+	oapi-codegen -generate types -package=metricsclient ./resources/metrics-v1.yaml > metricsclient/types.gen.go
 
 tidy:
 	go mod tidy

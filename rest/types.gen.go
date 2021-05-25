@@ -46,8 +46,10 @@ type Error struct {
 
 // Evaluation defines model for Evaluation.
 type Evaluation struct {
-	Flag  string `json:"flag"`
-	Value string `json:"value"`
+	Flag       string  `json:"flag"`
+	Identifier *string `json:"identifier,omitempty"`
+	Kind       string  `json:"kind"`
+	Value      string  `json:"value"`
 }
 
 // Evaluations defines model for Evaluations.
