@@ -13,9 +13,13 @@ type FlagCheckBody struct {
 	FlagKey  string `json:"flag_key"`
 	FlagKind string `json:"flag_kind"`
 	Target   *struct {
-		Email  *string `json:"email,omitempty"`
-		Name   *string `json:"name,omitempty"`
-		Region *string `json:"region,omitempty"`
+		Attributes *struct {
+			Email    *string `json:"email,omitempty"`
+			Region   *string `json:"region,omitempty"`
+			Username *string `json:"username,omitempty"`
+		} `json:"attributes,omitempty"`
+		TargetIdentifier *string `json:"target_identifier,omitempty"`
+		TargetName       *string `json:"target_name,omitempty"`
 	} `json:"target,omitempty"`
 }
 
