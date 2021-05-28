@@ -1,10 +1,13 @@
 # This workflow will build a docker container, publish it to Google Container Registry,
 
-name: Build/Push test wrapper container to GCR
+name: Build/Push test wrapper container to GCR - Manual trigger
 
 on:
-  release:
-    types: [created]
+  workflow_dispatch:
+    inputs:
+      docker_tag:
+        description: 'Container tag'
+        required: true
 
 env:
   PROJECT_ID: ${{ secrets.GCR_PROJECT }}
@@ -38,9 +41,6 @@ jobs:
     # Push the Docker image to Google Container Registry
     - name: Publish
       run: |-
-        docker tag "us.gcr.io/$PROJECT_ID/$IMAGE:latest" "us.gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA"
-        docker tag "us.gcr.io/$PROJECT_ID/$IMAGE:latest" "us.gcr.io/$PROJECT_ID/$IMAGE:${{ github.event.release.tag_name }}"
-        docker push "us.gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA"
-        docker push "us.gcr.io/$PROJECT_ID/$IMAGE:latest"
-        docker push "us.gcr.io/$PROJECT_ID/$IMAGE:${{ github.event.release.tag_name }}"
+        docker tag "us.gcr.io/$PROJECT_ID/$IMAGE:latest" "us.gcr.io/$PROJECT_ID/$IMAGE:${{ github.event.inputs.docker_tag }}"
+        docker push "us.gcr.io/$PROJECT_ID/$IMAGE:${{ github.event.inputs.docker_tag }}"
 

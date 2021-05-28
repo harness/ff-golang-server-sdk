@@ -214,12 +214,14 @@ func (fc FeatureConfig) GetVariationName(target *Target) string {
 		return fc.OffVariation
 	}
 	// TODO: variation to target
-	if fc.VariationToTargetMap != nil && len(fc.VariationToTargetMap) > 0 {
-		for _, variationMap := range fc.VariationToTargetMap {
-			if variationMap.Targets != nil {
-				for _, t := range variationMap.Targets {
-					if target.Identifier == t {
-						return variationMap.Variation
+	if target != nil {
+		if fc.VariationToTargetMap != nil && len(fc.VariationToTargetMap) > 0 {
+			for _, variationMap := range fc.VariationToTargetMap {
+				if variationMap.Targets != nil {
+					for _, t := range variationMap.Targets {
+						if target.Identifier == t {
+							return variationMap.Variation
+						}
 					}
 				}
 			}

@@ -41,21 +41,10 @@ func (s *ServerImpl) GetFlagValue(ctx echo.Context) error {
 		log.Error(err)
 		return ctx.JSON(http.StatusInternalServerError, restapi.ErrorResponse{ErrorMessage: err.Error()})
 	}
-	log.Infof("%+v", *flagBody)
-	var targetMap map[string]string
-	if flagBody.Target != nil {
-		if flagBody.Target.Name != nil {
-			targetMap["name"] = *flagBody.Target.Name
-		}
-		if flagBody.Target.Email != nil {
-			targetMap["email"] = *flagBody.Target.Email
-		}
-		if flagBody.Target.Region != nil {
-			targetMap["region"] = *flagBody.Target.Region
-		}
-	}
+	log.Warn("flag body   ---------------")
+	log.Warnf("%+v", *flagBody)
 
-	variantion, err := s.sdk.GetVariant(flagBody.FlagKind, flagBody.FlagKey, &targetMap)
+	variantion, err := s.sdk.GetVariant(flagBody)
 	if err != nil {
 		log.Error(err)
 		return ctx.JSON(http.StatusInternalServerError, restapi.ErrorResponse{ErrorMessage: err.Error()})

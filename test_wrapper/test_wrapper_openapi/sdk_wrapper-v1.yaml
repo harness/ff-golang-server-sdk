@@ -71,15 +71,24 @@ components:
         target:
           type: object
           properties:
-            name:
+            target_identifier:
               type: string
-              example: Jane
-            email:
+              example: target_1
+            target_name:
               type: string
-              example: jane@example.com
-            region:
-              type: string
-              example: Europe
+              example: Target 1
+            attributes:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: jane
+                email:
+                  type: string
+                  example: jane@example.com
+                region:
+                  type: string
+                  example: Europe
       required:
         - flag_key
         - flag_kind
