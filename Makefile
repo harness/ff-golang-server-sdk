@@ -26,7 +26,7 @@ test:
 	go test -race -v --cover ./...
 
 build-test-wrapper:
-	$(MAKE) -C test_wrapper build
+	docker build -t us.gcr.io/${PROJECT_ID}/${IMAGE}:latest -f ./docker/Dockerfile .
 
 # Format go code and error if any changes are made
 PHONY+= format
