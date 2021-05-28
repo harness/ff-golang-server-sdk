@@ -2,11 +2,9 @@ FROM golang:1.16-alpine as builder
 RUN apk update && apk add --no-cache make gcc musl-dev git ca-certificates && update-ca-certificates
 WORKDIR /app
 
-# Fetch dependencies.
-COPY ./go.mod .
-RUN go mod download
-
 COPY . .
+WORKDIR /app/test_wrapper
+RUN go mod download
 RUN go mod verify
 RUN make install
 RUN make generate

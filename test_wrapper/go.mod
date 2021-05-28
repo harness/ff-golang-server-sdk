@@ -2,6 +2,8 @@ module github.com/drone/ff-golang-server-sdk/test_wrapper
 
 go 1.16
 
+replace github.com/drone/ff-golang-server-sdk => ../
+
 require (
 	github.com/deepmap/oapi-codegen v1.6.1 // indirect
 	github.com/drone/ff-golang-server-sdk v0.0.9
