@@ -20,6 +20,13 @@ func WithURL(url string) ConfigOption {
 	}
 }
 
+// WithEventsURL set eventsURL for communicating with ff server
+func WithEventsURL(url string) ConfigOption {
+	return func(config *config) {
+		config.eventsURL = url
+	}
+}
+
 // WithPullInterval set pulling interval in minutes
 func WithPullInterval(interval uint) ConfigOption {
 	return func(config *config) {

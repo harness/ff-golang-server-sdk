@@ -14,6 +14,7 @@ import (
 
 type config struct {
 	url          string
+	eventsURL    string
 	pullInterval uint // in minutes
 	Cache        cache.Cache
 	Store        storage.Storage
@@ -37,6 +38,7 @@ func newDefaultConfig() *config {
 
 	return &config{
 		url:          "http://localhost:7999/api/1.0",
+		eventsURL:    "http://localhost:7998/api/1.0",
 		pullInterval: 1,
 		Cache:        defaultCache,
 		Store:        defaultStore,
