@@ -126,15 +126,19 @@ func (c *CfClient) retrieve(ctx context.Context) {
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		err := c.retrieveFlags(ctx)
+		rCtx, cancel := context.WithTimeout(ctx, time.Minute)
+		defer cancel()
+		err := c.retrieveFlags(rCtx)
 		if err != nil {
-			log.Printf("error while retreiving flags at startup: %v", err)
+			log.Printf("error while retreiving flags: %v", err)
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
-		err := c.retrieveSegments(ctx)
+		rCtx, cancel := context.WithTimeout(ctx, time.Minute)
+		defer cancel()
+		err := c.retrieveSegments(rCtx)
 		if err != nil {
 			log.Printf("error while retreiving segments at startup: %v", err)
 		}
@@ -164,6 +168,8 @@ func (c *CfClient) streamConnect() {
 
 	c.streamConnected = true
 	err = conn.OnDisconnect(func() error {
+		// Wait one minute before moving to polling
+		time.Sleep(1 * time.Minute)
 		c.mux.RLock()
 		defer c.mux.RUnlock()
 		c.streamConnected = false
@@ -278,7 +284,12 @@ func (c *CfClient) pullCronJob(ctx context.Context) {
 			c.mux.RLock()
 			if !c.streamConnected {
 				c.retrieve(ctx)
+				if c.config.enableStream {
+					// here stream is enabled but not connected, so we attempt to reconnect
+					go c.streamConnect()
+				}
 			}
+
 			c.mux.RUnlock()
 		}
 	}
