@@ -107,7 +107,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 }
 
 // IsInitialized determines if the client is ready to be used.  This is true if it has both authenticated
-// and successfully retrived flags.  If it takes longer than 30 seconds the call will timeout and return an error.
+// and successfully retrieved flags.  If it takes longer than 30 seconds the call will timeout and return an error.
 func (c *CfClient) IsInitialized() (bool, error) {
 	select {
 	case <-c.initialized:
