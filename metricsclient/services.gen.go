@@ -296,4 +296,3 @@ func ParsePostMetricsResponse(rsp *http.Response) (*PostMetricsResponse, error) 
 
 	return response, nil
 }
-

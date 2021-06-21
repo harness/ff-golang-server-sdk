@@ -55,7 +55,7 @@ lint: $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint
 		-E noctx \
 		-E nolintlint \
 		-E rowserrcheck \
-		-E scopelint \
+		-E exportloopref \
 		-E sqlclosecheck \
 		-E stylecheck \
 		-E unconvert \
