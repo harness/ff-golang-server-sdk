@@ -21,7 +21,7 @@ const (
 	variationValueAttribute      string = "featureValue"
 	targetAttribute              string = "target"
 	sdkVersionAttribute          string = "SDK_VERSION"
-	sdkVersion                   string = "0.0.10"
+	sdkVersion                   string = "1.0.0"
 	sdkTypeAttribute             string = "SDK_TYPE"
 	sdkType                      string = "server"
 	sdkLanguageAttribute         string = "SDK_LANGUAGE"

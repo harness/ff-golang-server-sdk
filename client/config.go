@@ -37,8 +37,8 @@ func newDefaultConfig() *config {
 	retryClient.RetryMax = 10
 
 	return &config{
-		url:          "http://localhost:7999/api/1.0",
-		eventsURL:    "http://localhost:7998/api/1.0",
+		url:          "https://config.ff.harness.io/api/1.0",
+		eventsURL:    "https://events.ff.harness.io/api/1.0",
 		pullInterval: 1,
 		Cache:        defaultCache,
 		Store:        defaultStore,
