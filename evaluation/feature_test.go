@@ -312,58 +312,148 @@ func TestServingRules_GetVariationName(t *testing.T) {
 		args args
 		want string
 	}{
-		{name: "equalOperator", sr: []ServingRule{
-			{Clauses: []Clause{
-				{Attribute: "identifier", ID: "id", Negate: false, Op: equalOperator, Value: []string{
-					harness,
-				}},
-			}, Priority: 0, RuleID: uuid.New().String(), Serve: struct {
-				Distribution *Distribution
-				Variation    *string
-			}{Distribution: nil, Variation: &onVariationIdentifier}},
-		}, args: struct {
-			target       *Target
-			segments     Segments
-			defaultServe Serve
-		}{target: target, defaultServe: struct {
-			Distribution *Distribution
-			Variation    *string
-		}{Distribution: nil, Variation: &onVariationIdentifier}}, want: onVariationIdentifier},
-		{name: "equal with rules", sr: []ServingRule{
-			{Clauses: []Clause{
-				{Attribute: "identifier", ID: "id", Negate: false, Op: equalOperator, Value: []string{
-					harness,
-				}},
-			}, Priority: 0, RuleID: uuid.NewString(), Serve: struct {
-				Distribution *Distribution
-				Variation    *string
-			}{Distribution: nil, Variation: &offVariationIdentifier}},
-		}, args: struct {
-			target       *Target
-			segments     Segments
-			defaultServe Serve
-		}{target: target, defaultServe: struct {
-			Distribution *Distribution
-			Variation    *string
-		}{Distribution: nil, Variation: &onVariationIdentifier}}, want: offVariationIdentifier},
-		//
-		{name: "segment match", sr: []ServingRule{
-			{Clauses: []Clause{
-				{Op: segmentMatchOperator, Value: []string{
-					segment.Identifier,
-				}},
-			}, Priority: 0, RuleID: uuid.NewString(), Serve: struct {
-				Distribution *Distribution
-				Variation    *string
-			}{Distribution: nil, Variation: &offVariationIdentifier}},
-		}, args: struct {
-			target       *Target
-			segments     Segments
-			defaultServe Serve
-		}{target: target, segments: Segments{segment.Identifier: segment}, defaultServe: struct {
-			Distribution *Distribution
-			Variation    *string
-		}{Distribution: nil, Variation: &onVariationIdentifier}}, want: offVariationIdentifier},
+		{
+			name: "happy path, no rules",
+			sr:   []ServingRule{},
+			args: struct {
+				target       *Target
+				segments     Segments
+				defaultServe Serve
+			}{
+				target: target,
+				defaultServe: struct {
+					Distribution *Distribution
+					Variation    *string
+				}{
+					Distribution: nil,
+					Variation:    &onVariationIdentifier,
+				},
+			},
+			want: onVariationIdentifier,
+		},
+		{
+			name: "equalOperator",
+			sr: []ServingRule{
+				{
+					Clauses: []Clause{
+						{
+							Attribute: "identifier",
+							ID:        "id",
+							Negate:    false,
+							Op:        equalOperator,
+							Value: []string{
+								harness,
+							},
+						},
+					},
+					Priority: 0,
+					RuleID:   uuid.New().String(),
+					Serve: struct {
+						Distribution *Distribution
+						Variation    *string
+					}{
+						Distribution: nil,
+						Variation:    &onVariationIdentifier,
+					},
+				},
+			},
+			args: struct {
+				target       *Target
+				segments     Segments
+				defaultServe Serve
+			}{
+				target: target, defaultServe: struct {
+					Distribution *Distribution
+					Variation    *string
+				}{
+					Distribution: nil,
+					Variation:    &onVariationIdentifier,
+				},
+			},
+			want: onVariationIdentifier,
+		},
+		{
+			name: "equal with rules",
+			sr: []ServingRule{
+				{
+					Clauses: []Clause{
+						{
+							Attribute: "identifier",
+							ID:        "id",
+							Negate:    false,
+							Op:        equalOperator,
+							Value: []string{
+								harness,
+							},
+						},
+					},
+					Priority: 0,
+					RuleID:   uuid.NewString(),
+					Serve: struct {
+						Distribution *Distribution
+						Variation    *string
+					}{
+						Distribution: nil,
+						Variation:    &offVariationIdentifier,
+					},
+				},
+			},
+			args: struct {
+				target       *Target
+				segments     Segments
+				defaultServe Serve
+			}{
+				target: target,
+				defaultServe: struct {
+					Distribution *Distribution
+					Variation    *string
+				}{
+					Distribution: nil,
+					Variation:    &onVariationIdentifier,
+				},
+			},
+			want: offVariationIdentifier,
+		},
+		{
+			name: "segment match",
+			sr: []ServingRule{
+				{
+					Clauses: []Clause{
+						{
+							Op: segmentMatchOperator,
+							Value: []string{
+								segment.Identifier,
+							},
+						},
+					},
+					Priority: 0,
+					RuleID:   uuid.NewString(),
+					Serve: struct {
+						Distribution *Distribution
+						Variation    *string
+					}{
+						Distribution: nil,
+						Variation:    &offVariationIdentifier,
+					},
+				},
+			},
+			args: struct {
+				target       *Target
+				segments     Segments
+				defaultServe Serve
+			}{
+				target:   target,
+				segments: Segments{segment.Identifier: segment},
+				defaultServe: struct {
+					Distribution *Distribution
+					Variation    *string
+				}{
+					Distribution: nil,
+					Variation:    &onVariationIdentifier,
+				},
+			},
+			want: offVariationIdentifier,
+		},
 	}
 	for _, tt := range tests {
 		val := tt

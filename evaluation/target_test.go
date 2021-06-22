@@ -7,80 +7,6 @@ import (
 	"github.com/drone/ff-golang-server-sdk/types"
 )
 
-func TestTarget_GetOperator(t1 *testing.T) {
-	harness := "Harness"
-	m := make(map[string]interface{})
-	m["anonymous"] = false
-	type fields struct {
-		Identifier string
-		Name       *string
-		Anonymous  bool
-		Attributes map[string]interface{}
-	}
-	type args struct {
-		attr string
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    types.ValueType
-		wantErr bool
-	}{
-		{name: "boolean operator", fields: struct {
-			Identifier string
-			Name       *string
-			Anonymous  bool
-			Attributes map[string]interface{}
-		}{Identifier: "harness", Name: &harness, Anonymous: false, Attributes: m},
-			args: struct{ attr string }{attr: "anonymous"}, want: types.Boolean(false)},
-		{name: "string operator", fields: struct {
-			Identifier string
-			Name       *string
-			Anonymous  bool
-			Attributes map[string]interface{}
-		}{Identifier: "harness", Name: &harness, Anonymous: false, Attributes: nil},
-			args: struct{ attr string }{attr: "identifier"}, want: types.String("harness")},
-		{name: "int operator", fields: struct {
-			Identifier string
-			Name       *string
-			Anonymous  bool
-			Attributes map[string]interface{}
-		}{Identifier: "harness", Name: &harness, Anonymous: false, Attributes: map[string]interface{}{
-			"order": 1,
-		}},
-			args: struct{ attr string }{attr: "order"}, want: types.Integer(1)},
-		{name: "number operator", fields: struct {
-			Identifier string
-			Name       *string
-			Anonymous  bool
-			Attributes map[string]interface{}
-		}{Identifier: "harness", Name: &harness, Anonymous: false, Attributes: map[string]interface{}{
-			"weight": 99.99,
-		}},
-			args: struct{ attr string }{attr: "weight"}, want: types.Number(99.99)},
-	}
-	for _, tt := range tests {
-		val := tt
-		t1.Run(val.name, func(t1 *testing.T) {
-			t := Target{
-				Identifier: val.fields.Identifier,
-				Name:       val.fields.Name,
-				Anonymous:  &val.fields.Anonymous,
-				Attributes: &val.fields.Attributes,
-			}
-			got, err := t.GetOperator(val.args.attr)
-			if (err != nil) != val.wantErr {
-				t1.Errorf("GetOperator() error = %v, wantErr %v", err, val.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, val.want) {
-				t1.Errorf("GetOperator() error = %v, want %v", err, val.want)
-			}
-		})
-	}
-}
-
 func TestTarget_GetAttrValue(t1 *testing.T) {
 	name := "John"
 	identifier := "john"
@@ -133,7 +59,7 @@ func TestTarget_GetAttrValue(t1 *testing.T) {
 	}
 }
 
-func TestTarget_GetOperator1(t1 *testing.T) {
+func TestTarget_GetOperator(t1 *testing.T) {
 	m := make(map[string]interface{})
 	m["anonymous"] = false
 	type fields struct {
