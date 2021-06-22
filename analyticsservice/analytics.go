@@ -2,6 +2,7 @@ package analyticsservice
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ const (
 	featureIdentifierAttribute   string = "featureIdentifier"
 	featureNameAttribute         string = "featureName"
 	variationIdentifierAttribute string = "variationIdentifier"
+	variationValueAttribute      string = "featureValue"
 	targetAttribute              string = "target"
 	sdkVersionAttribute          string = "SDK_VERSION"
 	sdkVersion                   string = "0.0.10"
@@ -24,6 +26,7 @@ const (
 	sdkType                      string = "server"
 	sdkLanguageAttribute         string = "SDK_LANGUAGE"
 	sdkLanguage                  string = "go"
+	globalTarget                 string = "global"
 )
 
 type analyticsEvent struct {
@@ -102,11 +105,7 @@ func (as *AnalyticsService) PushToQueue(target *evaluation.Target, featureConfig
 func (as *AnalyticsService) listener() {
 	as.logger.Info("Analytics cache successfully initialized")
 	for ad := range as.analyticsChan {
-		targetIdentifier := ""
-		if ad.target != nil {
-			targetIdentifier = ad.target.Identifier
-		}
-		key := fmt.Sprintf("%s-%s-%s", ad.featureConfig.Feature, ad.variation.Identifier, targetIdentifier)
+		key := getEventSummaryKey(ad)
 
 		as.mx.Lock()
 		analytic, ok := as.analyticsData[key]
@@ -132,7 +131,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	as.mx.Unlock()
 
 	metricData := make([]metricsclient.MetricsData, 0, len(as.analyticsData))
-	targetData := make([]metricsclient.TargetData, 0, len(as.analyticsData))
+	targetData := map[string]metricsclient.TargetData{}
 
 	for _, analytic := range analyticsData {
 		if analytic.target != nil {
@@ -161,7 +160,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 					Identifier: analytic.target.Identifier,
 					Attributes: targetAttributes,
 				}
-				targetData = append(targetData, td)
+				targetData[analytic.target.Identifier] = td
 			}
 		}
 
@@ -179,6 +178,10 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 				Value: analytic.variation.Identifier,
 			},
 			{
+				Key:   variationValueAttribute,
+				Value: analytic.variation.Value,
+			},
+			{
 				Key:   sdkTypeAttribute,
 				Value: sdkType,
 			},
@@ -192,12 +195,10 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 			},
 		}
 
-		if analytic.target != nil {
-			metricAttributes = append(metricAttributes, metricsclient.KeyValue{
-				Key:   targetAttribute,
-				Value: analytic.target.Identifier,
-			})
-		}
+		metricAttributes = append(metricAttributes, metricsclient.KeyValue{
+			Key:   targetAttribute,
+			Value: globalTarget,
+		})
 
 		md := metricsclient.MetricsData{
 			Timestamp:   time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)),
@@ -211,7 +212,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	// if targets data is empty we just send nil
 	var targetDataPayload *[]metricsclient.TargetData = nil
 	if len(targetData) > 0 {
-		targetDataPayload = &targetData
+		targetDataPayload = targetDataMapToArray(targetData)
 	}
 
 	analyticsPayload := metricsclient.PostMetricsJSONRequestBody{
@@ -219,11 +220,11 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 		TargetData:  targetDataPayload,
 	}
 
-	//jsonData, err := json.Marshal(analyticsPayload)
-	//if err != nil {
-	//	as.logger.Errorf(err.Error())
-	//}
-	//fmt.Println(string(jsonData))
+	jsonData, err := json.Marshal(analyticsPayload)
+	if err != nil {
+		as.logger.Errorf(err.Error())
+	}
+	fmt.Println(string(jsonData))
 
 	if as.metricsClient != nil {
 		mClient := *as.metricsClient
@@ -245,4 +246,24 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	} else {
 		as.logger.Warn("metrics client is not set")
 	}
+}
+
+//func getEventKey(event analyticsEvent) string {
+//	targetIdentifier := ""
+//	if event.target != nil {
+//		targetIdentifier = event.target.Identifier
+//	}
+//	return fmt.Sprintf("%s-%s-%s-%s", event.featureConfig.Feature, event.variation.Identifier, event.variation.Value, targetIdentifier)
+//}
+
+func getEventSummaryKey(event analyticsEvent) string {
+	return fmt.Sprintf("%s-%s-%s-%s", event.featureConfig.Feature, event.variation.Identifier, event.variation.Value, globalTarget)
+}
+
+func targetDataMapToArray(targetMap map[string]metricsclient.TargetData) *[]metricsclient.TargetData {
+	targetDataArray := make([]metricsclient.TargetData, 0, len(targetMap))
+	for _, targetData := range targetMap {
+		targetDataArray = append(targetDataArray, targetData)
+	}
+	return &targetDataArray
 }
