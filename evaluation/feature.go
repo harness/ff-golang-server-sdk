@@ -228,9 +228,11 @@ func (fc FeatureConfig) GetVariationName(target *Target) string {
 				if variationMap.TargetSegments != nil {
 					for _, segmentIdentifier := range variationMap.TargetSegments {
 						segment := fc.Segments[segmentIdentifier]
-						for _, t := range segment.Included {
-							if t == target.Identifier {
-								return variationMap.Variation
+						if segment.Included != nil {
+							for _, t := range segment.Included {
+								if t == target.Identifier {
+									return variationMap.Variation
+								}
 							}
 						}
 					}

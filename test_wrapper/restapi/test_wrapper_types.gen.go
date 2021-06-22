@@ -39,4 +39,3 @@ type GetFlagValueJSONBody FlagCheckBody
 
 // GetFlagValueJSONRequestBody defines body for GetFlagValue for application/json ContentType.
 type GetFlagValueJSONRequestBody GetFlagValueJSONBody
-
