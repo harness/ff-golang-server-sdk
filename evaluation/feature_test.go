@@ -398,15 +398,18 @@ func makeFeatureConfig(name, kind string, variation1, variation2, defaultServe V
 		DefaultServe: Serve{
 			Variation: &defaultServe.Identifier,
 		},
-		Environment:          "dev",
-		Feature:              name,
-		Kind:                 kind,
-		OffVariation:         variation2.Identifier,
-		Rules:                rules,
-		Prerequisites:        nil,
-		Project:              "default",
-		State:                state,
-		VariationToTargetMap: nil,
+		Environment:   "dev",
+		Feature:       name,
+		Kind:          kind,
+		OffVariation:  variation2.Identifier,
+		Rules:         rules,
+		Prerequisites: nil,
+		Project:       "default",
+		State:         state,
+		VariationToTargetMap: []VariationMap{
+			{Targets: []string{"Harness"},
+				TargetSegments: []string{"segment1"}},
+		},
 		Variations: []Variation{
 			{Description: nil, Identifier: variation1.Identifier, Name: variation1.Name, Value: variation1.Value},
 			{Description: nil, Identifier: variation2.Identifier, Name: variation2.Name, Value: variation2.Value},
@@ -440,7 +443,7 @@ func TestFeatureConfig_Evaluate(t *testing.T) {
 
 	target := Target{
 		Identifier: harness,
-		Name:       nil,
+		Name:       &harness,
 		Anonymous:  &f,
 		Attributes: &m,
 	}
@@ -485,6 +488,7 @@ func TestFeatureConfig_Evaluate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fc := tc.featureConfig
 			got, err := fc.Evaluate(tc.args.target)
+			fc.GetVariationName(&target)
 			if (err != nil) != tc.wantErr {
 				t.Errorf("BoolVariation() error = %v, wantErr %v", err, tc.wantErr)
 				return
