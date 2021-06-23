@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/labstack/gommon/log"
+
 	"github.com/drone/ff-golang-server-sdk/types"
 )
 
@@ -227,11 +229,15 @@ func (fc FeatureConfig) GetVariationName(target *Target) string {
 
 				if variationMap.TargetSegments != nil {
 					for _, segmentIdentifier := range variationMap.TargetSegments {
-						segment := fc.Segments[segmentIdentifier]
-						if segment.Included != nil {
-							for _, t := range segment.Included {
-								if t == target.Identifier {
-									return variationMap.Variation
+						segment, ok := fc.Segments[segmentIdentifier]
+						if !ok {
+							log.Error("The segment in variation map is invalid")
+						} else {
+							if segment.Included != nil {
+								for _, t := range segment.Included {
+									if t == target.Identifier {
+										return variationMap.Variation
+									}
 								}
 							}
 						}

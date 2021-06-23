@@ -11,6 +11,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/jarcoal/httpmock v1.0.8
 	github.com/json-iterator/go v1.1.10
+	github.com/labstack/gommon v0.3.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mitchellh/mapstructure v1.3.3
 	github.com/r3labs/sse v0.0.0-20201126193848-34e640891548
