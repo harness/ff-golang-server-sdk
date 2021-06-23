@@ -407,7 +407,7 @@ func makeFeatureConfig(name, kind string, variation1, variation2, defaultServe V
 		Project:       "default",
 		State:         state,
 		VariationToTargetMap: []VariationMap{
-			{Targets: []string{"Harness"},
+			{Targets: []string{"foo"},
 				TargetSegments: []string{"segment1"}},
 		},
 		Variations: []Variation{
