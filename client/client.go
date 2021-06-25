@@ -63,7 +63,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	)
 
 	//  functional options for config
-	config := newDefaultConfig()
+	config := newDefaultConfig(sdkKey)
 	for _, opt := range options {
 		opt(config)
 	}

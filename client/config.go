@@ -1,6 +1,8 @@
 package client
 
 import (
+	"crypto/sha1"
+	"encoding/base64"
 	"log"
 	"net/http"
 
@@ -25,13 +27,17 @@ type config struct {
 	target       evaluation.Target
 }
 
-func newDefaultConfig() *config {
+func newDefaultConfig(sdkKey string) *config {
 	defaultLogger, err := logger.NewZapLogger(false)
 	if err != nil {
 		log.Printf("Error creating zap logger instance, %v", err)
 	}
 	defaultCache, _ := cache.NewLruCache(10000, defaultLogger) // size of cache
-	defaultStore := storage.NewFileStore("defaultProject", storage.GetHarnessDir(), defaultLogger)
+
+	h := sha1.New()
+	h.Write([]byte(sdkKey))
+	hashValue := base64.URLEncoding.EncodeToString(h.Sum(nil))
+	defaultStore := storage.NewFileStore(hashValue, storage.GetHarnessDir(), defaultLogger)
 
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = 10

@@ -14,7 +14,7 @@ import (
 
 // FileStore object is simple JSON file representation
 type FileStore struct {
-	project       string
+	name          string
 	path          string
 	data          map[string]interface{}
 	lastPersisted time.Time
@@ -22,12 +22,12 @@ type FileStore struct {
 }
 
 // NewFileStore creates a new file store instance
-func NewFileStore(project string, path string, logger logger.Logger) *FileStore {
+func NewFileStore(name string, path string, logger logger.Logger) *FileStore {
 	return &FileStore{
-		project: project,
-		path:    filepath.Join(path, fmt.Sprintf("harness-ffm-v1-%s.json", project)),
-		data:    make(map[string]interface{}),
-		logger:  logger,
+		name:   name,
+		path:   filepath.Join(path, fmt.Sprintf("ffm-v1-%s.json", name)),
+		data:   make(map[string]interface{}),
+		logger: logger,
 	}
 }
 
