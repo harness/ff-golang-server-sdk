@@ -110,6 +110,6 @@ func (ds *FileStore) PersistedAt() time.Time {
 }
 
 // SetLogger set logger
-func (ds FileStore) SetLogger(logger logger.Logger) {
+func (ds *FileStore) SetLogger(logger logger.Logger) {
 	ds.logger = logger
 }
