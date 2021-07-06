@@ -93,6 +93,6 @@ func (lru *LRUCache) Updated() time.Time {
 }
 
 // SetLogger set logger
-func (lru LRUCache) SetLogger(logger logger.Logger) {
+func (lru *LRUCache) SetLogger(logger logger.Logger) {
 	lru.logger = logger
 }

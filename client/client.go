@@ -37,20 +37,21 @@ import (
 // that any pending analytics events have been delivered.
 //
 type CfClient struct {
-	mux              sync.RWMutex
-	api              rest.ClientWithResponsesInterface
-	metricsapi       metricsclient.ClientWithResponsesInterface
-	sdkKey           string
-	auth             rest.AuthenticationRequest
-	config           *config
-	environmentID    string
-	token            string
-	persistence      cache.Persistence
-	cancelFunc       context.CancelFunc
-	streamConnected  bool
-	authenticated    chan struct{}
-	initialized      chan bool
-	analyticsService *analyticsservice.AnalyticsService
+	mux               sync.RWMutex
+	api               rest.ClientWithResponsesInterface
+	metricsapi        metricsclient.ClientWithResponsesInterface
+	sdkKey            string
+	auth              rest.AuthenticationRequest
+	config            *config
+	environmentID     string
+	token             string
+	persistence       cache.Persistence
+	cancelFunc        context.CancelFunc
+	streamConnected   bool
+	authenticated     chan struct{}
+	initialized       chan bool
+	analyticsService  *analyticsservice.AnalyticsService
+	clusterIdentifier string
 }
 
 // NewCfClient creates a new client instance that connects to CF with the default configuration.
@@ -71,11 +72,12 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	analyticsService := analyticsservice.NewAnalyticsService(time.Minute, config.Logger)
 
 	client := &CfClient{
-		sdkKey:           sdkKey,
-		config:           config,
-		authenticated:    make(chan struct{}),
-		initialized:      make(chan bool),
-		analyticsService: analyticsService,
+		sdkKey:            sdkKey,
+		config:            config,
+		authenticated:     make(chan struct{}),
+		initialized:       make(chan bool),
+		analyticsService:  analyticsService,
+		clusterIdentifier: "1",
 	}
 	ctx, client.cancelFunc = context.WithCancel(context.Background())
 
@@ -158,7 +160,7 @@ func (c *CfClient) streamConnect() {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 	c.config.Logger.Info("Registering SSE consumer")
-	sseClient := sse.NewClient(fmt.Sprintf("%s/stream", c.config.url))
+	sseClient := sse.NewClient(fmt.Sprintf("%s/stream?cluster=%s", c.config.url, c.clusterIdentifier))
 	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.config.Cache, c.api)
 	err := conn.Connect(c.environmentID)
 	if err != nil {
@@ -240,6 +242,12 @@ func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) {
 		return
 	}
 
+	c.clusterIdentifier, ok = claims["clusterIdentifier"].(string)
+	if !ok {
+		c.config.Logger.Error(errors.New("cluster identifier not present"))
+		c.clusterIdentifier = "1"
+	}
+
 	// network layer setup
 	bearerTokenProvider, bearerTokenProviderErr := securityprovider.NewSecurityProviderBearerToken(c.token)
 	if bearerTokenProviderErr != nil {
@@ -248,6 +256,7 @@ func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) {
 	}
 	restClient, err := rest.NewClientWithResponses(c.config.url,
 		rest.WithRequestEditorFn(bearerTokenProvider.Intercept),
+		rest.WithRequestEditorFn(c.InterceptAddCluster),
 		rest.WithHTTPClient(c.config.httpClient),
 	)
 	if err != nil {
@@ -537,6 +546,14 @@ func (c *CfClient) Close() error {
 // Environment returns environment based on authenticated SDK key
 func (c *CfClient) Environment() string {
 	return c.environmentID
+}
+
+// InterceptAddCluster adds cluster ID to calls
+func (c *CfClient) InterceptAddCluster(ctx context.Context, req *http.Request) error {
+	q := req.URL.Query()
+	q.Add("cluster", c.clusterIdentifier)
+	req.URL.RawQuery = q.Encode()
+	return nil
 }
 
 // contains determines if the string variation is in the slice of variations.
