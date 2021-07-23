@@ -338,21 +338,22 @@ type ServingRules []ServingRule
 
 // GetVariationName returns variation identifier or defaultServe
 func (sr ServingRules) GetVariationName(target *Target, segments Segments, defaultServe Serve) string {
-RULES:
-	for _, rule := range sr {
-		// rules are OR operation
-		if !rule.Clauses.Evaluate(target, segments) {
-			continue RULES
+	if target != nil {
+	RULES:
+		for _, rule := range sr {
+			// rules are OR operation
+			if !rule.Clauses.Evaluate(target, segments) {
+				continue RULES
+			}
+			var name string
+			if rule.Serve.Variation != nil {
+				name = *rule.Serve.Variation
+			} else {
+				name = rule.Serve.Distribution.GetKeyName(target)
+			}
+			return name
 		}
-		var name string
-		if rule.Serve.Variation != nil {
-			name = *rule.Serve.Variation
-		} else {
-			name = rule.Serve.Distribution.GetKeyName(target)
-		}
-		return name
 	}
-
 	// not found then return defaultServe
 	if defaultServe.Variation != nil {
 		return *defaultServe.Variation
