@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -15,13 +14,13 @@ import (
 	"github.com/drone/ff-golang-server-sdk/metricsclient"
 
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/drone/ff-golang-server-sdk/cache"
 	"github.com/drone/ff-golang-server-sdk/dto"
 	"github.com/drone/ff-golang-server-sdk/evaluation"
 	"github.com/drone/ff-golang-server-sdk/rest"
 	"github.com/drone/ff-golang-server-sdk/stream"
 	"github.com/drone/ff-golang-server-sdk/types"
+	"github.com/golang-jwt/jwt"
 
 	"github.com/r3labs/sse"
 )
@@ -89,7 +88,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	// load from storage
 	if config.enableStore {
 		if err = client.persistence.LoadFromStore(); err != nil {
-			log.Printf("error loading from store err: %s", err)
+			config.Logger.Errorf("error loading from store err: %s", err.Error())
 		}
 	}
 
@@ -132,7 +131,7 @@ func (c *CfClient) retrieve(ctx context.Context) {
 		defer cancel()
 		err := c.retrieveFlags(rCtx)
 		if err != nil {
-			log.Printf("error while retreiving flags: %v", err)
+			c.config.Logger.Errorf("error while retreiving flags: %v", err.Error())
 		}
 	}()
 
@@ -142,7 +141,7 @@ func (c *CfClient) retrieve(ctx context.Context) {
 		defer cancel()
 		err := c.retrieveSegments(rCtx)
 		if err != nil {
-			log.Printf("error while retreiving segments at startup: %v", err)
+			c.config.Logger.Errorf("error while retreiving segments at startup: %v", err.Error())
 		}
 	}()
 	wg.Wait()
@@ -161,7 +160,7 @@ func (c *CfClient) streamConnect() {
 	defer c.mux.RUnlock()
 	c.config.Logger.Info("Registering SSE consumer")
 	sseClient := sse.NewClient(fmt.Sprintf("%s/stream?cluster=%s", c.config.url, c.clusterIdentifier))
-	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.config.Cache, c.api)
+	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.config.Cache, c.api, c.config.Logger)
 	err := conn.Connect(c.environmentID)
 	if err != nil {
 		c.streamConnected = false
