@@ -312,6 +312,47 @@ func TestServingRules_GetVariationName(t *testing.T) {
 		args args
 		want string
 	}{
+		{
+			name: "target is nil", sr: []ServingRule{
+				{
+					Clauses: []Clause{
+						{
+							Attribute: "identifier",
+							ID:        "id",
+							Negate:    false,
+							Op:        equalOperator,
+							Value: []string{
+								harness,
+							},
+						},
+					},
+					Priority: 0,
+					RuleID:   uuid.New().String(),
+					Serve: struct {
+						Distribution *Distribution
+						Variation    *string
+					}{
+						Distribution: nil,
+						Variation:    &onVariationIdentifier,
+					},
+				},
+			},
+			args: struct {
+				target       *Target
+				segments     Segments
+				defaultServe Serve
+			}{
+				target: nil,
+				defaultServe: struct {
+					Distribution *Distribution
+					Variation    *string
+				}{
+					Distribution: nil,
+					Variation:    &onVariationIdentifier,
+				},
+			},
+			want: onVariationIdentifier,
+		},
 		{name: "equalOperator", sr: []ServingRule{
 			{Clauses: []Clause{
 				{Attribute: "identifier", ID: "id", Negate: false, Op: equalOperator, Value: []string{
