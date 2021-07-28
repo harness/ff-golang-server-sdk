@@ -63,22 +63,34 @@ func (c *SSEClient) Connect(environment string) error {
 				case dto.KeyFeature:
 					// maybe is better to send event on memory bus that we get new message
 					// and subscribe to that event
-					go func(env, identifier string) {
-						ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
-						response, err := c.api.GetFeatureConfigByIdentifierWithResponse(ctx, env, identifier)
-						if err != nil {
-							c.logger.Errorf("error while pulling flag, err: %s", err.Error())
-							cancel()
-							return
-						}
-						if response.JSON200 != nil {
-							c.cache.Set(dto.Key{
+					switch cfMsg.Event {
+					case dto.SseDeleteEvent:
+						go func() {
+							c.cache.Remove(dto.Key{
 								Type: dto.KeyFeature,
 								Name: cfMsg.Identifier,
-							}, *response.JSON200.Convert())
-						}
-						cancel()
-					}(environment, cfMsg.Identifier)
+							})
+						}()
+
+					case dto.SsePatchEvent, dto.SseCreateEvent:
+						fallthrough
+					default:
+						go func(env, identifier string) {
+							ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+							defer cancel()
+							response, err := c.api.GetFeatureConfigByIdentifierWithResponse(ctx, env, identifier)
+							if err != nil {
+								c.logger.Errorf("error while pulling flag, err: %s", err.Error())
+								return
+							}
+							if response.JSON200 != nil {
+								c.cache.Set(dto.Key{
+									Type: dto.KeyFeature,
+									Name: cfMsg.Identifier,
+								}, *response.JSON200.Convert())
+							}
+						}(environment, cfMsg.Identifier)
+					}
 				case dto.KeySegment:
 					// need open client spec change
 				}
