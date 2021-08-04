@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/labstack/gommon/log"
+	"github.com/drone/ff-golang-server-sdk/log"
 
 	"github.com/drone/ff-golang-server-sdk/types"
 )
@@ -88,7 +88,7 @@ func (c Clauses) Evaluate(target *Target, segments Segments) bool {
 		// operator should be evaluated based on type of attribute
 		op, err := target.GetOperator(clause.Attribute)
 		if err != nil {
-			fmt.Print(err)
+			log.Warn(err)
 		}
 		if !clause.Evaluate(target, segments, op) {
 			return false
