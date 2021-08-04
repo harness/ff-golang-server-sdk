@@ -1,6 +1,8 @@
 package rest
 
-import "github.com/drone/ff-golang-server-sdk/evaluation"
+import (
+	"github.com/drone/ff-golang-server-sdk/evaluation"
+)
 
 func (wv WeightedVariation) convert() *evaluation.WeightedVariation {
 	return &evaluation.WeightedVariation{
@@ -144,7 +146,7 @@ func (s Segment) Convert() evaluation.Segment {
 	if s.Excluded != nil {
 		excluded = make(evaluation.StrSlice, len(*s.Excluded))
 		for i, excl := range *s.Excluded {
-			excluded[i] = excl.Name
+			excluded[i] = excl.Identifier
 		}
 	}
 
@@ -152,13 +154,13 @@ func (s Segment) Convert() evaluation.Segment {
 	if s.Included != nil {
 		included = make(evaluation.StrSlice, len(*s.Included))
 		for i, incl := range *s.Included {
-			included[i] = incl.Name
+			included[i] = incl.Identifier
 		}
 	}
 
-	rules := make(evaluation.Clauses, 0)
+	rules := make(evaluation.SegmentRules, 0)
 	if s.Rules != nil {
-		rules = make(evaluation.Clauses, len(*s.Rules))
+		rules = make(evaluation.SegmentRules, len(*s.Rules))
 		for i, rule := range *s.Rules {
 			rules[i] = evaluation.Clause{
 				Attribute: rule.Attribute,

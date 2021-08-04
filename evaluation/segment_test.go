@@ -1,27 +1,17 @@
 package evaluation
 
 import (
-	"github.com/google/uuid"
-
 	"testing"
 )
 
 func TestSegment_Evaluate(t *testing.T) {
 	type fields struct {
-		Identifier  string
-		Name        string
-		CreatedAt   *int64
-		ModifiedAt  *int64
-		Environment *string
-		Excluded    StrSlice
-		Included    StrSlice
-		Rules       Clauses
-		Tags        []Tag
-		Version     int64
+		Identifier string
+		Excluded   StrSlice
+		Included   StrSlice
+		Rules      SegmentRules
 	}
-	type args struct {
-		target *Target
-	}
+
 	f := false
 	m := make(map[string]interface{})
 	m["email"] = "john@doe.com"
@@ -35,54 +25,28 @@ func TestSegment_Evaluate(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		args   args
+		args   Target
 		want   bool
 	}{
-		{name: "test included", fields: struct {
-			Identifier  string
-			Name        string
-			CreatedAt   *int64
-			ModifiedAt  *int64
-			Environment *string
-			Excluded    StrSlice
-			Included    StrSlice
-			Rules       Clauses
-			Tags        []Tag
-			Version     int64
-		}{Identifier: "beta", Name: "Beta users", CreatedAt: nil, ModifiedAt: nil, Environment: nil, Excluded: nil,
-			Included: []string{"john"}, Rules: nil, Tags: nil, Version: 1}, args: struct{ target *Target }{target: &target}, want: true},
-		{name: "test rules", fields: struct {
-			Identifier  string
-			Name        string
-			CreatedAt   *int64
-			ModifiedAt  *int64
-			Environment *string
-			Excluded    StrSlice
-			Included    StrSlice
-			Rules       Clauses
-			Tags        []Tag
-			Version     int64
-		}{Identifier: "beta", Name: "Beta users", CreatedAt: nil, ModifiedAt: nil, Environment: nil, Excluded: nil,
-			Included: nil, Rules: []Clause{
-				{Attribute: "email", ID: uuid.New().String(), Negate: false, Op: equalOperator, Value: []string{"john@doe.com"}},
-			}, Tags: nil, Version: 1}, args: struct{ target *Target }{target: &target}, want: true},
+		{name: "test target included by list", fields: fields{Identifier: "beta", Included: []string{"john"}}, args: target, want: true},
+		{name: "test target excluded by list", fields: fields{Identifier: "beta", Included: []string{"john"}, Excluded: []string{"john"}}, args: target, want: false},
+		{name: "test target included by rules", fields: fields{Identifier: "beta", Rules: []Clause{{Attribute: "email", ID: "1", Op: equalOperator, Value: []string{"john@doe.com"}}}}, args: target, want: true},
+		{name: "test target not included by rules", fields: fields{Identifier: "beta", Rules: []Clause{{Attribute: "email", ID: "2", Op: equalOperator, Value: []string{"foo@doe.com"}}}}, args: target, want: false},
+		{name: "test target rules evaluating with OR", fields: fields{Identifier: "beta", Rules: []Clause{
+			{Attribute: "email", ID: "1", Op: equalOperator, Value: []string{"john@doe.com"}},
+			{Attribute: "email", ID: "2", Op: equalOperator, Value: []string{"foo@doe.com"}},
+		}}, args: target, want: true},
 	}
 	for _, tt := range tests {
 		val := tt
 		t.Run(val.name, func(t *testing.T) {
 			s := Segment{
-				Identifier:  val.fields.Identifier,
-				Name:        val.fields.Name,
-				CreatedAt:   val.fields.CreatedAt,
-				ModifiedAt:  val.fields.ModifiedAt,
-				Environment: val.fields.Environment,
-				Excluded:    val.fields.Excluded,
-				Included:    val.fields.Included,
-				Rules:       val.fields.Rules,
-				Tags:        val.fields.Tags,
-				Version:     val.fields.Version,
+				Identifier: val.fields.Identifier,
+				Excluded:   val.fields.Excluded,
+				Included:   val.fields.Included,
+				Rules:      val.fields.Rules,
 			}
-			if got := s.Evaluate(val.args.target); got != val.want {
+			if got := s.Evaluate(&val.args); got != val.want {
 				t.Errorf("Evaluate() = %v, want %v", got, val.want)
 			}
 		})
