@@ -2,6 +2,7 @@ package evaluation
 
 import (
 	"encoding/json"
+	"reflect"
 
 	"github.com/stretchr/testify/assert"
 
@@ -594,6 +595,48 @@ func TestClause_Evaluate(t *testing.T) {
 			}
 			if got := c.Evaluate(val.args.target, val.args.segments, val.args.operator); got != val.want {
 				t.Errorf("Evaluate() = %v, want %v", got, val.want)
+			}
+		})
+	}
+}
+
+func segmentMatchServingRule(segments ...string) ServingRules {
+	return ServingRules{ServingRule{Clauses: Clauses{Clause{Op: segmentMatchOperator, Value: segments}}}}
+}
+func variationToTargetMap(segments ...string) []VariationMap {
+	return []VariationMap{
+		{
+			TargetSegments: segments,
+		},
+	}
+}
+
+// TestFeatureConfig_GetSegmentIdentifiers tests that GetSegmentIdentifiers returns the expected data
+// given a mixture of clauses and variation target maps
+func TestFeatureConfig_GetSegmentIdentifiers(t *testing.T) {
+	type fields struct {
+		Rules                ServingRules
+		VariationToTargetMap []VariationMap
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   StrSlice
+	}{
+		{"test segment returned, that was added from rules", fields{Rules: segmentMatchServingRule("foo")}, StrSlice{"foo"}},
+		{"test multiple segments returned, that were added from rules", fields{Rules: segmentMatchServingRule("foo", "bar")}, StrSlice{"foo", "bar"}},
+		{"test segment returned, that was added from variation targetMap", fields{VariationToTargetMap: variationToTargetMap("foo")}, StrSlice{"foo"}},
+		{"test multiple segments returned, that were added from variation targetMap", fields{VariationToTargetMap: variationToTargetMap("foo", "bar")}, StrSlice{"foo", "bar"}},
+		{"test multiple segments returned, from both clauses and targetMap", fields{Rules: segmentMatchServingRule("foo"), VariationToTargetMap: variationToTargetMap("bar")}, StrSlice{"foo", "bar"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fc := FeatureConfig{
+				Rules:                tt.fields.Rules,
+				VariationToTargetMap: tt.fields.VariationToTargetMap,
+			}
+			if got := fc.GetSegmentIdentifiers(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetSegmentIdentifiers() = %v, want %v", got, tt.want)
 			}
 		})
 	}
