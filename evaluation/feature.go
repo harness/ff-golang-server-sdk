@@ -164,8 +164,8 @@ func (fc FeatureConfig) GetSegmentIdentifiers() StrSlice {
 
 	// Append any segments that come from the variation target map
 	// in addition to the rules above
-	for _, x := range fc.VariationToTargetMap {
-		slice = append(slice, x.TargetSegments...)
+	for _, targetMap := range fc.VariationToTargetMap {
+		slice = append(slice, targetMap.TargetSegments...)
 	}
 	return slice
 }
