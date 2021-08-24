@@ -65,13 +65,12 @@ func (c *SSEClient) Connect(environment string) error {
 					// and subscribe to that event
 					switch cfMsg.Event {
 					case dto.SseDeleteEvent:
-						go func() {
+						go func(identifier string) {
 							c.cache.Remove(dto.Key{
 								Type: dto.KeyFeature,
-								Name: cfMsg.Identifier,
+								Name: identifier,
 							})
-						}()
-
+						}(cfMsg.Identifier)
 					case dto.SsePatchEvent, dto.SseCreateEvent:
 						fallthrough
 					default:
@@ -86,16 +85,42 @@ func (c *SSEClient) Connect(environment string) error {
 							if response.JSON200 != nil {
 								c.cache.Set(dto.Key{
 									Type: dto.KeyFeature,
-									Name: cfMsg.Identifier,
+									Name: identifier,
 								}, *response.JSON200.Convert())
 							}
 						}(environment, cfMsg.Identifier)
 					}
 				case dto.KeySegment:
 					// need open client spec change
+					switch cfMsg.Event {
+					case dto.SseDeleteEvent:
+						go func(identifier string) {
+							c.cache.Remove(dto.Key{
+								Type: dto.KeySegment,
+								Name: identifier,
+							})
+						}(cfMsg.Identifier)
+					case dto.SsePatchEvent, dto.SseCreateEvent:
+						fallthrough
+					default:
+						go func(env, identifier string) {
+							ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+							defer cancel()
+							response, err := c.api.GetSegmentByIdentifierWithResponse(ctx, env, identifier)
+							if err != nil {
+								c.logger.Errorf("error while pulling segment, err: %s", err.Error())
+								return
+							}
+							if response.JSON200 != nil {
+								c.cache.Set(dto.Key{
+									Type: dto.KeySegment,
+									Name: identifier,
+								}, response.JSON200.Convert())
+							}
+						}(environment, cfMsg.Identifier)
+					}
 				}
 			}
-
 		})
 		if err != nil {
 			c.logger.Errorf("Error: %s", err.Error())
