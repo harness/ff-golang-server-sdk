@@ -59,6 +59,13 @@ func TestTarget_GetOperator(t1 *testing.T) {
 			"weight": 99.99,
 		}},
 			args: struct{ attr string }{attr: "weight"}, want: types.Number(99.99)},
+		{name: "empty operator", fields: struct {
+			Identifier string
+			Name       *string
+			Anonymous  bool
+			Attributes map[string]interface{}
+		}{Identifier: "harness", Name: nil, Anonymous: false, Attributes: map[string]interface{}{}},
+			args: struct{ attr string }{attr: ""}, want: nil},
 	}
 	for _, tt := range tests {
 		val := tt
