@@ -31,6 +31,9 @@ func (t Target) GetAttrValue(attr string) reflect.Value {
 
 // GetOperator returns interface based on attribute value
 func (t Target) GetOperator(attr string) (types.ValueType, error) {
+	if attr == "" {
+		return nil, nil
+	}
 	value := t.GetAttrValue(attr)
 	switch value.Kind() {
 	case reflect.Bool:
