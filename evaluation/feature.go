@@ -85,10 +85,20 @@ type Clauses []Clause
 func (c Clauses) Evaluate(target *Target, segments Segments) bool {
 	// AND operation
 	for _, clause := range c {
-		// operator should be evaluated based on type of attribute
-		op, err := target.GetOperator(clause.Attribute)
-		if err != nil {
-			log.Warn(err)
+
+		// If this is a SegmentMatch clause, then we don't need to get the operator for the
+		// attribute, as it is handled inside the Evaluate code below.
+		//
+		// If it is any other type of clause (i.e. if its an equals, contains etc)
+		// then we need to get the appropriate operator depending on the type of attribute
+		var op types.ValueType
+		var err error
+
+		if clause.Op != segmentMatchOperator {
+			op, err = target.GetOperator(clause.Attribute)
+			if err != nil {
+				log.Warn(err)
+			}
 		}
 		if !clause.Evaluate(target, segments, op) {
 			return false
@@ -239,12 +249,8 @@ func (fc FeatureConfig) GetVariationName(target *Target) string {
 						if !ok {
 							log.Error("The segment in variation map is invalid")
 						} else {
-							if segment.Included != nil {
-								for _, t := range segment.Included {
-									if t == target.Identifier {
-										return variationMap.Variation
-									}
-								}
+							if segment.Evaluate(target) {
+								return variationMap.Variation
 							}
 						}
 					}
