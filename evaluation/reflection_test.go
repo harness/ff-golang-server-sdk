@@ -13,7 +13,7 @@ func TestGetStructFieldValue(t *testing.T) {
 	f := false
 	target := Target{
 		Identifier: identifier,
-		Name:       &name,
+		Name:       name,
 		Anonymous:  &f,
 		Attributes: &m,
 	}
@@ -61,7 +61,7 @@ func Test_caseInsensitiveFieldByName(t *testing.T) {
 	f := false
 	target := Target{
 		Identifier: identifier,
-		Name:       &name,
+		Name:       name,
 		Anonymous:  &f,
 		Attributes: &m,
 	}
