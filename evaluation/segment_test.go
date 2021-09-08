@@ -17,7 +17,6 @@ func TestSegment_Evaluate(t *testing.T) {
 	m["email"] = "john@doe.com"
 	target := Target{
 		Identifier: "john",
-		Name:       nil,
 		Anonymous:  &f,
 		Attributes: &m,
 	}

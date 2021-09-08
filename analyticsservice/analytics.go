@@ -151,8 +151,8 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 				}
 
 				targetName := analytic.target.Identifier
-				if analytic.target.Name != nil {
-					targetName = *analytic.target.Name
+				if analytic.target.Name != "" {
+					targetName = analytic.target.Name
 				}
 
 				td := metricsclient.TargetData{

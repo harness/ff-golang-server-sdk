@@ -13,7 +13,7 @@ func TestTarget_GetOperator(t1 *testing.T) {
 	m["anonymous"] = false
 	type fields struct {
 		Identifier string
-		Name       *string
+		Name       string
 		Anonymous  bool
 		Attributes map[string]interface{}
 	}
@@ -29,42 +29,42 @@ func TestTarget_GetOperator(t1 *testing.T) {
 	}{
 		{name: "boolean operator", fields: struct {
 			Identifier string
-			Name       *string
+			Name       string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "harness", Name: &harness, Anonymous: false, Attributes: m},
+		}{Identifier: "harness", Name: harness, Anonymous: false, Attributes: m},
 			args: struct{ attr string }{attr: "anonymous"}, want: types.Boolean(false)},
 		{name: "string operator", fields: struct {
 			Identifier string
-			Name       *string
+			Name       string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "harness", Name: &harness, Anonymous: false, Attributes: nil},
+		}{Identifier: "harness", Name: harness, Anonymous: false, Attributes: nil},
 			args: struct{ attr string }{attr: "identifier"}, want: types.String("harness")},
 		{name: "int operator", fields: struct {
 			Identifier string
-			Name       *string
+			Name       string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "harness", Name: &harness, Anonymous: false, Attributes: map[string]interface{}{
+		}{Identifier: "harness", Name: harness, Anonymous: false, Attributes: map[string]interface{}{
 			"order": 1,
 		}},
 			args: struct{ attr string }{attr: "order"}, want: types.Integer(1)},
 		{name: "number operator", fields: struct {
 			Identifier string
-			Name       *string
+			Name       string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "harness", Name: &harness, Anonymous: false, Attributes: map[string]interface{}{
+		}{Identifier: "harness", Name: harness, Anonymous: false, Attributes: map[string]interface{}{
 			"weight": 99.99,
 		}},
 			args: struct{ attr string }{attr: "weight"}, want: types.Number(99.99)},
 		{name: "empty operator", fields: struct {
 			Identifier string
-			Name       *string
+			Name       string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "harness", Name: nil, Anonymous: false, Attributes: map[string]interface{}{}},
+		}{Identifier: "harness", Anonymous: false, Attributes: map[string]interface{}{}},
 			args: struct{ attr string }{attr: ""}, want: nil},
 	}
 	for _, tt := range tests {
@@ -94,7 +94,7 @@ func TestTarget_GetAttrValue(t1 *testing.T) {
 	email := "john@doe.com"
 	type fields struct {
 		Identifier string
-		Name       *string
+		Name       string
 		Anonymous  bool
 		Attributes map[string]interface{}
 	}
@@ -109,17 +109,17 @@ func TestTarget_GetAttrValue(t1 *testing.T) {
 	}{
 		{name: "check identifier", fields: struct {
 			Identifier string
-			Name       *string
+			Name       string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: identifier, Name: &name, Anonymous: false, Attributes: types.JSON{}},
+		}{Identifier: identifier, Name: name, Anonymous: false, Attributes: types.JSON{}},
 			args: struct{ attr string }{attr: "identifier"}, want: reflect.ValueOf(identifier)},
 		{name: "check attributes", fields: struct {
 			Identifier string
-			Name       *string
+			Name       string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "john", Name: &name, Anonymous: false, Attributes: types.JSON{
+		}{Identifier: "john", Name: name, Anonymous: false, Attributes: types.JSON{
 			"email": email,
 		}},
 			args: struct{ attr string }{attr: "email"}, want: reflect.ValueOf(email)},
@@ -145,7 +145,7 @@ func TestTarget_GetOperator1(t1 *testing.T) {
 	m["anonymous"] = false
 	type fields struct {
 		Identifier string
-		Name       *string
+		Name       string
 		Anonymous  bool
 		Attributes map[string]interface{}
 	}
@@ -163,33 +163,33 @@ func TestTarget_GetOperator1(t1 *testing.T) {
 	}{
 		{name: "bool operator", fields: struct {
 			Identifier string
-			Name       *string
+			Name       string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "john", Name: &name, Anonymous: false, Attributes: types.JSON{"anonymous": false}},
+		}{Identifier: "john", Name: name, Anonymous: false, Attributes: types.JSON{"anonymous": false}},
 			args: struct{ attr string }{attr: "anonymous"}, want: types.Boolean(false)},
 		{name: "string operator", fields: struct {
 			Identifier string
-			Name       *string
+			Name       string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "john", Name: &name, Anonymous: false, Attributes: types.JSON{}},
+		}{Identifier: "john", Name: name, Anonymous: false, Attributes: types.JSON{}},
 			args: struct{ attr string }{attr: "identifier"}, want: types.String("john")},
 		{name: "number operator", fields: struct {
 			Identifier string
-			Name       *string
+			Name       string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "john", Name: &name, Anonymous: false, Attributes: types.JSON{
+		}{Identifier: "john", Name: name, Anonymous: false, Attributes: types.JSON{
 			"height": 186.5,
 		}},
 			args: struct{ attr string }{attr: "height"}, want: types.Number(186.5)},
 		{name: "integer operator", fields: struct {
 			Identifier string
-			Name       *string
+			Name       string
 			Anonymous  bool
 			Attributes map[string]interface{}
-		}{Identifier: "john", Name: &name, Anonymous: false, Attributes: types.JSON{
+		}{Identifier: "john", Name: name, Anonymous: false, Attributes: types.JSON{
 			"zip": 90210,
 		}},
 			args: struct{ attr string }{attr: "zip"}, want: types.Integer(90210)},

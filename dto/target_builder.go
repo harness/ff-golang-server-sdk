@@ -63,7 +63,7 @@ func (b *targetBuilder) Lastname(lastname string) TargetBuilderInterface {
 
 // Name target name object
 func (b *targetBuilder) Name(name string) TargetBuilderInterface {
-	b.Custom("name", name)
+	b.Target.Name = name
 	return b
 }
 
@@ -76,8 +76,8 @@ func (b *targetBuilder) Anonymous(value bool) TargetBuilderInterface {
 // Custom object
 func (b *targetBuilder) Custom(key string, value interface{}) TargetBuilderInterface {
 	m := make(map[string]interface{})
-	if b.Target.Attributes == nil {
-		b.Target.Attributes = &m
+	if b.Target.Attributes != nil {
+		m = *b.Target.Attributes
 	}
 	m[key] = value
 	b.Target.Attributes = &m

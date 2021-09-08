@@ -191,7 +191,7 @@ func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) {
 		target.Anonymous,
 		target.Attributes,
 		target.Identifier,
-		target.Name,
+		&target.Name,
 	}
 	c.auth.Target = &t
 	c.mux.RLock()

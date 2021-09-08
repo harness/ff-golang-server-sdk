@@ -298,7 +298,7 @@ func TestServingRules_GetVariationName(t *testing.T) {
 	}
 	target := &Target{
 		Identifier: harness,
-		Name:       &harness,
+		Name:       harness,
 		Anonymous:  &f,
 		Attributes: &m,
 	}
@@ -482,7 +482,6 @@ func TestFeatureConfig_Evaluate(t *testing.T) {
 
 	target := Target{
 		Identifier: harness,
-		Name:       nil,
 		Anonymous:  &f,
 		Attributes: &m,
 	}
@@ -554,7 +553,6 @@ func TestClause_Evaluate(t *testing.T) {
 	m["email"] = "john@doe.com"
 	target := Target{
 		Identifier: "john",
-		Name:       nil,
 		Anonymous:  &f,
 		Attributes: &m,
 	}

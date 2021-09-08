@@ -2,6 +2,7 @@ package evaluation
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/drone/ff-golang-server-sdk/types"
 
@@ -11,7 +12,7 @@ import (
 // Target object
 type Target struct {
 	Identifier string
-	Name       *string
+	Name       string
 	Anonymous  *bool
 	Attributes *map[string]interface{}
 }
@@ -24,7 +25,14 @@ func (t Target) GetAttrValue(attr string) reflect.Value {
 	if ok {
 		value = reflect.ValueOf(attrVal)
 	} else {
-		value = GetStructFieldValue(t, attr)
+		// We only have two fields here, so we will access the fields directly, and use reflection if we start adding
+		// more in the future
+		switch strings.ToLower(attr) {
+		case "identifier":
+			value = reflect.ValueOf(t.Identifier)
+		case "name":
+			value = reflect.ValueOf(t.Name)
+		}
 	}
 	return value
 }
