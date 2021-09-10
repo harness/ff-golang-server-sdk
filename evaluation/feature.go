@@ -247,7 +247,7 @@ func (fc FeatureConfig) GetVariationName(target *Target) string {
 					for _, segmentIdentifier := range variationMap.TargetSegments {
 						segment, ok := fc.Segments[segmentIdentifier]
 						if !ok {
-							log.Error("The segment in variation map is invalid")
+							log.Errorf("The segment [%s] in variation map can not be found for feature %s in project %s", segmentIdentifier, fc.Feature, fc.Project)
 						} else {
 							if segment.Evaluate(target) {
 								return variationMap.Variation
