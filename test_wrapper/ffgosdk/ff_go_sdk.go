@@ -51,7 +51,7 @@ func (s SDK) GetVariant(flag *restapi.FlagCheckBody) (string, error) {
 				t.Identifier = *flag.Target.TargetIdentifier
 			}
 			if flag.Target.TargetName != nil {
-				t.Name = flag.Target.TargetName
+				t.Name = *flag.Target.TargetName
 			}
 			attributes := map[string]interface{}{}
 			if flag.Target.Attributes != nil {

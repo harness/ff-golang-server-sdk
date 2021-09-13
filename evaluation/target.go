@@ -20,7 +20,11 @@ type Target struct {
 // GetAttrValue returns value from target with specified attribute
 func (t Target) GetAttrValue(attr string) reflect.Value {
 	var value reflect.Value
-	attrs := *t.Attributes
+	attrs := make(map[string]interface{})
+	if t.Attributes != nil {
+		attrs = *t.Attributes
+	}
+
 	attrVal, ok := attrs[attr] // first check custom attributes
 	if ok {
 		value = reflect.ValueOf(attrVal)
