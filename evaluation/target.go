@@ -53,8 +53,10 @@ func (t Target) GetOperator(attr string) (types.ValueType, error) {
 	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8, reflect.Uint, reflect.Uint16,
 		reflect.Uint32, reflect.Uint64, reflect.Uint8:
 		return types.Integer(value.Int()), nil
+	case reflect.Slice:
+		return types.NewSlice(value.Interface()), nil
 	case reflect.Array, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Func, reflect.Interface,
-		reflect.Invalid, reflect.Map, reflect.Ptr, reflect.Slice, reflect.Struct, reflect.Uintptr, reflect.UnsafePointer:
+		reflect.Invalid, reflect.Map, reflect.Ptr, reflect.Struct, reflect.Uintptr, reflect.UnsafePointer:
 		fallthrough
 	default:
 		return nil, fmt.Errorf("unexpected type: %s", value.Kind().String())
