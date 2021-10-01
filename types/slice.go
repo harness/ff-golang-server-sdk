@@ -31,34 +31,29 @@ func (s Slice) In(values []string) bool {
 	}
 
 	// Determine what kind of slice we have
-	switch data.(type) {
+	switch attributes := data.(type) {
 	case []string:
-		attributes := data.([]string)
 		for _, attribute := range attributes {
 			if stringcmp(attribute, values) {
 				return true
 			}
 		}
 	case []float64:
-		attributes := data.([]float64)
 		for _, attribute := range attributes {
 			if float64cmp(attribute, values) {
 				return true
 			}
 		}
 	case []bool:
-		attributes := data.([]bool)
 		for _, attribute := range attributes {
 			if boolcmp(attribute, values) {
 				return true
 			}
-
 		}
 	case []interface{}:
 		// case we get a []interface, this can store different types at the same time
 		// e.g the first element could be a string, the next a float, so we need to
 		// iterate over the slice and determine the type of each element
-		attributes := data.([]interface{})
 		for _, attribute := range attributes {
 			switch attr := attribute.(type) {
 			case string:
