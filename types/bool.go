@@ -20,7 +20,7 @@ func NewBoolean(value interface{}) (*Boolean, error) {
 	return nil, fmt.Errorf("%v: cant cast to a booelan", ErrWrongTypeAssertion)
 }
 
-// numberOperator iterates over value, convets it to a float64 and calls fn on each element
+// boolOperator iterates over value, converts it to a float64 and calls fn on each element
 func boolOperator(value []string, fn func(bool) bool) bool {
 	if len(value) > 0 {
 		if i, err := strconv.ParseBool(value[0]); err == nil {

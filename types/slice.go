@@ -1,6 +1,7 @@
 package types
 
 import (
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -23,24 +24,30 @@ func NewSlice(value interface{}) Slice {
 // it will first determine what type of slice this is, before casting values
 // to the appropriate type.
 func (s Slice) In(values []string) bool {
+
+	data := validateSlice(s.data)
+	if data == nil {
+		return false
+	}
+
 	// Determine what kind of slice we have
-	switch s.data.(type) {
+	switch data.(type) {
 	case []string:
-		attributes := s.data.([]string)
+		attributes := data.([]string)
 		for _, attribute := range attributes {
 			if stringcmp(attribute, values) {
 				return true
 			}
 		}
 	case []float64:
-		attributes := s.data.([]float64)
+		attributes := data.([]float64)
 		for _, attribute := range attributes {
 			if float64cmp(attribute, values) {
 				return true
 			}
 		}
 	case []bool:
-		attributes := s.data.([]bool)
+		attributes := data.([]bool)
 		for _, attribute := range attributes {
 			if boolcmp(attribute, values) {
 				return true
@@ -51,25 +58,25 @@ func (s Slice) In(values []string) bool {
 		// case we get a []interface, this can store different types at the same time
 		// e.g the first element could be a string, the next a float, so we need to
 		// iterate over the slice and determine the type of each element
-		attributes := s.data.([]interface{})
+		attributes := data.([]interface{})
 		for _, attribute := range attributes {
-			switch attribute.(type) {
+			switch attr := attribute.(type) {
 			case string:
-				if stringcmp(attribute.(string), values) {
+				if stringcmp(attr, values) {
 					return true
 				}
 			case float64:
-				if float64cmp(attribute.(float64), values) {
+				if float64cmp(attr, values) {
 					return true
 				}
 			case bool:
-				if boolcmp(attribute.(bool), values) {
+				if boolcmp(attr, values) {
 					return true
 				}
 			}
 		}
 	default:
-		log.Warn("unsupported attributes for 'in' comparison: [%+v]", s.data)
+		log.Warn("unsupported attributes for 'in' comparison: [%+v]", data)
 
 	}
 
@@ -126,7 +133,7 @@ func (s Slice) LessThanEqual(value []string) bool {
 	return false
 }
 
-// strcmp compares the attribute with each element in values
+// stringcmp compares the attribute with each element in values
 // if any one of values matches it returns true, otherwise false.
 func stringcmp(attribute string, values []string) bool {
 	for _, value := range values {
@@ -169,4 +176,20 @@ func boolcmp(attribute bool, values []string) bool {
 		}
 	}
 	return false
+}
+
+// validateSlice checks if this is a ptr and deference it
+// then validates that we are working with a slice.
+func validateSlice(data interface{}) interface{} {
+	v := reflect.ValueOf(data)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+		data = v.Interface()
+	}
+
+	if v.Kind() != reflect.Slice {
+		return nil
+	}
+
+	return data
 }

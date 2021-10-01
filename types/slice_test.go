@@ -19,6 +19,8 @@ func TestSlice_In(t *testing.T) {
 		{"test string interface{} comparison returns true for match", []interface{}{"alpha", "bravo", "charlie"}, []string{"one", "charlie", "three"}, true},
 		{"test string interface{} comparison returns false for no match", []interface{}{"alpha", "bravo", "charlie"}, []string{"one", "two", "three"}, false},
 		{"test string comparison ignores case", []string{"alpha", "bravo", "charlie"}, []string{"one", "BRAVO", "three"}, true},
+		{"test ptr to interface is handled", &[]interface{}{"alpha", "bravo", "charlie"}, []string{"one", "BRAVO", "three"}, true},
+		{"test nil returns false", nil, []string{"one", "BRAVO", "three"}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
