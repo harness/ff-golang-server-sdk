@@ -1,0 +1,58 @@
+---
+kind: pipeline
+type: docker
+name: default
+
+steps:
+- name: check
+  image: golang:1.16.2
+  commands:
+  - make check
+  volumes:
+  - name: gopath
+    path: /go
+- name: test
+  image: golang:1.16.2
+  commands:
+  - make test
+  volumes:
+  - name: gopath
+    path: /go
+
+volumes:
+- name: gopath
+  temp: {}
+
+---
+kind: pipeline
+type: docker
+name: GCR release
+
+steps:
+- name: Build
+  image: golang:1.16.2
+  commands:
+  - make build-test-wrapper
+  volumes:
+  - name: gopath
+    path: /go
+- name: Release to GCR
+  image: plugins/gcr
+  pull: if-not-exists
+  settings:
+    repo: qa-setup/ff-golang-server-sdk
+    auto_tag: true
+    dockerfile: docker/Dockerfile
+    username:
+      from_secret: ff_gcr_username
+    password:
+      from_secret: ff_gcr_password
+
+volumes:
+- name: gopath
+  temp: {}
+
+trigger:
+  ref:
+  - "refs/tags/*"
+...
