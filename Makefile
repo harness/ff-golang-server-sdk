@@ -68,7 +68,7 @@ lint: $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint
 PHONY+= sec
 sec: $(GOPATH)/bin/gosec
 	@echo "Checking for security problems ..."
-	@gosec -quiet ./...
+	@gosec -quiet -confidence high -severity medium ./...
 	@echo "No problems found"; \
 
 $(GOPATH)/bin/golangci-lint:
