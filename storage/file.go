@@ -49,8 +49,10 @@ func (ds *FileStore) Load() error {
 		return err
 	}
 	defer func() {
-		if err := file.Close(); err != nil {
-			ds.logger.Errorf("error closing file, err: %v", err)
+		if file != nil {
+			if err := file.Close(); err != nil {
+				ds.logger.Errorf("error closing file, err: %v", err)
+			}
 		}
 	}()
 	dec := json.NewDecoder(file)
@@ -67,8 +69,10 @@ func (ds *FileStore) Persist() error {
 		return err
 	}
 	defer func() {
-		if err := file.Close(); err != nil {
-			ds.logger.Errorf("error closing file, err: %v", err)
+		if file != nil {
+			if err := file.Close(); err != nil {
+				ds.logger.Errorf("error closing file, err: %v", err)
+			}
 		}
 	}()
 	enc := json.NewEncoder(file)
