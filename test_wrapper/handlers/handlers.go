@@ -3,9 +3,9 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/drone/ff-golang-server-sdk/test_wrapper/ffgosdk"
-	restapi "github.com/drone/ff-golang-server-sdk/test_wrapper/restapi"
-	"github.com/drone/ff-golang-server-sdk/test_wrapper/wrapperconfig"
+	"github.com/harness/ff-golang-server-sdk/test_wrapper/ffgosdk"
+	restapi "github.com/harness/ff-golang-server-sdk/test_wrapper/restapi"
+	"github.com/harness/ff-golang-server-sdk/test_wrapper/wrapperconfig"
 	"github.com/labstack/echo/v4"
 	log "github.com/sirupsen/logrus"
 )
