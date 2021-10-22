@@ -7,7 +7,8 @@ WORKDIR /app/test_wrapper
 RUN go mod download
 RUN go mod verify
 RUN go get github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.6.0
-RUN make generate
+RUN oapi-codegen -generate server,spec -package=restapi ./test_wrapper_openapi/sdk_wrapper-v1.yaml > ./restapi/test_wrapper_service.gen.go
+RUN oapi-codegen -generate types -package=restapi ./test_wrapper_openapi/sdk_wrapper-v1.yaml > ./restapi/test_wrapper_types.gen.go
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/go_wrapper .
 
