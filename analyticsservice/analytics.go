@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/drone/ff-golang-server-sdk/evaluation"
-	"github.com/drone/ff-golang-server-sdk/metricsclient"
+	"github.com/harness/ff-golang-server-sdk/evaluation"
+	"github.com/harness/ff-golang-server-sdk/metricsclient"
 
-	"github.com/drone/ff-golang-server-sdk/logger"
+	"github.com/harness/ff-golang-server-sdk/logger"
 )
 
 const (

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/drone/ff-golang-server-sdk/types"
+	"github.com/harness/ff-golang-server-sdk/types"
 
 	"reflect"
 )

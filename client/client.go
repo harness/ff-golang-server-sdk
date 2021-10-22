@@ -10,17 +10,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/drone/ff-golang-server-sdk/analyticsservice"
-	"github.com/drone/ff-golang-server-sdk/metricsclient"
+	"github.com/harness/ff-golang-server-sdk/analyticsservice"
+	"github.com/harness/ff-golang-server-sdk/metricsclient"
 
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
-	"github.com/drone/ff-golang-server-sdk/cache"
-	"github.com/drone/ff-golang-server-sdk/dto"
-	"github.com/drone/ff-golang-server-sdk/evaluation"
-	"github.com/drone/ff-golang-server-sdk/rest"
-	"github.com/drone/ff-golang-server-sdk/stream"
-	"github.com/drone/ff-golang-server-sdk/types"
 	"github.com/golang-jwt/jwt"
+	"github.com/harness/ff-golang-server-sdk/cache"
+	"github.com/harness/ff-golang-server-sdk/dto"
+	"github.com/harness/ff-golang-server-sdk/evaluation"
+	"github.com/harness/ff-golang-server-sdk/rest"
+	"github.com/harness/ff-golang-server-sdk/stream"
+	"github.com/harness/ff-golang-server-sdk/types"
 
 	"github.com/r3labs/sse"
 )

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/drone/ff-golang-server-sdk/log"
+	"github.com/harness/ff-golang-server-sdk/log"
 )
 
 // Boolean type for clause attribute evaluation

@@ -1,6 +1,6 @@
-module github.com/drone/ff-golang-server-sdk
+module github.com/harness/ff-golang-server-sdk
 
-go 1.14
+go 1.16
 
 require (
 	github.com/deepmap/oapi-codegen v1.6.0

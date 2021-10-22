@@ -3,7 +3,7 @@ package evaluation
 import (
 	"strings"
 
-	"github.com/drone/ff-golang-server-sdk/log"
+	"github.com/harness/ff-golang-server-sdk/log"
 )
 
 // StrSlice helper type used for string slice operations
