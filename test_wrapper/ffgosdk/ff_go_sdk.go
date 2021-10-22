@@ -6,11 +6,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	harness "github.com/drone/ff-golang-server-sdk/client"
-	"github.com/drone/ff-golang-server-sdk/evaluation"
-	"github.com/drone/ff-golang-server-sdk/test_wrapper/restapi"
-	"github.com/drone/ff-golang-server-sdk/test_wrapper/wrapperconfig"
-	"github.com/drone/ff-golang-server-sdk/types"
+	harness "github.com/harness/ff-golang-server-sdk/client"
+	"github.com/harness/ff-golang-server-sdk/evaluation"
+	"github.com/harness/ff-golang-server-sdk/test_wrapper/restapi"
+	"github.com/harness/ff-golang-server-sdk/test_wrapper/wrapperconfig"
+	"github.com/harness/ff-golang-server-sdk/types"
 )
 
 // SDK .

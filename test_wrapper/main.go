@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/drone/ff-golang-server-sdk/test_wrapper/handlers"
-	"github.com/drone/ff-golang-server-sdk/test_wrapper/restapi"
-	"github.com/drone/ff-golang-server-sdk/test_wrapper/wrapperconfig"
+	"github.com/harness/ff-golang-server-sdk/test_wrapper/handlers"
+	"github.com/harness/ff-golang-server-sdk/test_wrapper/restapi"
+	"github.com/harness/ff-golang-server-sdk/test_wrapper/wrapperconfig"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	log "github.com/sirupsen/logrus"
