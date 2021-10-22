@@ -29,13 +29,6 @@ type: docker
 name: GCR release
 
 steps:
-- name: Build
-  image: golang:1.16.2
-  commands:
-  - make build-test-wrapper
-  volumes:
-  - name: gopath
-    path: /go
 - name: Release to GCR
   image: plugins/gcr
   pull: if-not-exists
@@ -45,9 +38,6 @@ steps:
     auto_tag: true
     dockerfile: docker/Dockerfile
     secrets: [ ff-gcp ]
-volumes:
-- name: gopath
-  temp: {}
 
 trigger:
   ref:
