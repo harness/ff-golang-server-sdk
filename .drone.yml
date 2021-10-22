@@ -41,13 +41,10 @@ steps:
   pull: if-not-exists
   settings:
     repo: qa-setup/ff-golang-server-sdk
+    registry: us.gcr.io
     auto_tag: true
     dockerfile: docker/Dockerfile
-    username:
-      from_secret: ff_gcr_username
-    password:
-      from_secret: ff_gcr_password
-
+    secrets: [ ff-gcp ]
 volumes:
 - name: gopath
   temp: {}
