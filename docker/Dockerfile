@@ -6,7 +6,7 @@ COPY . .
 WORKDIR /app/test_wrapper
 RUN go mod download
 RUN go mod verify
-RUN make install
+RUN go get github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.6.0
 RUN make generate
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/go_wrapper .
