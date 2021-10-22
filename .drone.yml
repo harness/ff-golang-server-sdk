@@ -37,7 +37,8 @@ steps:
     registry: us.gcr.io
     auto_tag: true
     dockerfile: docker/Dockerfile
-    secrets: [ ff-gcp ]
+    json_key:
+      from_secret: ff-gcp
 
 trigger:
   ref:
