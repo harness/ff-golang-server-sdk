@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/drone/ff-golang-server-sdk/cache"
-	"github.com/drone/ff-golang-server-sdk/dto"
-	"github.com/drone/ff-golang-server-sdk/logger"
-	"github.com/drone/ff-golang-server-sdk/rest"
+	"github.com/harness/ff-golang-server-sdk/cache"
+	"github.com/harness/ff-golang-server-sdk/dto"
+	"github.com/harness/ff-golang-server-sdk/logger"
+	"github.com/harness/ff-golang-server-sdk/rest"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/r3labs/sse"

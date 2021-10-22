@@ -1,6 +1,6 @@
 package log
 
-import "github.com/drone/ff-golang-server-sdk/logger"
+import "github.com/harness/ff-golang-server-sdk/logger"
 
 // And just go global.
 var defaultLogger logger.Logger

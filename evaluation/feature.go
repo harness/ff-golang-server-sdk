@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/drone/ff-golang-server-sdk/log"
+	"github.com/harness/ff-golang-server-sdk/log"
 
-	"github.com/drone/ff-golang-server-sdk/types"
+	"github.com/harness/ff-golang-server-sdk/types"
 )
 
 const (

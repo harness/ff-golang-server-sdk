@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/drone/ff-golang-server-sdk/rest"
+	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/jarcoal/httpmock"
 )
 

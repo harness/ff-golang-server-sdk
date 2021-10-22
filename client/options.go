@@ -3,10 +3,10 @@ package client
 import (
 	"net/http"
 
-	"github.com/drone/ff-golang-server-sdk/cache"
-	"github.com/drone/ff-golang-server-sdk/evaluation"
-	"github.com/drone/ff-golang-server-sdk/logger"
-	"github.com/drone/ff-golang-server-sdk/storage"
+	"github.com/harness/ff-golang-server-sdk/cache"
+	"github.com/harness/ff-golang-server-sdk/evaluation"
+	"github.com/harness/ff-golang-server-sdk/logger"
+	"github.com/harness/ff-golang-server-sdk/storage"
 )
 
 // ConfigOption is used as return value for advanced client configuration
