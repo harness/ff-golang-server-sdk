@@ -31,7 +31,6 @@ name: GCR release
 steps:
 - name: Release to GCR
   image: plugins/gcr
-  pull: if-not-exists
   settings:
     repo: qa-setup/go_sdk_wrapper
     registry: us.gcr.io
