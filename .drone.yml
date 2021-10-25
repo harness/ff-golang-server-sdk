@@ -35,9 +35,9 @@ steps:
   settings:
     repo: qa-setup/go_sdk_wrapper
     registry: us.gcr.io
-    auto_tag: true
     tags:
       - latest
+      - ${DRONE_TAG}
     dockerfile: docker/Dockerfile
     json_key:
       from_secret: ff-gcp
