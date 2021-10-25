@@ -33,9 +33,11 @@ steps:
   image: plugins/gcr
   pull: if-not-exists
   settings:
-    repo: qa-setup/ff-golang-server-sdk
+    repo: qa-setup/go_sdk_wrapper
     registry: us.gcr.io
     auto_tag: true
+    tags:
+      - latest
     dockerfile: docker/Dockerfile
     json_key:
       from_secret: ff-gcp
