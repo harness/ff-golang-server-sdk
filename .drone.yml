@@ -44,4 +44,25 @@ steps:
 trigger:
   ref:
   - "refs/tags/*"
+  
+---
+kind: pipeline
+type: docker
+name: GCR manual release
+
+steps:
+- name: Release to GCR
+  image: plugins/gcr
+  settings:
+    repo: qa-setup/go_sdk_wrapper
+    registry: us.gcr.io
+    tags:
+      - ${DRONE_DEPLOY_TO}
+    dockerfile: docker/Dockerfile
+    json_key:
+      from_secret: ff-gcp
+
+trigger:
+  event:
+    - promote
 ...
