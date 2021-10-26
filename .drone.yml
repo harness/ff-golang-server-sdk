@@ -57,7 +57,7 @@ steps:
     repo: qa-setup/go_sdk_wrapper
     registry: us.gcr.io
     tags:
-      - ${NAME}
+      - ${DRONE_DEPLOY_TO}
     dockerfile: docker/Dockerfile
     json_key:
       from_secret: ff-gcp
