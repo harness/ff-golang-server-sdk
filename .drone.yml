@@ -55,6 +55,8 @@ steps:
   image: plugins/gcr
   settings:
     repo: qa-setup/go_sdk_wrapper
+    config:
+      from_secret: dockerhub_readonly_config
     registry: us.gcr.io
     tags:
       - ${DRONE_DEPLOY_TO}
