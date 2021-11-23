@@ -88,8 +88,12 @@ $(GOPATH)/bin/gosec:
 	@curl -sfL https://raw.githubusercontent.com/securego/gosec/master/install.sh | sh -s -- -b $(GOPATH)/bin
 
 
+$(GOPATH)/bin/oapi-codegen:
+	@echo "🔘 Installing oapicodegen ... (`date '+%H:%M:%S'`)"
+	@go get github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.6.0
+
 PHONY+= tools
-tools: $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint $(GOPATH)/bin/gosec $(GOPATH)/bin/goimports
+tools: $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint $(GOPATH)/bin/gosec $(GOPATH)/bin/goimports $(GOPATH)/bin/oapi-codegen
 
 PHONY+= update-tools
 update-tools: delete-tools $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint $(GOPATH)/bin/gosec $(GOPATH)/bin/goimports
