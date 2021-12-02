@@ -122,7 +122,7 @@ func (c *CfClient) IsInitialized() (bool, error) {
 func (c *CfClient) retrieve(ctx context.Context) {
 	// check for first cycle of cron job
 	// for registering stream consumer
-	c.config.Logger.Info("Pooling")
+	c.config.Logger.Info("Polling")
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
@@ -131,7 +131,7 @@ func (c *CfClient) retrieve(ctx context.Context) {
 		defer cancel()
 		err := c.retrieveFlags(rCtx)
 		if err != nil {
-			c.config.Logger.Errorf("error while retreiving flags: %v", err.Error())
+			c.config.Logger.Errorf("error while retrieving flags: %v", err.Error())
 		}
 	}()
 
@@ -141,7 +141,7 @@ func (c *CfClient) retrieve(ctx context.Context) {
 		defer cancel()
 		err := c.retrieveSegments(rCtx)
 		if err != nil {
-			c.config.Logger.Errorf("error while retreiving segments at startup: %v", err.Error())
+			c.config.Logger.Errorf("error while retrieving segments at startup: %v", err.Error())
 		}
 	}()
 	wg.Wait()
@@ -304,6 +304,10 @@ func (c *CfClient) pullCronJob(ctx context.Context) {
 }
 
 func (c *CfClient) persistCronJob(ctx context.Context) {
+	// if store is disabled don't setup the cron job
+	if !c.config.enableStore {
+		return
+	}
 	persistingTicker := c.makeTicker(1)
 	for {
 		select {
