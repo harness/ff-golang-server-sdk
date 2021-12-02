@@ -224,7 +224,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	if err != nil {
 		as.logger.Errorf(err.Error())
 	}
-	fmt.Println(string(jsonData))
+	as.logger.Info(string(jsonData))
 
 	if as.metricsClient != nil {
 		mClient := *as.metricsClient
