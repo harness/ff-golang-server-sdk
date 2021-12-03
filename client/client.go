@@ -96,7 +96,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 
 	go client.setAnalyticsServiceClient(ctx)
 
-	go client.retrieve(ctx)
+	go client.retrieveInitialData(ctx)
 
 	go client.streamConnect()
 
@@ -119,10 +119,8 @@ func (c *CfClient) IsInitialized() (bool, error) {
 	return false, fmt.Errorf("timeout waiting to initialize")
 }
 
-func (c *CfClient) retrieve(ctx context.Context) {
-	// check for first cycle of cron job
-	// for registering stream consumer
-	c.config.Logger.Info("Polling")
+func (c *CfClient) retrieve(ctx context.Context) bool {
+	ok := true
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
@@ -131,6 +129,7 @@ func (c *CfClient) retrieve(ctx context.Context) {
 		defer cancel()
 		err := c.retrieveFlags(rCtx)
 		if err != nil {
+			ok = false
 			c.config.Logger.Errorf("error while retrieving flags: %v", err.Error())
 		}
 	}()
@@ -141,12 +140,23 @@ func (c *CfClient) retrieve(ctx context.Context) {
 		defer cancel()
 		err := c.retrieveSegments(rCtx)
 		if err != nil {
-			c.config.Logger.Errorf("error while retrieving segments at startup: %v", err.Error())
+			ok = false
+			c.config.Logger.Errorf("error while retrieving segments: %v", err.Error())
 		}
 	}()
 	wg.Wait()
+	if ok {
+		c.config.Logger.Info("Data poll finished successfully")
+	} else {
+		c.config.Logger.Error("Data poll finished with errors")
+	}
+
+	return ok
+}
+
+func (c *CfClient) retrieveInitialData(ctx context.Context) {
+	c.retrieve(ctx)
 	c.initialized <- true
-	c.config.Logger.Info("Sync run finished")
 }
 
 func (c *CfClient) streamConnect() {
@@ -160,25 +170,22 @@ func (c *CfClient) streamConnect() {
 	defer c.mux.RUnlock()
 	c.config.Logger.Info("Registering SSE consumer")
 	sseClient := sse.NewClient(fmt.Sprintf("%s/stream?cluster=%s", c.config.url, c.clusterIdentifier))
-	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.config.Cache, c.api, c.config.Logger)
-	err := conn.Connect(c.environmentID)
-	if err != nil {
-		c.streamConnected = false
-		return
-	}
 
-	c.streamConnected = true
-	err = conn.OnDisconnect(func() error {
+	streamErr := func() {
+		c.config.Logger.Error("Stream disconnected. Swapping to polling mode")
 		// Wait one minute before moving to polling
 		time.Sleep(1 * time.Minute)
 		c.mux.RLock()
 		defer c.mux.RUnlock()
 		c.streamConnected = false
-		return nil
-	})
-	if err != nil {
-		c.config.Logger.Errorf("error disconnecting the stream, err: %v", err)
 	}
+	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.config.Cache, c.api, c.config.Logger, streamErr)
+
+	// Connect kicks off a goroutine that attempts to establish a stream connection
+	// while this is happening we set streamConnected to true - if any errors happen
+	// in this process streamConnected will be set back to false by the streamErr function
+	conn.Connect(c.environmentID)
+	c.streamConnected = true
 }
 
 func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) {
@@ -291,10 +298,12 @@ func (c *CfClient) pullCronJob(ctx context.Context) {
 		case <-pullingTicker.C:
 			c.mux.RLock()
 			if !c.streamConnected {
-				c.retrieve(ctx)
-				if c.config.enableStream {
+				ok := c.retrieve(ctx)
+				// we should only try and start the stream after the poll succeeded to make sure we get the latest changes
+				if ok && c.config.enableStream {
 					// here stream is enabled but not connected, so we attempt to reconnect
-					go c.streamConnect()
+					c.config.Logger.Info("Attempting to start stream")
+					c.streamConnect()
 				}
 			}
 
