@@ -220,14 +220,24 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 		TargetData:  targetDataPayload,
 	}
 
-	jsonData, err := json.Marshal(analyticsPayload)
-	if err != nil {
-		as.logger.Errorf(err.Error())
-	}
-	as.logger.Debug(string(jsonData))
-
 	if as.metricsClient != nil {
+		emptyMetricsData := analyticsPayload.MetricsData == nil || len(*analyticsPayload.MetricsData) == 0
+		emptyTargetData := analyticsPayload.TargetData == nil || len(*analyticsPayload.TargetData) == 0
+
+		// if we have no metrics to send skip the post request
+		if emptyMetricsData && emptyTargetData {
+			as.logger.Debug("No metrics or target data to send")
+			return
+		}
+
 		mClient := *as.metricsClient
+
+		jsonData, err := json.Marshal(analyticsPayload)
+		if err != nil {
+			as.logger.Errorf(err.Error())
+		}
+		as.logger.Debug(string(jsonData))
+
 		resp, err := mClient.PostMetricsWithResponse(ctx, metricsclient.EnvironmentPathParam(as.environmentID), analyticsPayload)
 		if err != nil {
 			as.logger.Error(err)
