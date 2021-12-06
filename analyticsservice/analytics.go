@@ -224,7 +224,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	if err != nil {
 		as.logger.Errorf(err.Error())
 	}
-	as.logger.Info(string(jsonData))
+	as.logger.Debug(string(jsonData))
 
 	if as.metricsClient != nil {
 		mClient := *as.metricsClient
@@ -242,7 +242,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 			return
 		}
 
-		as.logger.Info("Metrics sent to server")
+		as.logger.Debug("Metrics sent to server")
 	} else {
 		as.logger.Warn("metrics client is not set")
 	}
