@@ -28,6 +28,11 @@ func NewZapLogger(debug bool) (*ZapLogger, error) {
 	}, nil
 }
 
+// NewZapLoggerFromSugar creates a ZapLogger from a zap.SugaredLogger
+func NewZapLoggerFromSugar(sl zap.SugaredLogger) *ZapLogger {
+	return &ZapLogger{logger: &sl}
+}
+
 // Debug uses zap to log a debug message.
 func (z ZapLogger) Debug(args ...interface{}) {
 	z.logger.Debug(args...)
@@ -86,4 +91,9 @@ func (z ZapLogger) Fatalf(template string, args ...interface{}) {
 // Errorf uses zap to log a error message.
 func (z ZapLogger) Errorf(template string, args ...interface{}) {
 	z.logger.Errorf(template, args...)
+}
+
+// Sugar returns the underlying sugared zap logger that ZapLogger uses
+func (z ZapLogger) Sugar() *zap.SugaredLogger {
+	return z.logger
 }
