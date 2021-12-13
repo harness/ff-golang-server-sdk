@@ -36,21 +36,22 @@ import (
 // that any pending analytics events have been delivered.
 //
 type CfClient struct {
-	mux               sync.RWMutex
-	api               rest.ClientWithResponsesInterface
-	metricsapi        metricsclient.ClientWithResponsesInterface
-	sdkKey            string
-	auth              rest.AuthenticationRequest
-	config            *config
-	environmentID     string
-	token             string
-	persistence       cache.Persistence
-	cancelFunc        context.CancelFunc
-	streamConnected   bool
-	authenticated     chan struct{}
-	initialized       chan bool
-	analyticsService  *analyticsservice.AnalyticsService
-	clusterIdentifier string
+	mux                 sync.RWMutex
+	api                 rest.ClientWithResponsesInterface
+	metricsapi          metricsclient.ClientWithResponsesInterface
+	sdkKey              string
+	auth                rest.AuthenticationRequest
+	config              *config
+	environmentID       string
+	token               string
+	persistence         cache.Persistence
+	cancelFunc          context.CancelFunc
+	streamConnected     bool
+	streamConnectedLock sync.RWMutex
+	authenticated       chan struct{}
+	initialized         chan bool
+	analyticsService    *analyticsservice.AnalyticsService
+	clusterIdentifier   string
 }
 
 // NewCfClient creates a new client instance that connects to CF with the default configuration.
@@ -160,7 +161,10 @@ func (c *CfClient) retrieveInitialData(ctx context.Context) {
 }
 
 func (c *CfClient) streamConnect() {
-	if !c.config.enableStream {
+	// we only ever want one stream to be setup - other threads must wait before trying to establish a connection
+	c.streamConnectedLock.Lock()
+	defer c.streamConnectedLock.Unlock()
+	if !c.config.enableStream || c.streamConnected {
 		return
 	}
 
