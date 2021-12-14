@@ -9,6 +9,7 @@ import (
 	"github.com/harness/ff-golang-server-sdk/dto"
 	"github.com/harness/ff-golang-server-sdk/logger"
 	"github.com/harness/ff-golang-server-sdk/rest"
+	backoff "gopkg.in/cenkalti/backoff.v1"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/r3labs/sse"
@@ -16,10 +17,11 @@ import (
 
 // SSEClient is Server Send Event object
 type SSEClient struct {
-	api    rest.ClientWithResponsesInterface
-	client *sse.Client
-	cache  cache.Cache
-	logger logger.Logger
+	api           rest.ClientWithResponsesInterface
+	client        *sse.Client
+	cache         cache.Cache
+	logger        logger.Logger
+	onStreamError func()
 }
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -32,20 +34,29 @@ func NewSSEClient(
 	cache cache.Cache,
 	api rest.ClientWithResponsesInterface,
 	logger logger.Logger,
+	onStreamError func(),
 ) *SSEClient {
 	client.Headers["Authorization"] = fmt.Sprintf("Bearer %s", token)
 	client.Headers["API-Key"] = apiKey
-	return &SSEClient{
-		client: client,
-		cache:  cache,
-		api:    api,
-		logger: logger,
+	client.OnDisconnect(func(client *sse.Client) {
+		onStreamError()
+	})
+	sseClient := &SSEClient{
+		client:        client,
+		cache:         cache,
+		api:           api,
+		logger:        logger,
+		onStreamError: onStreamError,
 	}
+	return sseClient
 }
 
 // Connect will subscribe to SSE stream
-func (c *SSEClient) Connect(environment string) error {
+func (c *SSEClient) Connect(environment string) {
 	c.logger.Infof("Start subscribing to Stream")
+	// don't use the default exponentialBackoff strategy - we have our own disconnect logic
+	// of polling the service then re-establishing a new stream once we can connect
+	c.client.ReconnectStrategy = &backoff.StopBackOff{}
 	// it is blocking operation, it needs to go in go routine
 	go func() {
 		err := c.client.Subscribe("*", func(msg *sse.Event) {
@@ -123,18 +134,8 @@ func (c *SSEClient) Connect(environment string) error {
 			}
 		})
 		if err != nil {
-			c.logger.Errorf("Error: %s", err.Error())
+			c.logger.Errorf("Error initializing stream: %s", err.Error())
+			c.onStreamError()
 		}
 	}()
-	return nil
-}
-
-// OnDisconnect will trigger func f when stream disconnects
-func (c *SSEClient) OnDisconnect(f func() error) error {
-	c.client.OnDisconnect(func(client *sse.Client) {
-		if err := f(); err != nil {
-			c.logger.Errorf("error invoking func on stream disconnect, err: %s", err.Error())
-		}
-	})
-	return nil
 }
