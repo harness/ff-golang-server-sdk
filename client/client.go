@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -49,7 +48,8 @@ type CfClient struct {
 	streamConnected     bool
 	streamConnectedLock sync.RWMutex
 	authenticated       chan struct{}
-	initialized         chan bool
+	initialized         bool
+	initializedLock     sync.RWMutex
 	analyticsService    *analyticsservice.AnalyticsService
 	clusterIdentifier   string
 }
@@ -75,7 +75,6 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		sdkKey:            sdkKey,
 		config:            config,
 		authenticated:     make(chan struct{}),
-		initialized:       make(chan bool),
 		analyticsService:  analyticsService,
 		clusterIdentifier: "1",
 	}
@@ -93,13 +92,9 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		}
 	}
 
-	go client.authenticate(ctx, client.config.target)
+	go client.initAuthentication(ctx, client.config.target)
 
 	go client.setAnalyticsServiceClient(ctx)
-
-	go client.retrieveInitialData(ctx)
-
-	go client.streamConnect()
 
 	go client.pullCronJob(ctx)
 
@@ -109,13 +104,16 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 }
 
 // IsInitialized determines if the client is ready to be used.  This is true if it has both authenticated
-// and successfully retrieved flags.  If it takes longer than 30 seconds the call will timeout and return an error.
+// and successfully retrieved flags.  If it takes longer than 1 minute the call will timeout and return an error.
 func (c *CfClient) IsInitialized() (bool, error) {
-	select {
-	case <-c.initialized:
-		return true, nil
-	case <-time.After(30 * time.Second):
-		break
+	for i := 0; i < 30; i++ {
+		c.initializedLock.RLock()
+		if c.initialized {
+			c.initializedLock.RUnlock()
+			return true, nil
+		}
+		c.initializedLock.RUnlock()
+		time.Sleep(time.Second * 2)
 	}
 	return false, fmt.Errorf("timeout waiting to initialize")
 }
@@ -152,12 +150,12 @@ func (c *CfClient) retrieve(ctx context.Context) bool {
 		c.config.Logger.Error("Data poll finished with errors")
 	}
 
+	if ok {
+		c.initializedLock.Lock()
+		c.initialized = true
+		c.initializedLock.Unlock()
+	}
 	return ok
-}
-
-func (c *CfClient) retrieveInitialData(ctx context.Context) {
-	c.retrieve(ctx)
-	c.initialized <- true
 }
 
 func (c *CfClient) streamConnect() {
@@ -192,7 +190,19 @@ func (c *CfClient) streamConnect() {
 	c.streamConnected = true
 }
 
-func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) {
+func (c *CfClient) initAuthentication(ctx context.Context, target evaluation.Target) {
+	// attempt to authenticate every minute until we succeed
+	for {
+		err := c.authenticate(ctx, target)
+		if err == nil {
+			return
+		}
+		c.config.Logger.Errorf("Authentication failed. Trying again in 1 minute: %s", err)
+		time.Sleep(1 * time.Minute)
+	}
+}
+
+func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) error {
 	t := struct {
 		Anonymous  *bool                   `json:"anonymous,omitempty"`
 		Attributes *map[string]interface{} `json:"attributes,omitempty"`
@@ -211,8 +221,7 @@ func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) {
 	// dont check err just retry
 	httpClient, err := rest.NewClientWithResponses(c.config.url, rest.WithHTTPClient(c.config.httpClient))
 	if err != nil {
-		c.config.Logger.Error(err)
-		return
+		return err
 	}
 
 	response, err := httpClient.AuthenticateWithResponse(ctx, rest.AuthenticateJSONRequestBody{
@@ -220,13 +229,11 @@ func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) {
 		Target: c.auth.Target,
 	})
 	if err != nil {
-		c.config.Logger.Error(err)
-		return
+		return err
 	}
 	// should be login to harness and get account data (JWT token)
 	if response.JSON200 == nil {
-		c.config.Logger.Errorf("error while authenticating %v", ErrUnauthorized)
-		return
+		return fmt.Errorf("error while authenticating %v", ErrUnauthorized)
 	}
 
 	c.token = response.JSON200.AuthToken
@@ -235,34 +242,30 @@ func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) {
 	payload := strings.Split(c.token, ".")[payloadIndex]
 	payloadData, err := jwt.DecodeSegment(payload)
 	if err != nil {
-		c.config.Logger.Error(err)
-		return
+		return err
 	}
 
 	var claims map[string]interface{}
 	if err = json.Unmarshal(payloadData, &claims); err != nil {
-		c.config.Logger.Error(err)
-		return
+		return err
 	}
 
 	var ok bool
 	c.environmentID, ok = claims["environment"].(string)
 	if !ok {
-		c.config.Logger.Error(errors.New("environment uuid not present"))
-		return
+		return fmt.Errorf("environment uuid not present")
 	}
 
 	c.clusterIdentifier, ok = claims["clusterIdentifier"].(string)
 	if !ok {
-		c.config.Logger.Error(errors.New("cluster identifier not present"))
 		c.clusterIdentifier = "1"
+		return fmt.Errorf("cluster identifier not present")
 	}
 
 	// network layer setup
 	bearerTokenProvider, bearerTokenProviderErr := securityprovider.NewSecurityProviderBearerToken(c.token)
 	if bearerTokenProviderErr != nil {
-		c.config.Logger.Error(bearerTokenProviderErr)
-		return
+		return bearerTokenProviderErr
 	}
 	restClient, err := rest.NewClientWithResponses(c.config.url,
 		rest.WithRequestEditorFn(bearerTokenProvider.Intercept),
@@ -270,8 +273,7 @@ func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) {
 		rest.WithHTTPClient(c.config.httpClient),
 	)
 	if err != nil {
-		c.config.Logger.Error(err)
-		return
+		return err
 	}
 
 	merticsClient, err := metricsclient.NewClientWithResponses(c.config.eventsURL,
@@ -279,13 +281,14 @@ func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) {
 		metricsclient.WithHTTPClient(http.DefaultClient),
 	)
 	if err != nil {
-		c.config.Logger.Error(err)
-		return
+		return err
 	}
 
 	c.api = restClient
 	c.metricsapi = merticsClient
+	c.config.Logger.Info("Authentication complete")
 	close(c.authenticated)
+	return nil
 }
 
 func (c *CfClient) makeTicker(interval uint) *time.Ticker {
@@ -293,6 +296,26 @@ func (c *CfClient) makeTicker(interval uint) *time.Ticker {
 }
 
 func (c *CfClient) pullCronJob(ctx context.Context) {
+	poll := func() {
+		c.mux.RLock()
+		if !c.streamConnected {
+			ok := c.retrieve(ctx)
+			// we should only try and start the stream after the poll succeeded to make sure we get the latest changes
+			if ok && c.config.enableStream {
+				// here stream is enabled but not connected, so we attempt to reconnect
+				c.config.Logger.Info("Attempting to start stream")
+				c.streamConnect()
+			}
+		}
+		c.mux.RUnlock()
+	}
+	// wait until authenticated
+	<-c.authenticated
+
+	// pull initial data
+	poll()
+
+	// start cron
 	pullingTicker := c.makeTicker(c.config.pullInterval)
 	for {
 		select {
@@ -300,18 +323,7 @@ func (c *CfClient) pullCronJob(ctx context.Context) {
 			pullingTicker.Stop()
 			return
 		case <-pullingTicker.C:
-			c.mux.RLock()
-			if !c.streamConnected {
-				ok := c.retrieve(ctx)
-				// we should only try and start the stream after the poll succeeded to make sure we get the latest changes
-				if ok && c.config.enableStream {
-					// here stream is enabled but not connected, so we attempt to reconnect
-					c.config.Logger.Info("Attempting to start stream")
-					c.streamConnect()
-				}
-			}
-
-			c.mux.RUnlock()
+			poll()
 		}
 	}
 }
