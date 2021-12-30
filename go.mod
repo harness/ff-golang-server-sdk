@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/deepmap/oapi-codegen v1.6.0
+	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/getkin/kin-openapi v0.53.0
 	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/google/uuid v1.2.0
@@ -18,5 +19,6 @@ require (
 	github.com/stretchr/testify v1.5.1
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0
+	golang.org/x/tools v0.0.0-20191125144606-a911d9008d1f // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 )

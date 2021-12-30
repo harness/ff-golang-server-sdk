@@ -31,6 +31,8 @@ type Storage interface {
 
 	Set(string, interface{}) error
 
+	Remove(string) error
+
 	// List returns a list of all feature toggles.
 	List() []interface{}
 
