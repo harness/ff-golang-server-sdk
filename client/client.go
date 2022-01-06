@@ -175,8 +175,6 @@ func (c *CfClient) streamConnect() {
 
 	streamErr := func() {
 		c.config.Logger.Error("Stream disconnected. Swapping to polling mode")
-		// Wait one minute before moving to polling
-		time.Sleep(1 * time.Minute)
 		c.mux.RLock()
 		defer c.mux.RUnlock()
 		c.streamConnected = false
