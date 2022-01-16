@@ -9,21 +9,24 @@ import (
 )
 
 const (
-	identifier       = "identifier"
-	harness          = "harness"
-	beta             = "beta"
-	alpha            = "alpha"
-	excluded         = "excluded"
-	offVariation     = "false"
-	simple           = "simple"
-	simpleWithPrereq = "simplePrereq"
-	notValidFlag     = "notValidFlag"
-	theme            = "theme"
-	size             = "size"
-	weight           = "weight"
-	invalidInt       = "invalidInt"
-	invalidNumber    = "invalidNumber"
-	prereqNotFound   = "prereqNotFound"
+	identifier        = "identifier"
+	harness           = "harness"
+	beta              = "beta"
+	alpha             = "alpha"
+	excluded          = "excluded"
+	offVariation      = "false"
+	simple            = "simple"
+	simpleWithPrereq  = "simplePrereq"
+	notValidFlag      = "notValidFlag"
+	theme             = "theme"
+	size              = "size"
+	weight            = "weight"
+	org               = "org"
+	invalidInt        = "invalidInt"
+	invalidNumber     = "invalidNumber"
+	invalidJSON       = "invalidJSON"
+	prereqNotFound    = "prereqNotFound"
+	prereqVarNotFound = "prereqVarNotFound"
 )
 
 var (
@@ -39,6 +42,12 @@ var (
 	identifierTrue     = "true"
 	identifierFalse    = "false"
 	targetIdentifier   = "harness"
+	json1              = "json1"
+	json2              = "json2"
+	harness1           = "harness1"
+	harness2           = "harness2"
+	json1Value         = fmt.Sprintf("{\"org\": \"%s\"}", harness1)
+	json2Value         = fmt.Sprintf("{\"org\": \"%s\"}", harness2)
 	boolVariations     = []rest.Variation{
 		{
 			Identifier: identifierTrue,
@@ -79,6 +88,16 @@ var (
 			Value:      heavyWeight,
 		},
 	}
+	jsonVariations = []rest.Variation{
+		{
+			Identifier: json1,
+			Value:      json1Value,
+		},
+		{
+			Identifier: json2,
+			Value:      json2Value,
+		},
+	}
 	testRepo = NewTestRepository(
 		map[string]rest.FeatureConfig{
 			simple: {
@@ -117,6 +136,15 @@ var (
 				Variations: numberVariations,
 				Kind:       "number",
 			},
+			org: {
+				Feature: org,
+				State:   rest.FeatureState_on,
+				DefaultServe: rest.Serve{
+					Variation: &json2,
+				},
+				Variations: jsonVariations,
+				Kind:       "json",
+			},
 			invalidInt: {
 				Feature: invalidInt,
 				State:   rest.FeatureState_on,
@@ -145,6 +173,20 @@ var (
 				},
 				Kind: "number",
 			},
+			invalidJSON: {
+				Feature: invalidJSON,
+				State:   rest.FeatureState_on,
+				DefaultServe: rest.Serve{
+					Variation: &invalidNumberValue,
+				},
+				Variations: []rest.Variation{
+					{
+						Identifier: invalidNumberValue,
+						Value:      invalidNumberValue,
+					},
+				},
+				Kind: "json",
+			},
 			simpleWithPrereq: {
 				Feature: simpleWithPrereq,
 				State:   rest.FeatureState_on,
@@ -171,6 +213,22 @@ var (
 					{
 						Feature:    "prereqNotFound",
 						Variations: []string{identifierTrue, identifierFalse},
+					},
+				},
+				Kind: "boolean",
+			},
+			prereqVarNotFound: {
+				Feature:      prereqVarNotFound,
+				OffVariation: offVariation,
+				State:        rest.FeatureState_on,
+				DefaultServe: rest.Serve{
+					Variation: &identifierTrue,
+				},
+				Variations: boolVariations,
+				Prerequisites: &[]rest.Prerequisite{
+					{
+						Feature:    simple,
+						Variations: []string{normalWeight, heavyWeight},
 					},
 				},
 				Kind: "boolean",
@@ -882,7 +940,19 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "flag is off serve off variation",
+			name: "evaluation of flag when is off state serve off variation",
+			args: args{
+				fc: rest.FeatureConfig{
+					OffVariation: offVariation,
+					State:        rest.FeatureState_off,
+					Variations:   boolVariations,
+				},
+			},
+			want:    boolVariations[1],
+			wantErr: false,
+		},
+		{
+			name: "evaluation with target when flag is off serve off variation",
 			args: args{
 				fc: rest.FeatureConfig{
 					OffVariation: offVariation,
@@ -1284,6 +1354,18 @@ func TestEvaluator_evaluate(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "error evaluating prereq",
+			fields: fields{
+				query: testRepo,
+			},
+			args: args{
+				identifier: prereqVarNotFound,
+				kind:       "boolean",
+			},
+			want:    boolVariations[1], // returns off variation
+			wantErr: false,
+		},
+		{
 			name: "happy path",
 			fields: fields{
 				query: testRepo,
@@ -1595,6 +1677,91 @@ func TestEvaluator_NumberVariation(t *testing.T) {
 			}
 			if got := e.NumberVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
 				t.Errorf("Evaluator.NumberVariation() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEvaluator_JSONVariation(t *testing.T) {
+	defaultValue := map[string]interface{}{
+		"email": "harness@harness.io",
+	}
+	type fields struct {
+		query Query
+	}
+	type args struct {
+		identifier   string
+		target       *rest.Target
+		defaultValue map[string]interface{}
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   map[string]interface{}
+	}{
+		{
+			name: "json flag not found return default value",
+			fields: fields{
+				query: testRepo,
+			},
+			args: args{
+				identifier:   "flagNotFound1000",
+				target:       nil,
+				defaultValue: defaultValue,
+			},
+			want: defaultValue,
+		},
+		{
+			name: "json evaluation of flag 'org' should return json2Value",
+			fields: fields{
+				query: testRepo,
+			},
+			args: args{
+				identifier:   org,
+				target:       nil,
+				defaultValue: defaultValue,
+			},
+			want: map[string]interface{}{
+				org: harness2,
+			},
+		},
+		{
+			name: "json evaluation of flag 'org' should return default value",
+			fields: fields{
+				query: testRepo,
+			},
+			args: args{
+				identifier:   invalidJSON,
+				target:       nil,
+				defaultValue: defaultValue,
+			},
+			want: defaultValue,
+		},
+		{
+			name: "json evaluation of flag 'org' with target 'harness' should return json2",
+			fields: fields{
+				query: testRepo,
+			},
+			args: args{
+				identifier: org,
+				target: &rest.Target{
+					Identifier: harness,
+				},
+				defaultValue: defaultValue,
+			},
+			want: map[string]interface{}{
+				org: harness2,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := Evaluator{
+				query: tt.fields.query,
+			}
+			if got := e.JSONVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Evaluator.JSONVariation() = %v, want %v", got, tt.want)
 			}
 		})
 	}

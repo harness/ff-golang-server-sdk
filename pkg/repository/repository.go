@@ -117,7 +117,7 @@ func (r Repository) SetSegment(segment rest.Segment) {
 	if r.isSegmentOutdated(segment) {
 		return
 	}
-	segmentKey := formatFlagKey(segment.Identifier)
+	segmentKey := formatSegmentKey(segment.Identifier)
 	if r.storage != nil {
 		if err := r.storage.Set(segmentKey, segment); err != nil {
 			log.Errorf("error while storing the segment %s into repository", segment.Identifier)
@@ -128,7 +128,7 @@ func (r Repository) SetSegment(segment rest.Segment) {
 	}
 
 	if r.callback != nil {
-		r.callback.OnFlagStored(segment.Identifier)
+		r.callback.OnSegmentStored(segment.Identifier)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/harness/ff-golang-server-sdk/log"
@@ -63,7 +64,7 @@ func TestEvaluator(t *testing.T) {
 	type args struct {
 		file     string
 		target   string
-		value    interface{}
+		expected interface{}
 		testFile testFile
 	}
 
@@ -73,17 +74,22 @@ func TestEvaluator(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	repository := repository.New(lruCache)
-	evaluator, err := evaluation.NewEvaluator(repository)
+	repo := repository.New(lruCache)
+	evaluator, err := evaluation.NewEvaluator(repo)
 	if err != nil {
 		t.Error(err)
 	}
 	for _, useCase := range data {
+		useCase.Flag.Feature += useCase.Filename
+		repo.SetFlag(useCase.Flag)
+		for _, segment := range useCase.Segments {
+			repo.SetSegment(segment)
+		}
 		for identifier, value := range useCase.Expected {
 			tests = append(tests, args{
 				file:     useCase.Filename,
 				target:   identifier,
-				value:    value,
+				expected: value,
 				testFile: useCase,
 			})
 		}
@@ -99,7 +105,22 @@ func TestEvaluator(t *testing.T) {
 					}
 				}
 			}
-			evaluator.BoolVariation(testCase.testFile.Flag.Feature, target, false)
+			var got interface{}
+			switch testCase.testFile.Flag.Kind {
+			case "boolean":
+				got = evaluator.BoolVariation(testCase.testFile.Flag.Feature, target, false)
+			case "string":
+				got = evaluator.StringVariation(testCase.testFile.Flag.Feature, target, "blue")
+			case "int":
+				got = evaluator.IntVariation(testCase.testFile.Flag.Feature, target, 100)
+			case "number":
+				got = evaluator.NumberVariation(testCase.testFile.Flag.Feature, target, 50.00)
+			case "json":
+				got = evaluator.JSONVariation(testCase.testFile.Flag.Feature, target, map[string]interface{}{})
+			}
+			if !reflect.DeepEqual(got, testCase.expected) {
+				t.Errorf("eval engine got = %v, want %v", got, testCase.expected)
+			}
 		})
 	}
 }

@@ -20,7 +20,7 @@ func Test_getAttrValueIsNil(t *testing.T) {
 		{
 			name: "when target is nil should return Value{}",
 			args: args{
-				attr: "identifier",
+				attr: identifier,
 			},
 			want: reflect.Value{},
 		},
@@ -28,7 +28,7 @@ func Test_getAttrValueIsNil(t *testing.T) {
 			name: "wrong attribute should return Value{}",
 			args: args{
 				target: &rest.Target{
-					Identifier: "harness",
+					Identifier: harness,
 					Attributes: &map[string]interface{}{
 						"email": "enver.bisevac@harness.io",
 					},
@@ -48,7 +48,6 @@ func Test_getAttrValueIsNil(t *testing.T) {
 }
 
 func Test_getAttrValue(t *testing.T) {
-	identifier := "john"
 	email := "john@doe.com"
 	type args struct {
 		target *rest.Target
@@ -63,11 +62,21 @@ func Test_getAttrValue(t *testing.T) {
 			name: "check identifier",
 			args: args{
 				target: &rest.Target{
-					Identifier: identifier,
+					Identifier: harness,
 				},
-				attr: "identifier",
+				attr: identifier,
 			},
-			want: reflect.ValueOf(identifier),
+			want: reflect.ValueOf(harness),
+		},
+		{
+			name: "check name",
+			args: args{
+				target: &rest.Target{
+					Name: harness,
+				},
+				attr: "name",
+			},
+			want: reflect.ValueOf(harness),
 		},
 		{
 			name: "check attributes",
@@ -94,13 +103,13 @@ func Test_getAttrValue(t *testing.T) {
 
 func Test_findVariation(t *testing.T) {
 	trueVariation := rest.Variation{
-		Identifier: "true",
-		Value:      "true",
+		Identifier: identifierTrue,
+		Value:      identifierTrue,
 	}
 	falseVariation := rest.Variation{
 
-		Identifier: "false",
-		Value:      "false",
+		Identifier: identifierFalse,
+		Value:      identifierFalse,
 	}
 	type args struct {
 		variations []rest.Variation
@@ -116,7 +125,7 @@ func Test_findVariation(t *testing.T) {
 			name: "true variation",
 			args: args{
 				variations: []rest.Variation{trueVariation, falseVariation},
-				identifier: "true",
+				identifier: identifierTrue,
 			},
 			want:    trueVariation,
 			wantErr: false,
@@ -185,7 +194,18 @@ func Test_isEnabled(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "rollout from 0",
+			name: "target identifier is empty should return false",
+			args: args{
+				target: &rest.Target{
+					Identifier: "",
+				},
+				bucketBy:   identifier,
+				percentage: 0,
+			},
+			want: false,
+		},
+		{
+			name: "rollout to 40",
 			args: args{
 				target: &rest.Target{
 					Identifier: "enver",
@@ -194,18 +214,20 @@ func Test_isEnabled(t *testing.T) {
 					},
 				},
 				bucketBy:   "email",
-				percentage: 0,
+				percentage: 40,
 			},
+			want: true,
 		},
 		{
 			name: "rollout from 50",
 			args: args{
 				target: &rest.Target{
-					Identifier: "enver",
+					Identifier: harness,
 				},
-				bucketBy:   "identifier",
+				bucketBy:   identifier,
 				percentage: 50,
 			},
+			want: true,
 		},
 	}
 	for _, tt := range tests {
@@ -232,7 +254,7 @@ func Test_evaluateDistribution(t *testing.T) {
 			args: args{
 				distribution: nil,
 			},
-			want: "",
+			want: empty,
 		},
 		{
 			name: "distribution is nil and target is nil",
@@ -240,29 +262,45 @@ func Test_evaluateDistribution(t *testing.T) {
 				distribution: nil,
 				target:       nil,
 			},
-			want: "",
+			want: empty,
+		},
+		{
+			name: "serve empty",
+			args: args{
+				distribution: &rest.Distribution{
+					BucketBy: identifier,
+					Variations: []rest.WeightedVariation{
+						{Variation: identifierTrue, Weight: 1},
+						{Variation: identifierFalse, Weight: 2},
+					},
+				},
+				target: &rest.Target{
+					Identifier: harness,
+				},
+			},
+			want: identifierFalse,
 		},
 		{
 			name: "serve false",
 			args: args{
 				distribution: &rest.Distribution{
-					BucketBy: "identifier",
+					BucketBy: identifier,
 					Variations: []rest.WeightedVariation{
-						{Variation: "true", Weight: 50},
-						{Variation: "false", Weight: 100},
+						{Variation: identifierTrue, Weight: 50},
+						{Variation: identifierFalse, Weight: 100},
 					},
 				},
 				target: &rest.Target{
 					Identifier: "enver",
 				},
 			},
-			want: "false",
+			want: identifierFalse,
 		},
 		{
 			name: "bucket value is 67 it should serve B",
 			args: args{
 				distribution: &rest.Distribution{
-					BucketBy: "identifier",
+					BucketBy: identifier,
 					Variations: []rest.WeightedVariation{
 						{Variation: "A", Weight: 10},
 						{Variation: "B", Weight: 60},
@@ -306,7 +344,7 @@ func Test_evaluateDistribution(t *testing.T) {
 }
 
 func Test_isTargetInList(t *testing.T) {
-	identifier := "harness"
+	identifier := harness
 	type args struct {
 		target  *rest.Target
 		targets []rest.Target
@@ -337,6 +375,16 @@ func Test_isTargetInList(t *testing.T) {
 				targets: []rest.Target{
 					{Identifier: "enver"},
 				},
+			},
+			want: false,
+		},
+		{
+			name: "targets is nil should return false",
+			args: args{
+				target: &rest.Target{
+					Identifier: identifier,
+				},
+				targets: nil,
 			},
 			want: false,
 		},
