@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/harness/ff-golang-server-sdk/logger"
 
@@ -16,6 +17,7 @@ import (
 type FileStore struct {
 	project       string
 	path          string
+	mu            sync.Mutex
 	data          map[string]interface{}
 	lastPersisted time.Time
 	logger        logger.Logger
@@ -55,6 +57,8 @@ func (ds *FileStore) Load() error {
 			}
 		}
 	}()
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
 	dec := json.NewDecoder(file)
 	if err := dec.Decode(&ds.data); err != nil {
 		return err
@@ -76,6 +80,8 @@ func (ds *FileStore) Persist() error {
 		}
 	}()
 	enc := json.NewEncoder(file)
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
 	if err := enc.Encode(ds.data); err != nil {
 		return err
 	}
@@ -88,23 +94,37 @@ func (ds *FileStore) getTime() time.Time {
 }
 
 // Get value with the specified key
-func (ds FileStore) Get(key string) (interface{}, bool) {
+func (ds *FileStore) Get(key string) (interface{}, bool) {
+	ds.mu.Lock()
 	val, ok := ds.data[key]
+	ds.mu.Unlock()
 	return val, ok
 }
 
 // List all values
 func (ds *FileStore) List() []interface{} {
 	var values []interface{}
+	ds.mu.Lock()
 	for _, val := range ds.data {
 		values = append(values, val)
 	}
+	ds.mu.Unlock()
 	return values
 }
 
 // Set new key and value
 func (ds *FileStore) Set(key string, value interface{}) error {
+	ds.mu.Lock()
 	ds.data[key] = value
+	ds.mu.Unlock()
+	return nil
+}
+
+// Remove object from data store identified by key parameter
+func (ds *FileStore) Remove(key string) error {
+	ds.mu.Lock()
+	delete(ds.data, key)
+	ds.mu.Unlock()
 	return nil
 }
 
