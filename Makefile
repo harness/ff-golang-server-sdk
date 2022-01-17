@@ -27,6 +27,11 @@ clean:
 test:
 	go test -race -v --cover ./...
 
+report:
+	go test ./... -covermode=atomic -coverpkg=./...  -coverprofile=c.out
+	gocov convert ./c.out | gocov-html > ~/go-sdk-test-report.html
+
+
 build-test-wrapper:
 	docker build -t us.gcr.io/${PROJECT_ID}/${IMAGE}:latest -f ./docker/Dockerfile .
 
