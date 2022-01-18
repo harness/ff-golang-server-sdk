@@ -92,8 +92,8 @@ func WithTarget(target evaluation.Target) ConfigOption {
 
 // WithEventStreamListener configures the SDK to forward Events from the Feature
 // Flag server to the passed EventStreamListener
-func WithEventStreamListener(cs stream.EventStreamListener) ConfigOption {
+func WithEventStreamListener(e stream.EventStreamListener) ConfigOption {
 	return func(config *config) {
-		config.eventStreamListener = cs
+		config.eventStreamListener = e
 	}
 }

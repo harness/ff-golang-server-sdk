@@ -15,7 +15,8 @@ type Connection interface {
 // EventStreamListener provides a way to hook in to the SSE Events that the SDK
 // recieves from the FeatureFlags server and forward them on to another type.
 type EventStreamListener interface {
-	// Pub publishes an event from the SDK to your Listener
+	// Pub publishes an event from the SDK to your Listener. Pub should implement
+	// any backoff/retry logic as this is not handled in the SDK.
 	Pub(ctx context.Context, event Event) error
 }
 
