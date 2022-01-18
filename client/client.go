@@ -184,12 +184,12 @@ func (c *CfClient) streamConnect() {
 		defer c.mux.RUnlock()
 		c.streamConnected = false
 	}
-	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.config.Cache, c.api, c.config.Logger, streamErr)
+	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.config.Cache, c.api, c.config.Logger, streamErr, c.config.eventStreamListener)
 
 	// Connect kicks off a goroutine that attempts to establish a stream connection
 	// while this is happening we set streamConnected to true - if any errors happen
 	// in this process streamConnected will be set back to false by the streamErr function
-	conn.Connect(c.environmentID)
+	conn.Connect(c.environmentID, c.sdkKey)
 	c.streamConnected = true
 }
 

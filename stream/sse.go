@@ -3,6 +3,7 @@ package stream
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/harness/ff-golang-server-sdk/cache"
@@ -17,11 +18,12 @@ import (
 
 // SSEClient is Server Send Event object
 type SSEClient struct {
-	api           rest.ClientWithResponsesInterface
-	client        *sse.Client
-	cache         cache.Cache
-	logger        logger.Logger
-	onStreamError func()
+	api                 rest.ClientWithResponsesInterface
+	client              *sse.Client
+	cache               cache.Cache
+	logger              logger.Logger
+	onStreamError       func()
+	eventStreamListener EventStreamListener
 }
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -35,6 +37,7 @@ func NewSSEClient(
 	api rest.ClientWithResponsesInterface,
 	logger logger.Logger,
 	onStreamError func(),
+	eventStreamListener EventStreamListener,
 ) *SSEClient {
 	client.Headers["Authorization"] = fmt.Sprintf("Bearer %s", token)
 	client.Headers["API-Key"] = apiKey
@@ -42,17 +45,18 @@ func NewSSEClient(
 		onStreamError()
 	})
 	sseClient := &SSEClient{
-		client:        client,
-		cache:         cache,
-		api:           api,
-		logger:        logger,
-		onStreamError: onStreamError,
+		client:              client,
+		cache:               cache,
+		api:                 api,
+		logger:              logger,
+		onStreamError:       onStreamError,
+		eventStreamListener: eventStreamListener,
 	}
 	return sseClient
 }
 
 // Connect will subscribe to SSE stream
-func (c *SSEClient) Connect(environment string) {
+func (c *SSEClient) Connect(environment string, apiKey string) {
 	c.logger.Infof("Start subscribing to Stream")
 	// don't use the default exponentialBackoff strategy - we have our own disconnect logic
 	// of polling the service then re-establishing a new stream once we can connect
@@ -61,6 +65,8 @@ func (c *SSEClient) Connect(environment string) {
 	go func() {
 		err := c.client.Subscribe("*", func(msg *sse.Event) {
 			c.logger.Infof("Event received: %s", msg.Data)
+
+			wg := &sync.WaitGroup{}
 
 			cfMsg := Message{}
 			if len(msg.Data) > 0 {
@@ -76,16 +82,25 @@ func (c *SSEClient) Connect(environment string) {
 					// and subscribe to that event
 					switch cfMsg.Event {
 					case dto.SseDeleteEvent:
+						wg.Add(1)
+
 						go func(identifier string) {
+							defer wg.Done()
+
 							c.cache.Remove(dto.Key{
 								Type: dto.KeyFeature,
 								Name: identifier,
 							})
 						}(cfMsg.Identifier)
+
 					case dto.SsePatchEvent, dto.SseCreateEvent:
 						fallthrough
 					default:
+						wg.Add(1)
+
 						go func(env, identifier string) {
+							defer wg.Done()
+
 							ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 							defer cancel()
 							response, err := c.api.GetFeatureConfigByIdentifierWithResponse(ctx, env, identifier)
@@ -101,20 +116,30 @@ func (c *SSEClient) Connect(environment string) {
 							}
 						}(environment, cfMsg.Identifier)
 					}
+
 				case dto.KeySegment:
 					// need open client spec change
 					switch cfMsg.Event {
 					case dto.SseDeleteEvent:
+						wg.Add(1)
+
 						go func(identifier string) {
+							defer wg.Done()
+
 							c.cache.Remove(dto.Key{
 								Type: dto.KeySegment,
 								Name: identifier,
 							})
 						}(cfMsg.Identifier)
+
 					case dto.SsePatchEvent, dto.SseCreateEvent:
 						fallthrough
 					default:
+						wg.Add(1)
+
 						go func(env, identifier string) {
+							defer wg.Done()
+
 							ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 							defer cancel()
 							response, err := c.api.GetSegmentByIdentifierWithResponse(ctx, env, identifier)
@@ -129,6 +154,19 @@ func (c *SSEClient) Connect(environment string) {
 								}, response.JSON200.Convert())
 							}
 						}(environment, cfMsg.Identifier)
+					}
+				}
+
+				if c.eventStreamListener != nil {
+					sendWithTimeout := func() error {
+						ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+						defer cancel()
+						return c.eventStreamListener.Pub(ctx, Event{APIKey: apiKey, Environment: environment, Event: msg})
+					}
+
+					wg.Wait()
+					if err := sendWithTimeout(); err != nil {
+						c.logger.Errorf("error while forwarding SSE Event to change stream: %s", err)
 					}
 				}
 			}

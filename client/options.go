@@ -7,6 +7,7 @@ import (
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/logger"
 	"github.com/harness/ff-golang-server-sdk/storage"
+	"github.com/harness/ff-golang-server-sdk/stream"
 )
 
 // ConfigOption is used as return value for advanced client configuration
@@ -86,5 +87,13 @@ func WithHTTPClient(client *http.Client) ConfigOption {
 func WithTarget(target evaluation.Target) ConfigOption {
 	return func(config *config) {
 		config.target = target
+	}
+}
+
+// WithEventStreamListener configures the SDK to forward Events from the Feature
+// Flag server to the passed EventStreamListener
+func WithEventStreamListener(cs stream.EventStreamListener) ConfigOption {
+	return func(config *config) {
+		config.eventStreamListener = cs
 	}
 }
