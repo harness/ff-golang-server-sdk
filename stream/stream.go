@@ -26,6 +26,6 @@ type Event struct {
 	APIKey string
 	// Environment is the ID of the environment that the event occured for
 	Environment string
-	// Event is the SSEEvent that was sent from the FeatureFlags server to the SDK
-	Event *sse.Event
+	// SSEEvent is the SSEEvent that was sent from the FeatureFlags server to the SDK
+	SSEEvent *sse.Event
 }
