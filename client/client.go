@@ -163,7 +163,7 @@ func (c *CfClient) retrieve(ctx context.Context) bool {
 	return ok
 }
 
-func (c *CfClient) streamConnect() {
+func (c *CfClient) streamConnect(ctx context.Context) {
 	// we only ever want one stream to be setup - other threads must wait before trying to establish a connection
 	c.streamConnectedLock.Lock()
 	defer c.streamConnectedLock.Unlock()
@@ -184,12 +184,12 @@ func (c *CfClient) streamConnect() {
 		defer c.mux.RUnlock()
 		c.streamConnected = false
 	}
-	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.config.Cache, c.api, c.config.Logger, streamErr)
+	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.config.Cache, c.api, c.config.Logger, streamErr, c.config.eventStreamListener)
 
 	// Connect kicks off a goroutine that attempts to establish a stream connection
 	// while this is happening we set streamConnected to true - if any errors happen
 	// in this process streamConnected will be set back to false by the streamErr function
-	conn.Connect(c.environmentID)
+	conn.Connect(ctx, c.environmentID, c.sdkKey)
 	c.streamConnected = true
 }
 
@@ -307,7 +307,7 @@ func (c *CfClient) pullCronJob(ctx context.Context) {
 			if ok && c.config.enableStream {
 				// here stream is enabled but not connected, so we attempt to reconnect
 				c.config.Logger.Info("Attempting to start stream")
-				c.streamConnect()
+				c.streamConnect(ctx)
 			}
 		}
 		c.mux.RUnlock()

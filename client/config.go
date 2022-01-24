@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/harness/ff-golang-server-sdk/evaluation"
+	"github.com/harness/ff-golang-server-sdk/stream"
 
 	"github.com/harness/ff-golang-server-sdk/cache"
 	"github.com/harness/ff-golang-server-sdk/logger"
@@ -13,16 +14,17 @@ import (
 )
 
 type config struct {
-	url          string
-	eventsURL    string
-	pullInterval uint // in minutes
-	Cache        cache.Cache
-	Store        storage.Storage
-	Logger       logger.Logger
-	httpClient   *http.Client
-	enableStream bool
-	enableStore  bool
-	target       evaluation.Target
+	url                 string
+	eventsURL           string
+	pullInterval        uint // in minutes
+	Cache               cache.Cache
+	Store               storage.Storage
+	Logger              logger.Logger
+	httpClient          *http.Client
+	enableStream        bool
+	enableStore         bool
+	target              evaluation.Target
+	eventStreamListener stream.EventStreamListener
 }
 
 func newDefaultConfig() *config {
