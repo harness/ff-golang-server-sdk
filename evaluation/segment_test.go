@@ -51,3 +51,67 @@ func TestSegment_Evaluate(t *testing.T) {
 		})
 	}
 }
+
+func TestSegments_Evaluate(t *testing.T) {
+	f := false
+	m := make(map[string]interface{})
+	m["email"] = "john@doe.com"
+	target := Target{
+		Identifier: "john",
+		Anonymous:  &f,
+		Attributes: &m,
+	}
+
+	tests := map[string]struct {
+		segments Segments
+		target   Target
+		want     bool
+	}{
+		"test target included by segment alpha returns true": {
+			segments: Segments{"alpha": {Identifier: "alpha", Included: []string{target.Identifier}}},
+			target:   target,
+			want:     true,
+		},
+		"test target not included segment alpha, but included in beta returns true": {
+			segments: Segments{
+				"alpha": {Identifier: "alpha", Included: []string{}},
+				"beta":  {Identifier: "beta", Included: []string{target.Identifier}},
+			},
+			target: target,
+			want:   true,
+		},
+		"test target not included segment alpha, and not included in beta returns false": {
+			segments: Segments{
+				"alpha": {Identifier: "alpha", Included: []string{}},
+				"beta":  {Identifier: "beta", Included: []string{}},
+			},
+			target: target,
+			want:   false,
+		},
+		"test target included segment alpha, and excluded in beta returns true": {
+			segments: Segments{
+				"alpha": {Identifier: "alpha", Included: []string{target.Identifier}},
+				"beta":  {Identifier: "beta", Excluded: []string{target.Identifier}},
+			},
+			target: target,
+			want:   true,
+		},
+		"test target excluded from segment alpha, and included in beta returns true": {
+			segments: Segments{
+				"alpha": {Identifier: "alpha", Excluded: []string{target.Identifier}},
+				"beta":  {Identifier: "beta", Included: []string{target.Identifier}},
+			},
+			target: target,
+			want:   true,
+		},
+	}
+	for name, tt := range tests {
+		val := tt
+		t.Run(name, func(t *testing.T) {
+			s := val.segments
+			if got := s.Evaluate(&val.target); got != val.want {
+				t.Errorf("Evaluate() = %v, want %v", got, val.want)
+			}
+		})
+	}
+}

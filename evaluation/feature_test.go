@@ -556,34 +556,47 @@ func TestClause_Evaluate(t *testing.T) {
 		Anonymous:  &f,
 		Attributes: &m,
 	}
-	tests := []struct {
+	tests := map[string]struct {
 		name   string
 		fields fields
 		args   args
 		want   bool
 	}{
-		{name: "segment match operator (include)", fields: struct {
-			Attribute string
-			ID        string
-			Negate    bool
-			Op        string
-			Value     []string
-		}{Op: segmentMatchOperator, Value: []string{"beta"}},
-			args: struct {
-				target   *Target
-				segments Segments
-				operator types.ValueType
-			}{target: &target, segments: map[string]*Segment{
+		"segment match operator (include)": {
+			fields: fields{Op: segmentMatchOperator, Value: []string{"beta"}},
+			args: args{target: &target, segments: map[string]*Segment{
 				"beta": {
 					Identifier: "beta",
 					Name:       "Beta users",
 					Included:   []string{target.Identifier},
 				},
-			}, operator: nil}, want: true},
+			}, operator: nil},
+			want: true,
+		},
+		"evaluate returns false when clause value does not match any segment": {
+			fields: fields{Op: segmentMatchOperator, Value: []string{"beta"}},
+			args: args{
+				target: &target,
+				segments: Segments{
+					"beta":  {Identifier: "beta", Included: []string{}},
+					"alpha": {Identifier: "alpha", Included: []string{target.Identifier}},
+				}, operator: nil},
+			want: false,
+		},
+		"evaluate returns true when clause value matches segment that target belongs to": {
+			fields: fields{Op: segmentMatchOperator, Value: []string{"alpha"}},
+			args: args{
+				target: &target,
+				segments: Segments{
+					"beta":  {Identifier: "beta", Excluded: []string{target.Identifier}},
+					"alpha": {Identifier: "alpha", Included: []string{target.Identifier}},
+				}, operator: nil},
+			want: true,
+		},
 	}
-	for _, tt := range tests {
+	for name, tt := range tests {
 		val := tt
-		t.Run(tt.name, func(t *testing.T) {
+		t.Run(name, func(t *testing.T) {
 			c := &Clause{
 				Attribute: val.fields.Attribute,
 				ID:        val.fields.ID,

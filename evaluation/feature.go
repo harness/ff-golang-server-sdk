@@ -51,7 +51,16 @@ func (c *Clause) Evaluate(target *Target, segments Segments, operator types.Valu
 		if segments == nil {
 			return false
 		}
-		return segments.Evaluate(target)
+		// Determine if the given target belongs to one of the segments,
+		// that was specified by the clause
+		for _, segmentName := range c.Value {
+			if segment, ok := segments[segmentName]; ok {
+				if segment.Evaluate(target) {
+					return true
+				}
+			}
+		}
+		return false
 	}
 
 	// Ensure operator is valid and not nil
@@ -100,6 +109,7 @@ func (c Clauses) Evaluate(target *Target, segments Segments) bool {
 				log.Warn(err)
 			}
 		}
+
 		if !clause.Evaluate(target, segments, op) {
 			return false
 		}
@@ -118,9 +128,12 @@ type Distribution struct {
 // GetKeyName returns variation identifier based on target
 func (d *Distribution) GetKeyName(target *Target) string {
 	variation := ""
+
+	totalPercentage := 0
 	for _, tdVariation := range d.Variations {
 		variation = tdVariation.Variation
-		if d.isEnabled(target, tdVariation.Weight) {
+		totalPercentage += tdVariation.Weight
+		if d.isEnabled(target, totalPercentage) {
 			return variation
 		}
 	}

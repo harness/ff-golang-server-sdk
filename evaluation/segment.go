@@ -107,9 +107,9 @@ type Segments map[string]*Segment
 // Evaluate through all segments based on target input
 func (s Segments) Evaluate(target *Target) bool {
 	for _, segment := range s {
-		if !segment.Evaluate(target) {
-			return false
+		if segment.Evaluate(target) {
+			return true
 		}
 	}
-	return true
+	return false
 }
