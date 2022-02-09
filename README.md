@@ -20,17 +20,21 @@ FFM is feature flag management platform for helping teams to deliver better soft
 This version of FFM has been tested with GO 1.14
 
 ## Install
-`go get github.com/wings-software/ff-client-sdk-go`
+`go get github.com/harness/ff-golang-server-sdk`
 
 ## Usage
 First we need to import lib with harness alias
-`import harness "github.com/wings-software/ff-client-sdk-go/pkg/api"`
+```golang
+import harness "github.com/harness/ff-golang-server-sdk/client"
+```
 
 Next we create client instance for interaction with api
-`client := harness.NewClient(sdkKey)`
+```golang
+client, err := harness.NewCfClient(sdkKey)
+```
 
 Target definition can be user, device, app etc.
-```
+```golang
 target := dto.NewTargetBuilder("key").
  		Firstname("John").
  		Lastname("doe").
@@ -41,4 +45,11 @@ target := dto.NewTargetBuilder("key").
 ```
 
 Evaluating Feature Flag
-`showFeature, err := client.BoolVariation(featureFlagKey, target, false)`
+```golang
+showFeature, err := client.BoolVariation(featureFlagKey, &target, false)
+```
+
+Flush any changes and close the SDK
+```golang
+client.close()
+```
