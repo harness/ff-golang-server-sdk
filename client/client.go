@@ -108,6 +108,11 @@ func (c *CfClient) IsStreamConnected() bool {
 	return c.streamConnected
 }
 
+// GetClusterIdentifier returns the cluster identifier we're connected to
+func (c *CfClient) GetClusterIdentifier() string {
+	return c.clusterIdentifier
+}
+
 // IsInitialized determines if the client is ready to be used.  This is true if it has both authenticated
 // and successfully retrieved flags.  If it takes longer than 1 minute the call will timeout and return an error.
 func (c *CfClient) IsInitialized() (bool, error) {
