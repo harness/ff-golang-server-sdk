@@ -1,4 +1,4 @@
-# Before you Begin
+# Before you Begin....
 
 Harness Feature Flags (FF) is a feature management solution that enables users to change the software’s functionality, without deploying new code. FF uses feature flags to hide code or behaviours without having to ship new versions of the software. A feature flag is like a powerful if statement.
 
