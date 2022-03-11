@@ -284,8 +284,9 @@ func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) e
 		return err
 	}
 
-	merticsClient, err := metricsclient.NewClientWithResponses(c.config.eventsURL,
+	metricsClient, err := metricsclient.NewClientWithResponses(c.config.eventsURL,
 		metricsclient.WithRequestEditorFn(bearerTokenProvider.Intercept),
+		metricsclient.WithRequestEditorFn(c.InterceptAddCluster),
 		metricsclient.WithHTTPClient(http.DefaultClient),
 	)
 	if err != nil {
@@ -293,7 +294,7 @@ func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) e
 	}
 
 	c.api = restClient
-	c.metricsapi = merticsClient
+	c.metricsapi = metricsClient
 	c.config.Logger.Info("Authentication complete")
 	close(c.authenticated)
 	return nil
