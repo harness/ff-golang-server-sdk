@@ -3,6 +3,7 @@ package stream
 import (
 	"context"
 	"fmt"
+	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"time"
 
 	"github.com/harness/ff-golang-server-sdk/cache"
@@ -141,7 +142,7 @@ func (c *SSEClient) handleEvent(event Event) {
 					c.cache.Set(dto.Key{
 						Type: dto.KeyFeature,
 						Name: cfMsg.Identifier,
-					}, *response.JSON200.Convert())
+					}, *evaluation.NewFC(response.JSON200))
 				}
 			}
 
@@ -174,7 +175,7 @@ func (c *SSEClient) handleEvent(event Event) {
 					c.cache.Set(dto.Key{
 						Type: dto.KeySegment,
 						Name: cfMsg.Identifier,
-					}, response.JSON200.Convert())
+					}, evaluation.NewSegment(response.JSON200))
 				}
 			}
 			updateWithTimeout()

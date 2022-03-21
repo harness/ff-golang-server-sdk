@@ -1,32 +1,30 @@
-package rest
+package evaluation
 
-import (
-	"github.com/harness/ff-golang-server-sdk/evaluation"
-)
+import "github.com/harness/ff-golang-server-sdk/rest"
 
-func (wv WeightedVariation) convert() *evaluation.WeightedVariation {
-	return &evaluation.WeightedVariation{
+func convertWV(wv *rest.WeightedVariation) WeightedVariation {
+	return WeightedVariation{
 		Variation: wv.Variation,
 		Weight:    wv.Weight,
 	}
 }
 
-func (d *Distribution) convert() *evaluation.Distribution {
+func convertDistribution(d *rest.Distribution) *Distribution {
 	if d == nil {
 		return nil
 	}
-	vars := make([]evaluation.WeightedVariation, len(d.Variations))
+	vars := make([]WeightedVariation, len(d.Variations))
 	for i, val := range d.Variations {
-		vars[i] = *val.convert()
+		vars[i] = convertWV(&val)
 	}
-	return &evaluation.Distribution{
+	return &Distribution{
 		BucketBy:   d.BucketBy,
 		Variations: vars,
 	}
 }
 
-func (v Variation) convert() *evaluation.Variation {
-	return &evaluation.Variation{
+func convertVariation(v *rest.Variation) Variation {
+	return Variation{
 		Description: v.Description,
 		Identifier:  v.Identifier,
 		Name:        v.Name,
@@ -34,15 +32,15 @@ func (v Variation) convert() *evaluation.Variation {
 	}
 }
 
-func (s Serve) convert() *evaluation.Serve {
-	return &evaluation.Serve{
-		Distribution: s.Distribution.convert(),
+func convertServe(s *rest.Serve) Serve {
+	return Serve{
+		Distribution: convertDistribution(s.Distribution),
 		Variation:    s.Variation,
 	}
 }
 
-func (c Clause) convert() *evaluation.Clause {
-	return &evaluation.Clause{
+func convertClause(c *rest.Clause) Clause {
+	return Clause{
 		Attribute: c.Attribute,
 		ID:        c.Id,
 		Negate:    c.Negate,
@@ -51,36 +49,36 @@ func (c Clause) convert() *evaluation.Clause {
 	}
 }
 
-func (r ServingRule) convert() *evaluation.ServingRule {
-	clauses := make([]evaluation.Clause, len(r.Clauses))
+func convertServingRule(r *rest.ServingRule) ServingRule {
+	clauses := make([]Clause, len(r.Clauses))
 	for i, val := range r.Clauses {
-		clauses[i] = *val.convert()
+		clauses[i] = convertClause(&val)
 	}
-	return &evaluation.ServingRule{
+	return ServingRule{
 		Clauses:  clauses,
 		Priority: r.Priority,
 		RuleID:   r.RuleId,
-		Serve:    *r.Serve.convert(),
+		Serve:    convertServe(&r.Serve),
 	}
 }
 
-func (p Prerequisite) convert() *evaluation.Prerequisite {
-	return &evaluation.Prerequisite{
+func convertPrereq(p *rest.Prerequisite) Prerequisite {
+	return Prerequisite{
 		Feature:    p.Feature,
 		Variations: p.Variations,
 	}
 }
 
 //convert converts variation map to evaluation object
-func (v VariationMap) convert() *evaluation.VariationMap {
-	return &evaluation.VariationMap{
+func convertVariationMap(v *rest.VariationMap) VariationMap {
+	return VariationMap{
 		TargetSegments: *v.TargetSegments,
 		Targets:        convertTargetToIdentifier(*v.Targets),
 		Variation:      v.Variation,
 	}
 }
 
-func convertTargetToIdentifier(tm []TargetMap) []string {
+func convertTargetToIdentifier(tm []rest.TargetMap) []string {
 	result := make([]string, 0, len(tm))
 	for j := range tm {
 		result = append(result, *tm[j].Identifier)
@@ -88,43 +86,43 @@ func convertTargetToIdentifier(tm []TargetMap) []string {
 	return result
 }
 
-// Convert feature flag from ff server to evaluation object
-func (fc FeatureConfig) Convert() *evaluation.FeatureConfig {
-	vars := make(evaluation.Variations, len(fc.Variations))
+// NewFC feature flag from ff server to evaluation object
+func NewFC(fc *rest.FeatureConfig) *FeatureConfig {
+	vars := make(Variations, len(fc.Variations))
 	for i, val := range fc.Variations {
-		vars[i] = *val.convert()
+		vars[i] = convertVariation(&val)
 	}
 
-	var rules evaluation.ServingRules
+	var rules ServingRules
 	if fc.Rules != nil {
-		rules = make(evaluation.ServingRules, len(*fc.Rules))
+		rules = make(ServingRules, len(*fc.Rules))
 		for i, val := range *fc.Rules {
-			rules[i] = *val.convert()
+			rules[i] = convertServingRule(&val)
 		}
 	}
 
-	var pre []evaluation.Prerequisite
+	var pre []Prerequisite
 	if fc.Prerequisites != nil {
-		pre = make([]evaluation.Prerequisite, len(*fc.Prerequisites))
+		pre = make([]Prerequisite, len(*fc.Prerequisites))
 		for i, val := range *fc.Prerequisites {
-			pre[i] = *val.convert()
+			pre[i] = convertPrereq(&val)
 		}
 	}
-	defaultServe := evaluation.Serve{}
+	defaultServe := Serve{}
 	if fc.DefaultServe.Distribution != nil {
-		defaultServe.Distribution = fc.DefaultServe.Distribution.convert()
+		defaultServe.Distribution = convertDistribution(fc.DefaultServe.Distribution)
 	}
 	if fc.DefaultServe.Variation != nil {
 		defaultServe.Variation = fc.DefaultServe.Variation
 	}
-	var vtm []evaluation.VariationMap
+	var vtm []VariationMap
 	if fc.VariationToTargetMap != nil {
-		vtm = make([]evaluation.VariationMap, len(*fc.VariationToTargetMap))
+		vtm = make([]VariationMap, len(*fc.VariationToTargetMap))
 		for i, val := range *fc.VariationToTargetMap {
-			vtm[i] = *val.convert()
+			vtm[i] = convertVariationMap(&val)
 		}
 	}
-	return &evaluation.FeatureConfig{
+	return &FeatureConfig{
 		DefaultServe:         defaultServe,
 		Environment:          fc.Environment,
 		Feature:              fc.Feature,
@@ -133,36 +131,36 @@ func (fc FeatureConfig) Convert() *evaluation.FeatureConfig {
 		Prerequisites:        pre,
 		Project:              fc.Project,
 		Rules:                rules,
-		State:                evaluation.FeatureState(fc.State),
+		State:                FeatureState(fc.State),
 		VariationToTargetMap: vtm,
 		Variations:           vars,
 	}
 }
 
 // Convert REST segment response to evaluation segment object
-func (s Segment) Convert() evaluation.Segment {
+func NewSegment(s *rest.Segment) *Segment {
 	// need openspec change: included, excluded and rules should be required in response
-	excluded := make(evaluation.StrSlice, 0)
+	excluded := make(StrSlice, 0)
 	if s.Excluded != nil {
-		excluded = make(evaluation.StrSlice, len(*s.Excluded))
+		excluded = make(StrSlice, len(*s.Excluded))
 		for i, excl := range *s.Excluded {
 			excluded[i] = excl.Identifier
 		}
 	}
 
-	included := make(evaluation.StrSlice, 0)
+	included := make(StrSlice, 0)
 	if s.Included != nil {
-		included = make(evaluation.StrSlice, len(*s.Included))
+		included = make(StrSlice, len(*s.Included))
 		for i, incl := range *s.Included {
 			included[i] = incl.Identifier
 		}
 	}
 
-	rules := make(evaluation.SegmentRules, 0)
+	rules := make(SegmentRules, 0)
 	if s.Rules != nil {
-		rules = make(evaluation.SegmentRules, len(*s.Rules))
+		rules = make(SegmentRules, len(*s.Rules))
 		for i, rule := range *s.Rules {
-			rules[i] = evaluation.Clause{
+			rules[i] = Clause{
 				Attribute: rule.Attribute,
 				ID:        rule.Id,
 				Negate:    rule.Negate,
@@ -172,12 +170,12 @@ func (s Segment) Convert() evaluation.Segment {
 		}
 	}
 
-	tags := make([]evaluation.Tag, 0)
+	tags := make([]Tag, 0)
 	if s.Rules != nil {
 		if s.Tags != nil {
-			tags = make([]evaluation.Tag, len(*s.Tags))
+			tags = make([]Tag, len(*s.Tags))
 			for i, tag := range *s.Tags {
-				tags[i] = evaluation.Tag{
+				tags[i] = Tag{
 					Name:  tag.Name,
 					Value: tag.Value,
 				}
@@ -189,7 +187,7 @@ func (s Segment) Convert() evaluation.Segment {
 	if s.Version != nil {
 		version = *s.Version
 	}
-	return evaluation.Segment{
+	return &Segment{
 		Identifier:  s.Identifier,
 		Name:        s.Name,
 		CreatedAt:   s.CreatedAt,

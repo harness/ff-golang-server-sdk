@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/harness/ff-golang-server-sdk/rest"
 	"sync"
 	"time"
 
@@ -31,8 +32,8 @@ const (
 
 type analyticsEvent struct {
 	target        *evaluation.Target
-	featureConfig evaluation.FeatureConfig
-	variation     evaluation.Variation
+	featureConfig *rest.FeatureConfig
+	variation     *rest.Variation
 	count         int
 }
 
@@ -88,15 +89,11 @@ timerloop:
 }
 
 // PushToQueue is used to queue analytics data to send to the server
-func (as *AnalyticsService) PushToQueue(target *evaluation.Target, featureConfig *evaluation.FeatureConfig, variation evaluation.Variation) {
-	fc := evaluation.FeatureConfig{}
-	if featureConfig != nil {
-		fc = *featureConfig
-	}
+func (as *AnalyticsService) PushToQueue(featureConfig *rest.FeatureConfig, target *evaluation.Target, variation *rest.Variation) {
 
 	ad := analyticsEvent{
 		target:        target,
-		featureConfig: fc,
+		featureConfig: featureConfig,
 		variation:     variation,
 	}
 	as.analyticsChan <- ad

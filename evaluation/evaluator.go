@@ -26,6 +26,8 @@ const (
 	equalSensitiveOperator = "equal_sensitive"
 )
 
+type ProcessEvaluation func(fc *rest.FeatureConfig, target *Target, variation *rest.Variation)
+
 // Query provides methods for segment and flag retrieval
 type Query interface {
 	GetSegment(identifier string) (rest.Segment, error)
@@ -47,7 +49,7 @@ func NewEvaluator(query Query) (*Evaluator, error) {
 	}, nil
 }
 
-func (e Evaluator) evaluateClause(clause *rest.Clause, target *rest.Target) bool {
+func (e Evaluator) evaluateClause(clause *rest.Clause, target *Target) bool {
 	if clause == nil {
 		return false
 	}
@@ -103,7 +105,7 @@ func (e Evaluator) evaluateClause(clause *rest.Clause, target *rest.Target) bool
 	}
 }
 
-func (e Evaluator) evaluateClauses(clauses []rest.Clause, target *rest.Target) bool {
+func (e Evaluator) evaluateClauses(clauses []rest.Clause, target *Target) bool {
 	for i := range clauses {
 		if !e.evaluateClause(&clauses[i], target) {
 			return false
@@ -112,11 +114,11 @@ func (e Evaluator) evaluateClauses(clauses []rest.Clause, target *rest.Target) b
 	return true
 }
 
-func (e Evaluator) evaluateRule(servingRule *rest.ServingRule, target *rest.Target) bool {
+func (e Evaluator) evaluateRule(servingRule *rest.ServingRule, target *Target) bool {
 	return e.evaluateClauses(servingRule.Clauses, target)
 }
 
-func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *rest.Target) string {
+func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target) string {
 	if target == nil || servingRules == nil {
 		return ""
 	}
@@ -144,7 +146,7 @@ func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *rest.T
 	return ""
 }
 
-func (e Evaluator) evaluateVariationMap(variationsMap []rest.VariationMap, target *rest.Target) string {
+func (e Evaluator) evaluateVariationMap(variationsMap []rest.VariationMap, target *Target) string {
 	if variationsMap == nil || target == nil {
 		return ""
 	}
@@ -166,7 +168,7 @@ func (e Evaluator) evaluateVariationMap(variationsMap []rest.VariationMap, targe
 	return ""
 }
 
-func (e Evaluator) evaluateFlag(fc rest.FeatureConfig, target *rest.Target) (rest.Variation, error) {
+func (e Evaluator) evaluateFlag(fc rest.FeatureConfig, target *Target) (rest.Variation, error) {
 	var variation = fc.OffVariation
 	if fc.State == rest.FeatureState_on {
 		variation = ""
@@ -190,7 +192,7 @@ func (e Evaluator) evaluateFlag(fc rest.FeatureConfig, target *rest.Target) (res
 	return rest.Variation{}, fmt.Errorf("%w: %s", ErrEvaluationFlag, fc.Feature)
 }
 
-func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, target *rest.Target) bool {
+func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, target *Target) bool {
 	if segmentList == nil {
 		return false
 	}
@@ -225,7 +227,7 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 	return false
 }
 
-func (e Evaluator) checkPreRequisite(parent *rest.FeatureConfig, target *rest.Target) (bool, error) {
+func (e Evaluator) checkPreRequisite(parent *rest.FeatureConfig, target *Target) (bool, error) {
 	if e.query == nil {
 		log.Errorf(ErrQueryProviderMissing.Error())
 		return true, ErrQueryProviderMissing
@@ -277,7 +279,9 @@ func (e Evaluator) checkPreRequisite(parent *rest.FeatureConfig, target *rest.Ta
 	return true, nil
 }
 
-func (e Evaluator) evaluate(identifier string, target *rest.Target, kind string) (rest.Variation, error) {
+func (e Evaluator) evaluate(identifier string, target *Target, kind string,
+	processEvaluation ProcessEvaluation) (rest.Variation, error) {
+
 	if e.query == nil {
 		log.Errorf(ErrQueryProviderMissing.Error())
 		return rest.Variation{}, ErrQueryProviderMissing
@@ -301,12 +305,15 @@ func (e Evaluator) evaluate(identifier string, target *rest.Target, kind string)
 	if err != nil {
 		return rest.Variation{}, err
 	}
+	if processEvaluation != nil {
+		processEvaluation(&flag, target, &variation)
+	}
 	return variation, nil
 }
 
 // BoolVariation returns boolean evaluation for target
-func (e Evaluator) BoolVariation(identifier string, target *rest.Target, defaultValue bool) bool {
-	variation, err := e.evaluate(identifier, target, "boolean")
+func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue bool, processEvaluation ProcessEvaluation) bool {
+	variation, err := e.evaluate(identifier, target, "boolean", processEvaluation)
 	if err != nil {
 		log.Errorf("Error while evaluating boolean flag '%s', err: %v", identifier, err)
 		return defaultValue
@@ -315,8 +322,10 @@ func (e Evaluator) BoolVariation(identifier string, target *rest.Target, default
 }
 
 // StringVariation returns string evaluation for target
-func (e Evaluator) StringVariation(identifier string, target *rest.Target, defaultValue string) string {
-	variation, err := e.evaluate(identifier, target, "string")
+func (e Evaluator) StringVariation(identifier string, target *Target, defaultValue string,
+	processEvaluation ProcessEvaluation) string {
+
+	variation, err := e.evaluate(identifier, target, "string", processEvaluation)
 	if err != nil {
 		log.Errorf("Error while evaluating string flag '%s', err: %v", identifier, err)
 		return defaultValue
@@ -325,8 +334,10 @@ func (e Evaluator) StringVariation(identifier string, target *rest.Target, defau
 }
 
 // IntVariation returns int evaluation for target
-func (e Evaluator) IntVariation(identifier string, target *rest.Target, defaultValue int) int {
-	variation, err := e.evaluate(identifier, target, "int")
+func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue int,
+	processEvaluation ProcessEvaluation) int {
+
+	variation, err := e.evaluate(identifier, target, "int", processEvaluation)
 	if err != nil {
 		log.Errorf("Error while evaluating int flag '%s', err: %v", identifier, err)
 		return defaultValue
@@ -339,8 +350,10 @@ func (e Evaluator) IntVariation(identifier string, target *rest.Target, defaultV
 }
 
 // NumberVariation returns number evaluation for target
-func (e Evaluator) NumberVariation(identifier string, target *rest.Target, defaultValue float64) float64 {
-	variation, err := e.evaluate(identifier, target, "number")
+func (e Evaluator) NumberVariation(identifier string, target *Target, defaultValue float64,
+	processEvaluation ProcessEvaluation) float64 {
+
+	variation, err := e.evaluate(identifier, target, "number", processEvaluation)
 	if err != nil {
 		log.Errorf("Error while evaluating number flag '%s', err: %v", identifier, err)
 		return defaultValue
@@ -353,8 +366,10 @@ func (e Evaluator) NumberVariation(identifier string, target *rest.Target, defau
 }
 
 // JSONVariation returns json evaluation for target
-func (e Evaluator) JSONVariation(identifier string, target *rest.Target, defaultValue map[string]interface{}) map[string]interface{} {
-	variation, err := e.evaluate(identifier, target, "json")
+func (e Evaluator) JSONVariation(identifier string, target *Target,
+	defaultValue map[string]interface{}, processEvaluation ProcessEvaluation) map[string]interface{} {
+
+	variation, err := e.evaluate(identifier, target, "json", processEvaluation)
 	if err != nil {
 		log.Errorf("Error while evaluating json flag '%s', err: %v", identifier, err)
 		return defaultValue

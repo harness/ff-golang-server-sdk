@@ -11,17 +11,6 @@ import (
 	"github.com/harness/ff-golang-server-sdk/types"
 )
 
-const (
-	segmentMatchOperator   = "segmentMatch"
-	inOperator             = "in"
-	equalOperator          = "equal"
-	gtOperator             = "gt"
-	startsWithOperator     = "starts_with"
-	endsWithOperator       = "ends_with"
-	containsOperator       = "contains"
-	equalSensitiveOperator = "equal_sensitive"
-)
-
 var (
 	errUnexpectedType = fmt.Errorf("unexpected type")
 )
