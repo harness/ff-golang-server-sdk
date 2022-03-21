@@ -26,6 +26,7 @@ const (
 	equalSensitiveOperator = "equal_sensitive"
 )
 
+// ProcessEvaluation is HOF for after evaluation processing
 type ProcessEvaluation func(fc *rest.FeatureConfig, target *Target, variation *rest.Variation)
 
 // Query provides methods for segment and flag retrieval
@@ -227,17 +228,17 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 	return false
 }
 
-func (e Evaluator) checkPreRequisite(parent *rest.FeatureConfig, target *Target) (bool, error) {
+func (e Evaluator) checkPreRequisite(fc *rest.FeatureConfig, target *Target) (bool, error) {
 	if e.query == nil {
 		log.Errorf(ErrQueryProviderMissing.Error())
 		return true, ErrQueryProviderMissing
 	}
-	prerequisites := parent.Prerequisites
+	prerequisites := fc.Prerequisites
 	if prerequisites != nil {
 		log.Infof(
 			"Checking pre requisites %v of parent feature %v",
 			prerequisites,
-			parent.Feature)
+			fc.Feature)
 		for _, pre := range *prerequisites {
 			prereqFeature := pre.Feature
 			prereqFeatureConfig, err := e.query.GetFlag(prereqFeature)
@@ -270,7 +271,6 @@ func (e Evaluator) checkPreRequisite(parent *rest.FeatureConfig, target *Target)
 			if !contains(validPrereqVariations, prereqEvaluatedVariation.Identifier) {
 				return false, nil
 			}
-			// no need to check this error because it is recursion so err should never happen
 			if r, _ := e.checkPreRequisite(&prereqFeatureConfig, target); !r {
 				return false, nil
 			}

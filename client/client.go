@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/harness/ff-golang-server-sdk/pkg/repository"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/harness/ff-golang-server-sdk/pkg/repository"
 
 	"github.com/harness/ff-golang-server-sdk/analyticsservice"
 	"github.com/harness/ff-golang-server-sdk/metricsclient"
@@ -16,7 +17,6 @@ import (
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/golang-jwt/jwt"
 	"github.com/harness/ff-golang-server-sdk/cache"
-	"github.com/harness/ff-golang-server-sdk/dto"
 	eval "github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/harness/ff-golang-server-sdk/stream"
@@ -37,6 +37,7 @@ import (
 //
 type CfClient struct {
 	evaluator           *eval.Evaluator
+	repository          repository.Repository
 	mux                 sync.RWMutex
 	api                 rest.ClientWithResponsesInterface
 	metricsapi          metricsclient.ClientWithResponsesInterface
@@ -89,8 +90,8 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	repo := repository.New(lruCache)
-	client.evaluator, err = eval.NewEvaluator(repo)
+	client.repository = repository.New(lruCache)
+	client.evaluator, err = eval.NewEvaluator(client.repository)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +191,8 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 		defer c.mux.RUnlock()
 		c.streamConnected = false
 	}
-	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.config.Cache, c.api, c.config.Logger, streamErr, c.config.eventStreamListener)
+	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.repository, c.api, c.config.Logger, streamErr,
+		c.config.eventStreamListener)
 
 	// Connect kicks off a goroutine that attempts to establish a stream connection
 	// while this is happening we set streamConnected to true - if any errors happen
@@ -344,10 +346,7 @@ func (c *CfClient) retrieveFlags(ctx context.Context) error {
 	}
 
 	for _, flag := range *flags.JSON200 {
-		c.config.Cache.Set(dto.Key{
-			Type: dto.KeyFeature,
-			Name: flag.Feature,
-		}, *eval.NewFC(&flag)) // dereference for holding object in cache instead of address
+		c.repository.SetFlag(flag)
 	}
 	c.config.Logger.Info("Retrieving flags finished")
 	return nil
@@ -371,10 +370,7 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 	}
 
 	for _, segment := range *segments.JSON200 {
-		c.config.Cache.Set(dto.Key{
-			Type: dto.KeySegment,
-			Name: segment.Identifier,
-		}, eval.NewSegment(&segment))
+		c.repository.SetSegment(segment)
 	}
 	c.config.Logger.Info("Retrieving segments finished")
 	return nil
@@ -443,7 +439,7 @@ func (c *CfClient) Environment() string {
 }
 
 // InterceptAddCluster adds cluster ID to calls
-func (c *CfClient) InterceptAddCluster(ctx context.Context, req *http.Request) error {
+func (c *CfClient) InterceptAddCluster(_ context.Context, req *http.Request) error {
 	q := req.URL.Query()
 	q.Add("cluster", c.clusterIdentifier)
 	req.URL.RawQuery = q.Encode()

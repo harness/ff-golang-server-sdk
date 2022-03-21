@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/harness/ff-golang-server-sdk/rest"
 	"sync"
 	"time"
+
+	"github.com/harness/ff-golang-server-sdk/rest"
 
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/metricsclient"

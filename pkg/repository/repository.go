@@ -8,6 +8,20 @@ import (
 	"github.com/harness/ff-golang-server-sdk/storage"
 )
 
+// Repository interface for data providers
+type Repository interface {
+	GetFlag(identifier string) (rest.FeatureConfig, error)
+	GetSegment(identifier string) (rest.Segment, error)
+
+	SetFlag(featureConfig rest.FeatureConfig)
+	SetSegment(segment rest.Segment)
+
+	DeleteFlag(identifier string)
+	DeleteSegment(identifier string)
+
+	Close()
+}
+
 // Callback provides events when repository data being modified
 type Callback interface {
 	OnFlagStored(identifier string)
@@ -16,8 +30,8 @@ type Callback interface {
 	OnSegmentDeleted(identifier string)
 }
 
-// Repository holds cache and optionally offline data
-type Repository struct {
+// FFRepository holds cache and optionally offline data
+type FFRepository struct {
 	cache    Cache
 	storage  storage.Storage
 	callback Callback
@@ -25,14 +39,14 @@ type Repository struct {
 
 // New repository with only cache capabillity
 func New(cache Cache) Repository {
-	return Repository{
+	return FFRepository{
 		cache: cache,
 	}
 }
 
 // NewWithStorage works with offline storage implementation
 func NewWithStorage(cache Cache, storage storage.Storage) Repository {
-	return Repository{
+	return FFRepository{
 		cache:   cache,
 		storage: storage,
 	}
@@ -41,14 +55,14 @@ func NewWithStorage(cache Cache, storage storage.Storage) Repository {
 // NewWithStorageAndCallback factory function with cache, offline storage and
 // listener on events
 func NewWithStorageAndCallback(cache Cache, storage storage.Storage, callback Callback) Repository {
-	return Repository{
+	return FFRepository{
 		cache:    cache,
 		storage:  storage,
 		callback: callback,
 	}
 }
 
-func (r Repository) getFlagAndCache(identifier string, cacheable bool) (rest.FeatureConfig, error) {
+func (r FFRepository) getFlagAndCache(identifier string, cacheable bool) (rest.FeatureConfig, error) {
 	flagKey := formatFlagKey(identifier)
 	flag, ok := r.cache.Get(flagKey)
 	if ok {
@@ -66,11 +80,11 @@ func (r Repository) getFlagAndCache(identifier string, cacheable bool) (rest.Fea
 }
 
 // GetFlag returns flag from cache or offline storage
-func (r Repository) GetFlag(identifier string) (rest.FeatureConfig, error) {
+func (r FFRepository) GetFlag(identifier string) (rest.FeatureConfig, error) {
 	return r.getFlagAndCache(identifier, true)
 }
 
-func (r Repository) getSegmentAndCache(identifier string, cacheable bool) (rest.Segment, error) {
+func (r FFRepository) getSegmentAndCache(identifier string, cacheable bool) (rest.Segment, error) {
 	segmentKey := formatSegmentKey(identifier)
 	flag, ok := r.cache.Get(segmentKey)
 	if ok {
@@ -88,12 +102,12 @@ func (r Repository) getSegmentAndCache(identifier string, cacheable bool) (rest.
 }
 
 // GetSegment returns flag from cache or offline storage
-func (r Repository) GetSegment(identifier string) (rest.Segment, error) {
+func (r FFRepository) GetSegment(identifier string) (rest.Segment, error) {
 	return r.getSegmentAndCache(identifier, true)
 }
 
 // SetFlag places a flag in the repository with the new value
-func (r Repository) SetFlag(featureConfig rest.FeatureConfig) {
+func (r FFRepository) SetFlag(featureConfig rest.FeatureConfig) {
 	if r.isFlagOutdated(featureConfig) {
 		return
 	}
@@ -113,7 +127,7 @@ func (r Repository) SetFlag(featureConfig rest.FeatureConfig) {
 }
 
 // SetSegment places a segment in the repository with the new value
-func (r Repository) SetSegment(segment rest.Segment) {
+func (r FFRepository) SetSegment(segment rest.Segment) {
 	if r.isSegmentOutdated(segment) {
 		return
 	}
@@ -133,7 +147,7 @@ func (r Repository) SetSegment(segment rest.Segment) {
 }
 
 // DeleteFlag removes a flag from the repository
-func (r Repository) DeleteFlag(identifier string) {
+func (r FFRepository) DeleteFlag(identifier string) {
 	flagKey := formatFlagKey(identifier)
 	if r.storage != nil {
 		// remove from storage
@@ -149,7 +163,7 @@ func (r Repository) DeleteFlag(identifier string) {
 }
 
 // DeleteSegment removes a segment from the repository
-func (r Repository) DeleteSegment(identifier string) {
+func (r FFRepository) DeleteSegment(identifier string) {
 	segmentKey := formatSegmentKey(identifier)
 	if r.storage != nil {
 		// remove from storage
@@ -164,7 +178,7 @@ func (r Repository) DeleteSegment(identifier string) {
 	}
 }
 
-func (r Repository) isFlagOutdated(featureConfig rest.FeatureConfig) bool {
+func (r FFRepository) isFlagOutdated(featureConfig rest.FeatureConfig) bool {
 	oldFlag, err := r.getFlagAndCache(featureConfig.Feature, false)
 	if err != nil || oldFlag.Version == nil {
 		return false
@@ -173,7 +187,7 @@ func (r Repository) isFlagOutdated(featureConfig rest.FeatureConfig) bool {
 	return *oldFlag.Version >= *featureConfig.Version
 }
 
-func (r Repository) isSegmentOutdated(segment rest.Segment) bool {
+func (r FFRepository) isSegmentOutdated(segment rest.Segment) bool {
 	oldSegment, err := r.getSegmentAndCache(segment.Identifier, false)
 	if err != nil || oldSegment.Version == nil {
 		return false
@@ -183,7 +197,7 @@ func (r Repository) isSegmentOutdated(segment rest.Segment) bool {
 }
 
 // Close all resources
-func (r Repository) Close() {
+func (r FFRepository) Close() {
 
 }
 
