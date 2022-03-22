@@ -109,16 +109,11 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 }
 
 func (c *CfClient) postEvalDataListener(ctx context.Context) {
-	for c.postEvalChan != nil {
+	for {
 		select {
-		case data, ok := <-c.postEvalChan:
-			if !ok {
-				c.postEvalChan = nil
-			}
-
+		case data := <-c.postEvalChan:
 			c.analyticsService.PushToQueue(data.FeatureConfig, data.Target, data.Variation)
 		case <-ctx.Done():
-			close(c.postEvalChan)
 			return
 		}
 	}
