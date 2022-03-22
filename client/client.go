@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/harness/ff-golang-server-sdk/evaluation"
+
 	"github.com/harness/ff-golang-server-sdk/pkg/repository"
 
 	"github.com/harness/ff-golang-server-sdk/analyticsservice"
@@ -16,8 +18,6 @@ import (
 
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/golang-jwt/jwt"
-	"github.com/harness/ff-golang-server-sdk/cache"
-	eval "github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/harness/ff-golang-server-sdk/stream"
 	"github.com/harness/ff-golang-server-sdk/types"
@@ -36,7 +36,7 @@ import (
 // that any pending analytics events have been delivered.
 //
 type CfClient struct {
-	evaluator           *eval.Evaluator
+	evaluator           *evaluation.Evaluator
 	repository          repository.Repository
 	mux                 sync.RWMutex
 	api                 rest.ClientWithResponsesInterface
@@ -46,11 +46,11 @@ type CfClient struct {
 	config              *config
 	environmentID       string
 	token               string
-	persistence         cache.Persistence
 	cancelFunc          context.CancelFunc
 	streamConnected     bool
 	streamConnectedLock sync.RWMutex
 	authenticated       chan struct{}
+	postEvalChan        chan evaluation.PostEvalData
 	initialized         bool
 	initializedLock     sync.RWMutex
 	analyticsService    *analyticsservice.AnalyticsService
@@ -80,6 +80,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		authenticated:     make(chan struct{}),
 		analyticsService:  analyticsService,
 		clusterIdentifier: "1",
+		postEvalChan:      make(chan evaluation.PostEvalData),
 	}
 	ctx, client.cancelFunc = context.WithCancel(context.Background())
 
@@ -91,7 +92,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		return nil, err
 	}
 	client.repository = repository.New(lruCache)
-	client.evaluator, err = eval.NewEvaluator(client.repository)
+	client.evaluator, err = evaluation.NewEvaluator(client.repository, client.postEvalChan)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +103,25 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 
 	go client.pullCronJob(ctx)
 
+	go client.postEvalDataListener(ctx)
+
 	return client, nil
+}
+
+func (c *CfClient) postEvalDataListener(ctx context.Context) {
+	for c.postEvalChan != nil {
+		select {
+		case data, ok := <-c.postEvalChan:
+			if !ok {
+				c.postEvalChan = nil
+			}
+
+			c.analyticsService.PushToQueue(data.FeatureConfig, data.Target, data.Variation)
+		case <-ctx.Done():
+			close(c.postEvalChan)
+			return
+		}
+	}
 }
 
 // IsStreamConnected determines if the stream is currently connected
@@ -384,32 +403,32 @@ func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 // BoolVariation returns the value of a boolean feature flag for a given target.
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
-func (c *CfClient) BoolVariation(key string, target *eval.Target, defaultValue bool) (bool, error) {
-	value := c.evaluator.BoolVariation(key, target, defaultValue, c.analyticsService.PushToQueue)
+func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultValue bool) (bool, error) {
+	value := c.evaluator.BoolVariation(key, target, defaultValue)
 	return value, nil
 }
 
 // StringVariation returns the value of a string feature flag for a given target.
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
-func (c *CfClient) StringVariation(key string, target *eval.Target, defaultValue string) (string, error) {
-	value := c.evaluator.StringVariation(key, target, defaultValue, c.analyticsService.PushToQueue)
+func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaultValue string) (string, error) {
+	value := c.evaluator.StringVariation(key, target, defaultValue)
 	return value, nil
 }
 
 // IntVariation returns the value of a integer feature flag for a given target.
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
-func (c *CfClient) IntVariation(key string, target *eval.Target, defaultValue int64) (int64, error) {
-	value := c.evaluator.IntVariation(key, target, int(defaultValue), c.analyticsService.PushToQueue)
+func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultValue int64) (int64, error) {
+	value := c.evaluator.IntVariation(key, target, int(defaultValue))
 	return int64(value), nil
 }
 
 // NumberVariation returns the value of a float64 feature flag for a given target.
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
-func (c *CfClient) NumberVariation(key string, target *eval.Target, defaultValue float64) (float64, error) {
-	value := c.evaluator.NumberVariation(key, target, defaultValue, c.analyticsService.PushToQueue)
+func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaultValue float64) (float64, error) {
+	value := c.evaluator.NumberVariation(key, target, defaultValue)
 	return value, nil
 }
 
@@ -417,18 +436,14 @@ func (c *CfClient) NumberVariation(key string, target *eval.Target, defaultValue
 // of any JSON type.
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
-func (c *CfClient) JSONVariation(key string, target *eval.Target, defaultValue types.JSON) (types.JSON, error) {
-	value := c.evaluator.JSONVariation(key, target, defaultValue, c.analyticsService.PushToQueue)
+func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultValue types.JSON) (types.JSON, error) {
+	value := c.evaluator.JSONVariation(key, target, defaultValue)
 	return value, nil
 }
 
 // Close shuts down the Feature Flag client. After calling this, the client
 // should no longer be used
 func (c *CfClient) Close() error {
-	err := c.persistence.SaveToStore()
-	if err != nil {
-		return err
-	}
 	c.cancelFunc()
 	return nil
 }
@@ -439,7 +454,7 @@ func (c *CfClient) Environment() string {
 }
 
 // InterceptAddCluster adds cluster ID to calls
-func (c *CfClient) InterceptAddCluster(_ context.Context, req *http.Request) error {
+func (c *CfClient) InterceptAddCluster(ctx context.Context, req *http.Request) error {
 	q := req.URL.Query()
 	q.Add("cluster", c.clusterIdentifier)
 	req.URL.RawQuery = q.Encode()

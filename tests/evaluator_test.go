@@ -76,7 +76,7 @@ func TestEvaluator(t *testing.T) {
 		t.Error(err)
 	}
 	repo := repository.New(lruCache)
-	evaluator, err := evaluation.NewEvaluator(repo)
+	evaluator, err := evaluation.NewEvaluator(repo, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -109,15 +109,15 @@ func TestEvaluator(t *testing.T) {
 			var got interface{}
 			switch testCase.testFile.Flag.Kind {
 			case "boolean":
-				got = evaluator.BoolVariation(testCase.testFile.Flag.Feature, target, false, nil)
+				got = evaluator.BoolVariation(testCase.testFile.Flag.Feature, target, false)
 			case "string":
-				got = evaluator.StringVariation(testCase.testFile.Flag.Feature, target, "blue", nil)
+				got = evaluator.StringVariation(testCase.testFile.Flag.Feature, target, "blue")
 			case "int":
-				got = evaluator.IntVariation(testCase.testFile.Flag.Feature, target, 100, nil)
+				got = evaluator.IntVariation(testCase.testFile.Flag.Feature, target, 100)
 			case "number":
-				got = evaluator.NumberVariation(testCase.testFile.Flag.Feature, target, 50.00, nil)
+				got = evaluator.NumberVariation(testCase.testFile.Flag.Feature, target, 50.00)
 			case "json":
-				got = evaluator.JSONVariation(testCase.testFile.Flag.Feature, target, map[string]interface{}{}, nil)
+				got = evaluator.JSONVariation(testCase.testFile.Flag.Feature, target, map[string]interface{}{})
 			}
 			if !reflect.DeepEqual(got, testCase.expected) {
 				t.Errorf("eval engine got = %v, want %v", got, testCase.expected)

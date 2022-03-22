@@ -303,7 +303,7 @@ func (m TestRepository) GetFlag(identifier string) (rest.FeatureConfig, error) {
 }
 
 func TestNewEvaluator(t *testing.T) {
-	eval, _ := NewEvaluator(testRepo)
+	eval, _ := NewEvaluator(testRepo, nil)
 	type args struct {
 		query Query
 	}
@@ -330,7 +330,7 @@ func TestNewEvaluator(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewEvaluator(tt.args.query)
+			got, err := NewEvaluator(tt.args.query, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewEvaluator() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1285,7 +1285,6 @@ func TestEvaluator_evaluate(t *testing.T) {
 		identifier string
 		target     *Target
 		kind       string
-		fn         ProcessEvaluation
 	}
 	tests := []struct {
 		name    string
@@ -1383,7 +1382,7 @@ func TestEvaluator_evaluate(t *testing.T) {
 			e := Evaluator{
 				query: tt.fields.query,
 			}
-			got, err := e.evaluate(tt.args.identifier, tt.args.target, tt.args.kind, tt.args.fn)
+			got, err := e.evaluate(tt.args.identifier, tt.args.target, tt.args.kind)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Evaluator.evaluate() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1403,7 +1402,6 @@ func TestEvaluator_BoolVariation(t *testing.T) {
 		identifier   string
 		target       *Target
 		defaultValue bool
-		fn           ProcessEvaluation
 	}
 	tests := []struct {
 		name   string
@@ -1455,7 +1453,7 @@ func TestEvaluator_BoolVariation(t *testing.T) {
 			e := Evaluator{
 				query: tt.fields.query,
 			}
-			if got := e.BoolVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue, tt.args.fn); got != tt.want {
+			if got := e.BoolVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
 				t.Errorf("Evaluator.BoolVariation() = %v, want %v", got, tt.want)
 			}
 		})
@@ -1470,7 +1468,6 @@ func TestEvaluator_StringVariation(t *testing.T) {
 		identifier   string
 		target       *Target
 		defaultValue string
-		fn           ProcessEvaluation
 	}
 	tests := []struct {
 		name   string
@@ -1522,7 +1519,7 @@ func TestEvaluator_StringVariation(t *testing.T) {
 			e := Evaluator{
 				query: tt.fields.query,
 			}
-			if got := e.StringVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue, tt.args.fn); got != tt.want {
+			if got := e.StringVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
 				t.Errorf("Evaluator.StringVariation() = %v, want %v", got, tt.want)
 			}
 		})
@@ -1537,7 +1534,6 @@ func TestEvaluator_IntVariation(t *testing.T) {
 		identifier   string
 		target       *Target
 		defaultValue int
-		fn           ProcessEvaluation
 	}
 	tests := []struct {
 		name   string
@@ -1601,7 +1597,7 @@ func TestEvaluator_IntVariation(t *testing.T) {
 			e := Evaluator{
 				query: tt.fields.query,
 			}
-			if got := e.IntVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue, tt.args.fn); got != tt.want {
+			if got := e.IntVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
 				t.Errorf("Evaluator.IntVariation() = %v, want %v", got, tt.want)
 			}
 		})
@@ -1616,7 +1612,6 @@ func TestEvaluator_NumberVariation(t *testing.T) {
 		identifier   string
 		target       *Target
 		defaultValue float64
-		fn           ProcessEvaluation
 	}
 	tests := []struct {
 		name   string
@@ -1680,7 +1675,7 @@ func TestEvaluator_NumberVariation(t *testing.T) {
 			e := Evaluator{
 				query: tt.fields.query,
 			}
-			if got := e.NumberVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue, tt.args.fn); got != tt.want {
+			if got := e.NumberVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
 				t.Errorf("Evaluator.NumberVariation() = %v, want %v", got, tt.want)
 			}
 		})
@@ -1698,7 +1693,6 @@ func TestEvaluator_JSONVariation(t *testing.T) {
 		identifier   string
 		target       *Target
 		defaultValue map[string]interface{}
-		fn           ProcessEvaluation
 	}
 	tests := []struct {
 		name   string
@@ -1766,7 +1760,7 @@ func TestEvaluator_JSONVariation(t *testing.T) {
 			e := Evaluator{
 				query: tt.fields.query,
 			}
-			if got := e.JSONVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue, tt.args.fn); !reflect.DeepEqual(got, tt.want) {
+			if got := e.JSONVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Evaluator.JSONVariation() = %v, want %v", got, tt.want)
 			}
 		})

@@ -77,14 +77,13 @@ func (as *AnalyticsService) Start(ctx context.Context, client *metricsclient.Cli
 }
 
 func (as *AnalyticsService) startTimer(ctx context.Context) {
-timerloop:
 	for {
 		select {
 		case <-time.After(as.timeout):
 			as.sendDataAndResetCache(ctx)
 		case <-ctx.Done():
 			close(as.analyticsChan)
-			break timerloop
+			return
 		}
 	}
 }
@@ -134,7 +133,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	for _, analytic := range analyticsData {
 		if analytic.target != nil {
 			if analytic.target.Anonymous == nil || !*analytic.target.Anonymous {
-				var targetAttributes []metricsclient.KeyValue
+				targetAttributes := make([]metricsclient.KeyValue, 0)
 				if analytic.target.Attributes != nil {
 					targetAttributes = make([]metricsclient.KeyValue, 0, len(*analytic.target.Attributes))
 					for key, value := range *analytic.target.Attributes {
