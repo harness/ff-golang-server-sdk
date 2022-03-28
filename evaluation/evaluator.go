@@ -39,20 +39,26 @@ type PostEvalData struct {
 	Variation     *rest.Variation
 }
 
+// PostEvaluateCallback interface can be used for advanced processing
+// of evaluated data
+type PostEvaluateCallback interface {
+	PostEvaluateProcessor(data *PostEvalData)
+}
+
 // Evaluator engine evaluates flag from provided query
 type Evaluator struct {
-	query        Query
-	postEvalChan chan<- PostEvalData
+	query            Query
+	postEvalCallback PostEvaluateCallback
 }
 
 // NewEvaluator constructs evaluator with query instance
-func NewEvaluator(query Query, postEvalChan chan<- PostEvalData) (*Evaluator, error) {
+func NewEvaluator(query Query, postEvalCallback PostEvaluateCallback) (*Evaluator, error) {
 	if query == nil {
 		return nil, ErrQueryProviderMissing
 	}
 	return &Evaluator{
-		query:        query,
-		postEvalChan: postEvalChan,
+		query:            query,
+		postEvalCallback: postEvalCallback,
 	}, nil
 }
 
@@ -310,12 +316,14 @@ func (e Evaluator) evaluate(identifier string, target *Target, kind string) (res
 	if err != nil {
 		return rest.Variation{}, err
 	}
-	if e.postEvalChan != nil {
-		e.postEvalChan <- PostEvalData{
+	if e.postEvalCallback != nil {
+		data := PostEvalData{
 			FeatureConfig: &flag,
 			Target:        target,
 			Variation:     &variation,
 		}
+
+		e.postEvalCallback.PostEvaluateProcessor(&data)
 	}
 	return variation, nil
 }
@@ -372,7 +380,8 @@ func (e Evaluator) NumberVariation(identifier string, target *Target, defaultVal
 }
 
 // JSONVariation returns json evaluation for target
-func (e Evaluator) JSONVariation(identifier string, target *Target, defaultValue map[string]interface{}) map[string]interface{} {
+func (e Evaluator) JSONVariation(identifier string, target *Target,
+	defaultValue map[string]interface{}) map[string]interface{} {
 
 	variation, err := e.evaluate(identifier, target, "json")
 	if err != nil {

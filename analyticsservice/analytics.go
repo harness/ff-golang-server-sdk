@@ -82,7 +82,6 @@ func (as *AnalyticsService) startTimer(ctx context.Context) {
 		case <-time.After(as.timeout):
 			as.sendDataAndResetCache(ctx)
 		case <-ctx.Done():
-			close(as.analyticsChan)
 			return
 		}
 	}

@@ -92,7 +92,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		return nil, err
 	}
 	client.repository = repository.New(lruCache)
-	client.evaluator, err = evaluation.NewEvaluator(client.repository, client.postEvalChan)
+	client.evaluator, err = evaluation.NewEvaluator(client.repository, client)
 	if err != nil {
 		return nil, err
 	}
@@ -103,20 +103,13 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 
 	go client.pullCronJob(ctx)
 
-	go client.postEvalDataListener(ctx)
-
 	return client, nil
 }
 
-func (c *CfClient) postEvalDataListener(ctx context.Context) {
-	for {
-		select {
-		case data := <-c.postEvalChan:
-			c.analyticsService.PushToQueue(data.FeatureConfig, data.Target, data.Variation)
-		case <-ctx.Done():
-			return
-		}
-	}
+// PostEvaluateProcessor push the data to the analytics service
+func (c *CfClient) PostEvaluateProcessor(data *evaluation.PostEvalData) {
+	c.config.Logger.Infof("post evaluation %v", data.FeatureConfig.Feature)
+	c.analyticsService.PushToQueue(data.FeatureConfig, data.Target, data.Variation)
 }
 
 // IsStreamConnected determines if the stream is currently connected
