@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/harness/ff-golang-server-sdk/rest"
+
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/metricsclient"
 
@@ -31,8 +33,8 @@ const (
 
 type analyticsEvent struct {
 	target        *evaluation.Target
-	featureConfig evaluation.FeatureConfig
-	variation     evaluation.Variation
+	featureConfig *rest.FeatureConfig
+	variation     *rest.Variation
 	count         int
 }
 
@@ -75,28 +77,22 @@ func (as *AnalyticsService) Start(ctx context.Context, client *metricsclient.Cli
 }
 
 func (as *AnalyticsService) startTimer(ctx context.Context) {
-timerloop:
 	for {
 		select {
 		case <-time.After(as.timeout):
 			as.sendDataAndResetCache(ctx)
 		case <-ctx.Done():
-			close(as.analyticsChan)
-			break timerloop
+			return
 		}
 	}
 }
 
 // PushToQueue is used to queue analytics data to send to the server
-func (as *AnalyticsService) PushToQueue(target *evaluation.Target, featureConfig *evaluation.FeatureConfig, variation evaluation.Variation) {
-	fc := evaluation.FeatureConfig{}
-	if featureConfig != nil {
-		fc = *featureConfig
-	}
+func (as *AnalyticsService) PushToQueue(featureConfig *rest.FeatureConfig, target *evaluation.Target, variation *rest.Variation) {
 
 	ad := analyticsEvent{
 		target:        target,
-		featureConfig: fc,
+		featureConfig: featureConfig,
 		variation:     variation,
 	}
 	as.analyticsChan <- ad
@@ -136,7 +132,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	for _, analytic := range analyticsData {
 		if analytic.target != nil {
 			if analytic.target.Anonymous == nil || !*analytic.target.Anonymous {
-				var targetAttributes []metricsclient.KeyValue
+				targetAttributes := make([]metricsclient.KeyValue, 0)
 				if analytic.target.Attributes != nil {
 					targetAttributes = make([]metricsclient.KeyValue, 0, len(*analytic.target.Attributes))
 					for key, value := range *analytic.target.Attributes {

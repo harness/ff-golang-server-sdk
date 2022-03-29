@@ -10,7 +10,7 @@ import (
 	"github.com/spaolacci/murmur3"
 )
 
-func getAttrValue(target *rest.Target, attr string) reflect.Value {
+func getAttrValue(target *Target, attr string) reflect.Value {
 	var value reflect.Value
 	if target == nil {
 		return value
@@ -57,7 +57,7 @@ func getNormalizedNumber(identifier, bucketBy string) int {
 	return (hash % oneHundred) + 1
 }
 
-func isEnabled(target *rest.Target, bucketBy string, percentage int) bool {
+func isEnabled(target *Target, bucketBy string, percentage int) bool {
 	value := getAttrValue(target, bucketBy)
 	identifier := value.String()
 	if identifier == "" {
@@ -68,7 +68,7 @@ func isEnabled(target *rest.Target, bucketBy string, percentage int) bool {
 	return percentage > 0 && bucketID <= percentage
 }
 
-func evaluateDistribution(distribution *rest.Distribution, target *rest.Target) string {
+func evaluateDistribution(distribution *rest.Distribution, target *Target) string {
 	variation := ""
 	if distribution == nil {
 		return variation
@@ -85,7 +85,7 @@ func evaluateDistribution(distribution *rest.Distribution, target *rest.Target) 
 	return variation
 }
 
-func isTargetInList(target *rest.Target, targets []rest.Target) bool {
+func isTargetInList(target *Target, targets []rest.Target) bool {
 	if targets == nil || target == nil {
 		return false
 	}

@@ -9,7 +9,7 @@ import (
 
 func Test_getAttrValueIsNil(t *testing.T) {
 	type args struct {
-		target *rest.Target
+		target *Target
 		attr   string
 	}
 	tests := []struct {
@@ -27,7 +27,7 @@ func Test_getAttrValueIsNil(t *testing.T) {
 		{
 			name: "wrong attribute should return Value{}",
 			args: args{
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 					Attributes: &map[string]interface{}{
 						"email": "enver.bisevac@harness.io",
@@ -50,7 +50,7 @@ func Test_getAttrValueIsNil(t *testing.T) {
 func Test_getAttrValue(t *testing.T) {
 	email := "john@doe.com"
 	type args struct {
-		target *rest.Target
+		target *Target
 		attr   string
 	}
 	tests := []struct {
@@ -61,7 +61,7 @@ func Test_getAttrValue(t *testing.T) {
 		{
 			name: "check identifier",
 			args: args{
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 				attr: identifier,
@@ -71,7 +71,7 @@ func Test_getAttrValue(t *testing.T) {
 		{
 			name: "check name",
 			args: args{
-				target: &rest.Target{
+				target: &Target{
 					Name: harness,
 				},
 				attr: "name",
@@ -81,7 +81,7 @@ func Test_getAttrValue(t *testing.T) {
 		{
 			name: "check attributes",
 			args: args{
-				target: &rest.Target{
+				target: &Target{
 					Identifier: identifier,
 					Attributes: &map[string]interface{}{
 						"email": email,
@@ -184,7 +184,7 @@ func Test_getNormalizedNumber(t *testing.T) {
 
 func Test_isEnabled(t *testing.T) {
 	type args struct {
-		target     *rest.Target
+		target     *Target
 		bucketBy   string
 		percentage int
 	}
@@ -196,7 +196,7 @@ func Test_isEnabled(t *testing.T) {
 		{
 			name: "target identifier is empty should return false",
 			args: args{
-				target: &rest.Target{
+				target: &Target{
 					Identifier: "",
 				},
 				bucketBy:   identifier,
@@ -207,7 +207,7 @@ func Test_isEnabled(t *testing.T) {
 		{
 			name: "rollout to 40",
 			args: args{
-				target: &rest.Target{
+				target: &Target{
 					Identifier: "enver",
 					Attributes: &map[string]interface{}{
 						"email": "enver.bisevac@harness.io",
@@ -221,7 +221,7 @@ func Test_isEnabled(t *testing.T) {
 		{
 			name: "rollout from 50",
 			args: args{
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 				bucketBy:   identifier,
@@ -242,7 +242,7 @@ func Test_isEnabled(t *testing.T) {
 func Test_evaluateDistribution(t *testing.T) {
 	type args struct {
 		distribution *rest.Distribution
-		target       *rest.Target
+		target       *Target
 	}
 	tests := []struct {
 		name string
@@ -274,7 +274,7 @@ func Test_evaluateDistribution(t *testing.T) {
 						{Variation: identifierFalse, Weight: 2},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -290,7 +290,7 @@ func Test_evaluateDistribution(t *testing.T) {
 						{Variation: identifierFalse, Weight: 100},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: "enver",
 				},
 			},
@@ -307,7 +307,7 @@ func Test_evaluateDistribution(t *testing.T) {
 						{Variation: "C", Weight: 30},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: "enver",
 				},
 			},
@@ -324,7 +324,7 @@ func Test_evaluateDistribution(t *testing.T) {
 						{Variation: "C", Weight: 20},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: "enver",
 					Attributes: &map[string]interface{}{
 						"email": "enver.bisevac@harness.io",
@@ -346,7 +346,7 @@ func Test_evaluateDistribution(t *testing.T) {
 func Test_isTargetInList(t *testing.T) {
 	identifier := harness
 	type args struct {
-		target  *rest.Target
+		target  *Target
 		targets []rest.Target
 	}
 	tests := []struct {
@@ -357,7 +357,7 @@ func Test_isTargetInList(t *testing.T) {
 		{
 			name: "target in a list",
 			args: args{
-				target: &rest.Target{
+				target: &Target{
 					Identifier: identifier,
 				},
 				targets: []rest.Target{
@@ -369,7 +369,7 @@ func Test_isTargetInList(t *testing.T) {
 		{
 			name: "target not in a list",
 			args: args{
-				target: &rest.Target{
+				target: &Target{
 					Identifier: identifier,
 				},
 				targets: []rest.Target{
@@ -381,7 +381,7 @@ func Test_isTargetInList(t *testing.T) {
 		{
 			name: "targets is nil should return false",
 			args: args{
-				target: &rest.Target{
+				target: &Target{
 					Identifier: identifier,
 				},
 				targets: nil,

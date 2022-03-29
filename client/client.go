@@ -9,14 +9,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/harness/ff-golang-server-sdk/evaluation"
+
+	"github.com/harness/ff-golang-server-sdk/pkg/repository"
+
 	"github.com/harness/ff-golang-server-sdk/analyticsservice"
 	"github.com/harness/ff-golang-server-sdk/metricsclient"
 
 	"github.com/deepmap/oapi-codegen/pkg/securityprovider"
 	"github.com/golang-jwt/jwt"
-	"github.com/harness/ff-golang-server-sdk/cache"
-	"github.com/harness/ff-golang-server-sdk/dto"
-	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/harness/ff-golang-server-sdk/stream"
 	"github.com/harness/ff-golang-server-sdk/types"
@@ -35,6 +36,8 @@ import (
 // that any pending analytics events have been delivered.
 //
 type CfClient struct {
+	evaluator           *evaluation.Evaluator
+	repository          repository.Repository
 	mux                 sync.RWMutex
 	api                 rest.ClientWithResponsesInterface
 	metricsapi          metricsclient.ClientWithResponsesInterface
@@ -43,11 +46,11 @@ type CfClient struct {
 	config              *config
 	environmentID       string
 	token               string
-	persistence         cache.Persistence
 	cancelFunc          context.CancelFunc
 	streamConnected     bool
 	streamConnectedLock sync.RWMutex
 	authenticated       chan struct{}
+	postEvalChan        chan evaluation.PostEvalData
 	initialized         bool
 	initializedLock     sync.RWMutex
 	analyticsService    *analyticsservice.AnalyticsService
@@ -77,30 +80,36 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		authenticated:     make(chan struct{}),
 		analyticsService:  analyticsService,
 		clusterIdentifier: "1",
+		postEvalChan:      make(chan evaluation.PostEvalData),
 	}
 	ctx, client.cancelFunc = context.WithCancel(context.Background())
 
 	if sdkKey == "" {
 		return client, types.ErrSdkCantBeEmpty
 	}
-
-	client.persistence = cache.NewPersistence(config.Store, config.Cache, config.Logger)
-	// load from storage
-	if config.enableStore {
-		if err = client.persistence.LoadFromStore(); err != nil {
-			config.Logger.Errorf("error loading from store err: %s", err.Error())
-		}
+	lruCache, err := repository.NewLruCache(10000)
+	if err != nil {
+		return nil, err
+	}
+	client.repository = repository.New(lruCache)
+	client.evaluator, err = evaluation.NewEvaluator(client.repository, client)
+	if err != nil {
+		return nil, err
 	}
 
-	go client.initAuthentication(ctx, client.config.target)
+	go client.initAuthentication(ctx)
 
 	go client.setAnalyticsServiceClient(ctx)
 
 	go client.pullCronJob(ctx)
 
-	go client.persistCronJob(ctx)
-
 	return client, nil
+}
+
+// PostEvaluateProcessor push the data to the analytics service
+func (c *CfClient) PostEvaluateProcessor(data *evaluation.PostEvalData) {
+	c.config.Logger.Infof("post evaluation %v", data.FeatureConfig.Feature)
+	c.analyticsService.PushToQueue(data.FeatureConfig, data.Target, data.Variation)
 }
 
 // IsStreamConnected determines if the stream is currently connected
@@ -189,7 +198,8 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 		defer c.mux.RUnlock()
 		c.streamConnected = false
 	}
-	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.config.Cache, c.api, c.config.Logger, streamErr, c.config.eventStreamListener)
+	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.repository, c.api, c.config.Logger, streamErr,
+		c.config.eventStreamListener)
 
 	// Connect kicks off a goroutine that attempts to establish a stream connection
 	// while this is happening we set streamConnected to true - if any errors happen
@@ -198,10 +208,10 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	c.streamConnected = true
 }
 
-func (c *CfClient) initAuthentication(ctx context.Context, target evaluation.Target) {
+func (c *CfClient) initAuthentication(ctx context.Context) {
 	// attempt to authenticate every minute until we succeed
 	for {
-		err := c.authenticate(ctx, target)
+		err := c.authenticate(ctx)
 		if err == nil {
 			return
 		}
@@ -210,19 +220,7 @@ func (c *CfClient) initAuthentication(ctx context.Context, target evaluation.Tar
 	}
 }
 
-func (c *CfClient) authenticate(ctx context.Context, target evaluation.Target) error {
-	t := struct {
-		Anonymous  *bool                   `json:"anonymous,omitempty"`
-		Attributes *map[string]interface{} `json:"attributes,omitempty"`
-		Identifier string                  `json:"identifier"`
-		Name       *string                 `json:"name,omitempty"`
-	}{
-		target.Anonymous,
-		target.Attributes,
-		target.Identifier,
-		&target.Name,
-	}
-	c.auth.Target = &t
+func (c *CfClient) authenticate(ctx context.Context) error {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 
@@ -337,26 +335,6 @@ func (c *CfClient) pullCronJob(ctx context.Context) {
 	}
 }
 
-func (c *CfClient) persistCronJob(ctx context.Context) {
-	// if store is disabled don't setup the cron job
-	if !c.config.enableStore {
-		return
-	}
-	persistingTicker := c.makeTicker(1)
-	for {
-		select {
-		case <-ctx.Done():
-			persistingTicker.Stop()
-			return
-		case <-persistingTicker.C:
-			err := c.persistence.SaveToStore()
-			if err != nil {
-				c.config.Logger.Errorf("error while persisting data, err: %v", err)
-			}
-		}
-	}
-}
-
 func (c *CfClient) retrieveFlags(ctx context.Context) error {
 
 	<-c.authenticated
@@ -375,10 +353,7 @@ func (c *CfClient) retrieveFlags(ctx context.Context) error {
 	}
 
 	for _, flag := range *flags.JSON200 {
-		c.config.Cache.Set(dto.Key{
-			Type: dto.KeyFeature,
-			Name: flag.Feature,
-		}, *flag.Convert()) // dereference for holding object in cache instead of address
+		c.repository.SetFlag(flag)
 	}
 	c.config.Logger.Info("Retrieving flags finished")
 	return nil
@@ -402,42 +377,10 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 	}
 
 	for _, segment := range *segments.JSON200 {
-		c.config.Cache.Set(dto.Key{
-			Type: dto.KeySegment,
-			Name: segment.Identifier,
-		}, segment.Convert())
+		c.repository.SetSegment(segment)
 	}
 	c.config.Logger.Info("Retrieving segments finished")
 	return nil
-}
-
-func (c *CfClient) getFlagFromCache(key string) *evaluation.FeatureConfig {
-	value, _ := c.config.Cache.Get(dto.Key{
-		Type: dto.KeyFeature,
-		Name: key,
-	})
-	fc, ok := value.(evaluation.FeatureConfig)
-	if ok {
-		return &fc
-	}
-	return nil
-}
-
-func (c *CfClient) getSegmentsFromCache(fc *evaluation.FeatureConfig) {
-	segments := fc.GetSegmentIdentifiers()
-	for _, segmentIdentifier := range segments {
-		value, _ := c.config.Cache.Get(dto.Key{
-			Type: dto.KeySegment,
-			Name: segmentIdentifier,
-		})
-		segment, ok := value.(evaluation.Segment)
-		if ok {
-			if fc.Segments == nil {
-				fc.Segments = make(map[string]*evaluation.Segment)
-			}
-			fc.Segments[segmentIdentifier] = &segment
-		}
-	}
 }
 
 func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
@@ -449,99 +392,32 @@ func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultValue bool) (bool, error) {
-	fc := c.getFlagFromCache(key)
-	if fc != nil {
-		// load segments dep
-		c.getSegmentsFromCache(fc)
-
-		result := checkPreRequisite(c, fc, target)
-		if !result {
-			return fc.Variations.FindByIdentifier(fc.OffVariation).Bool(defaultValue), nil
-		}
-		variation, err := fc.BoolVariation(target)
-		if err != nil {
-			return defaultValue, err
-		}
-		c.analyticsService.PushToQueue(target, fc, variation)
-
-		return variation.Bool(defaultValue), nil
-	}
-	return defaultValue, nil
+	value := c.evaluator.BoolVariation(key, target, defaultValue)
+	return value, nil
 }
 
 // StringVariation returns the value of a string feature flag for a given target.
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaultValue string) (string, error) {
-	fc := c.getFlagFromCache(key)
-	if fc != nil {
-		// load segments dep
-		c.getSegmentsFromCache(fc)
-
-		result := checkPreRequisite(c, fc, target)
-		if !result {
-			return fc.Variations.FindByIdentifier(fc.OffVariation).String(defaultValue), nil
-		}
-		variation, err := fc.StringVariation(target)
-		if err != nil {
-			return defaultValue, err
-		}
-
-		c.analyticsService.PushToQueue(target, fc, variation)
-
-		return variation.String(defaultValue), nil
-	}
-	return defaultValue, nil
+	value := c.evaluator.StringVariation(key, target, defaultValue)
+	return value, nil
 }
 
 // IntVariation returns the value of a integer feature flag for a given target.
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultValue int64) (int64, error) {
-	fc := c.getFlagFromCache(key)
-	if fc != nil {
-		// load segments dep
-		c.getSegmentsFromCache(fc)
-
-		result := checkPreRequisite(c, fc, target)
-		if !result {
-			return fc.Variations.FindByIdentifier(fc.OffVariation).Int(defaultValue), nil
-		}
-		variation, err := fc.IntVariation(target)
-		if err != nil {
-			return defaultValue, err
-		}
-
-		c.analyticsService.PushToQueue(target, fc, variation)
-
-		return variation.Int(defaultValue), nil
-	}
-	return defaultValue, nil
+	value := c.evaluator.IntVariation(key, target, int(defaultValue))
+	return int64(value), nil
 }
 
 // NumberVariation returns the value of a float64 feature flag for a given target.
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaultValue float64) (float64, error) {
-	fc := c.getFlagFromCache(key)
-	if fc != nil {
-		// load segments dep
-		c.getSegmentsFromCache(fc)
-
-		result := checkPreRequisite(c, fc, target)
-		if !result {
-			return fc.Variations.FindByIdentifier(fc.OffVariation).Number(defaultValue), nil
-		}
-		variation, err := fc.NumberVariation(target)
-		if err != nil {
-			return defaultValue, err
-		}
-
-		c.analyticsService.PushToQueue(target, fc, variation)
-
-		return variation.Number(defaultValue), nil
-	}
-	return defaultValue, nil
+	value := c.evaluator.NumberVariation(key, target, defaultValue)
+	return value, nil
 }
 
 // JSONVariation returns the value of a feature flag for the given target, allowing the value to be
@@ -549,33 +425,13 @@ func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaul
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultValue types.JSON) (types.JSON, error) {
-	fc := c.getFlagFromCache(key)
-	if fc != nil {
-		// load segments dep
-		c.getSegmentsFromCache(fc)
-
-		result := checkPreRequisite(c, fc, target)
-		if !result {
-			return fc.Variations.FindByIdentifier(fc.OffVariation).JSON(defaultValue), nil
-		}
-		variation, err := fc.JSONVariation(target)
-		if err != nil {
-			return defaultValue, err
-		}
-		c.analyticsService.PushToQueue(target, fc, variation)
-
-		return variation.JSON(defaultValue), err
-	}
-	return defaultValue, nil
+	value := c.evaluator.JSONVariation(key, target, defaultValue)
+	return value, nil
 }
 
 // Close shuts down the Feature Flag client. After calling this, the client
 // should no longer be used
 func (c *CfClient) Close() error {
-	err := c.persistence.SaveToStore()
-	if err != nil {
-		return err
-	}
 	c.cancelFunc()
 	return nil
 }
@@ -591,48 +447,4 @@ func (c *CfClient) InterceptAddCluster(ctx context.Context, req *http.Request) e
 	q.Add("cluster", c.clusterIdentifier)
 	req.URL.RawQuery = q.Encode()
 	return nil
-}
-
-// contains determines if the string variation is in the slice of variations.
-// returns true if found, otherwise false.
-func contains(variations []string, variation string) bool {
-	for _, x := range variations {
-		if x == variation {
-			return true
-		}
-	}
-	return false
-}
-
-func checkPreRequisite(client *CfClient, featureConfig *evaluation.FeatureConfig, target *evaluation.Target) bool {
-	result := true
-
-	for _, preReq := range featureConfig.Prerequisites {
-		preReqFeature := client.getFlagFromCache(preReq.Feature)
-		if preReqFeature == nil {
-			client.config.Logger.Errorf("Could not retrieve the pre requisite details of feature flag :[%s]", preReq.Feature)
-			continue
-		}
-
-		// Get Variation (this performs evaluation and returns the current variation to be served to this target)
-		preReqVariationName := preReqFeature.GetVariationName(target)
-		preReqVariation := preReqFeature.Variations.FindByIdentifier(preReqVariationName)
-		if preReqVariation == nil {
-			client.config.Logger.Infof("Could not retrieve the pre requisite variation: %s", preReqVariationName)
-			continue
-		}
-		client.config.Logger.Debugf("Pre requisite flag %s has variation %s for target %s", preReq.Feature, preReqVariation.Value, target.Identifier)
-
-		if !contains(preReq.Variations, preReqVariation.Value) {
-			return false
-		}
-
-		// Check this pre-requisites, own pre-requisite.  If we get a false anywhere we need to stop
-		result = checkPreRequisite(client, preReqFeature, target)
-		if !result {
-			return false
-		}
-	}
-
-	return result
 }

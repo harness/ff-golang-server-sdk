@@ -7,8 +7,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/harness/ff-golang-server-sdk/evaluation"
+
 	"github.com/harness/ff-golang-server-sdk/log"
-	"github.com/harness/ff-golang-server-sdk/pkg/evaluation"
 	"github.com/harness/ff-golang-server-sdk/pkg/repository"
 	"github.com/harness/ff-golang-server-sdk/rest"
 )
@@ -19,7 +20,7 @@ type testFile struct {
 	Filename string
 	Flag     rest.FeatureConfig     `json:"flag"`
 	Segments []rest.Segment         `json:"segments"`
-	Targets  []rest.Target          `json:"targets"`
+	Targets  []evaluation.Target    `json:"targets"`
 	Expected map[string]interface{} `json:"expected"`
 }
 
@@ -75,7 +76,7 @@ func TestEvaluator(t *testing.T) {
 		t.Error(err)
 	}
 	repo := repository.New(lruCache)
-	evaluator, err := evaluation.NewEvaluator(repo)
+	evaluator, err := evaluation.NewEvaluator(repo, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -97,7 +98,7 @@ func TestEvaluator(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.testFile.Filename, func(t *testing.T) {
-			var target *rest.Target
+			var target *evaluation.Target
 			if testCase.target != "_no_target" {
 				for i, val := range testCase.testFile.Targets {
 					if val.Identifier == testCase.target {

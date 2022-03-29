@@ -14,7 +14,8 @@ func MakeBoolFeatureConfigs(name, defaultVariation, offVariation, state string, 
 
 	// If there are any PreReqs then we need to store them as flags as well.
 	for _, x := range preReqs {
-		featureConfig = append(featureConfig, MakeBoolFeatureConfig(x.Feature, "true", "false", x.Variations[0], nil))
+		featureConfig = append(featureConfig, MakeBoolFeatureConfig(x.Feature, "true", "false",
+			state, nil))
 	}
 
 	return featureConfig
@@ -39,10 +40,10 @@ func MakeBoolFeatureConfig(name, defaultVariation, offVariation, state string, p
 	}
 }
 
-func MakeBoolPreRequisite(name string, state string) rest.Prerequisite {
+func MakeBoolPreRequisite(name string, variation string) rest.Prerequisite {
 	return rest.Prerequisite{
 		Feature:    name,
-		Variations: []string{state},
+		Variations: []string{variation},
 	}
 }
 

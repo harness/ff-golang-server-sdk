@@ -303,7 +303,7 @@ func (m TestRepository) GetFlag(identifier string) (rest.FeatureConfig, error) {
 }
 
 func TestNewEvaluator(t *testing.T) {
-	eval, _ := NewEvaluator(testRepo)
+	eval, _ := NewEvaluator(testRepo, nil)
 	type args struct {
 		query Query
 	}
@@ -330,7 +330,7 @@ func TestNewEvaluator(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewEvaluator(tt.args.query)
+			got, err := NewEvaluator(tt.args.query, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewEvaluator() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -348,7 +348,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 	}
 	type args struct {
 		clause *rest.Clause
-		target *rest.Target
+		target *Target
 	}
 	tests := []struct {
 		name   string
@@ -361,7 +361,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			fields: fields{},
 			args: args{
 				clause: nil,
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -410,7 +410,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        "greaterthan",
 					Values:    []string{harness},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -425,7 +425,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        equalOperator,
 					Values:    []string{harness},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -440,7 +440,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        matchOperator,
 					Values:    []string{"^harness$"},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -455,7 +455,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        matchOperator,
 					Values:    []string{"^harness(wings$"},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -470,7 +470,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        inOperator,
 					Values:    []string{"harness", "wings-software"},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -485,7 +485,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        inOperator,
 					Values:    []string{"harness1", "wings-software"},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -500,7 +500,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        equalOperator,
 					Values:    []string{harness},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -515,7 +515,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        equalSensitiveOperator,
 					Values:    []string{harness},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: "Harness",
 				},
 			},
@@ -530,7 +530,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        gtOperator,
 					Values:    []string{"A"},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: "B",
 				},
 			},
@@ -545,7 +545,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        gtOperator,
 					Values:    []string{"B"},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: "A",
 				},
 			},
@@ -560,7 +560,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        startsWithOperator,
 					Values:    []string{harness},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness + " - wings software",
 				},
 			},
@@ -575,7 +575,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        endsWithOperator,
 					Values:    []string{harness},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: "wings software - " + harness,
 				},
 			},
@@ -590,7 +590,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:        containsOperator,
 					Values:    []string{harness},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: "wings " + harness + " software",
 				},
 			},
@@ -606,7 +606,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 					Op:     segmentMatchOperator,
 					Values: []string{beta},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -631,7 +631,7 @@ func TestEvaluator_evaluateRules(t *testing.T) {
 	}
 	type args struct {
 		servingRules []rest.ServingRule
-		target       *rest.Target
+		target       *Target
 	}
 	tests := []struct {
 		name   string
@@ -686,7 +686,7 @@ func TestEvaluator_evaluateRules(t *testing.T) {
 						},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -725,7 +725,7 @@ func TestEvaluator_evaluateRules(t *testing.T) {
 						},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -755,7 +755,7 @@ func TestEvaluator_evaluateRules(t *testing.T) {
 						},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -787,7 +787,7 @@ func TestEvaluator_evaluateRules(t *testing.T) {
 			name: "when rules is empty return \"\"",
 			args: args{
 				servingRules: []rest.ServingRule{},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -812,7 +812,7 @@ func TestEvaluator_evaluateVariationMap(t *testing.T) {
 	}
 	type args struct {
 		variationsMap []rest.VariationMap
-		target        *rest.Target
+		target        *Target
 	}
 	tests := []struct {
 		name   string
@@ -847,7 +847,7 @@ func TestEvaluator_evaluateVariationMap(t *testing.T) {
 						},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: targetIdentifier,
 				},
 			},
@@ -865,7 +865,7 @@ func TestEvaluator_evaluateVariationMap(t *testing.T) {
 						TargetSegments: &[]string{beta},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: targetIdentifier,
 				},
 			},
@@ -877,7 +877,7 @@ func TestEvaluator_evaluateVariationMap(t *testing.T) {
 				query: testRepo,
 			},
 			args: args{
-				target: &rest.Target{
+				target: &Target{
 					Identifier: targetIdentifier,
 				},
 			},
@@ -895,7 +895,7 @@ func TestEvaluator_evaluateVariationMap(t *testing.T) {
 						TargetSegments: &[]string{beta},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: targetIdentifier,
 				},
 			},
@@ -905,7 +905,7 @@ func TestEvaluator_evaluateVariationMap(t *testing.T) {
 			name: "when variations map is empty return \"\"",
 			args: args{
 				variationsMap: []rest.VariationMap{},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: targetIdentifier,
 				},
 			},
@@ -930,7 +930,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 	}
 	type args struct {
 		fc     rest.FeatureConfig
-		target *rest.Target
+		target *Target
 	}
 	tests := []struct {
 		name    string
@@ -959,7 +959,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 					State:        rest.FeatureState_off,
 					Variations:   boolVariations,
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -976,7 +976,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 						Variation: &boolVariations[0].Value,
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -1004,7 +1004,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 						},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -1032,7 +1032,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 						},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -1056,7 +1056,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 						},
 					},
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: targetIdentifier,
 				},
 			},
@@ -1069,7 +1069,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 				fc: rest.FeatureConfig{
 					State: rest.FeatureState_on,
 				},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: targetIdentifier,
 				},
 			},
@@ -1100,7 +1100,7 @@ func TestEvaluator_isTargetIncludedOrExcludedInSegment(t *testing.T) {
 	}
 	type args struct {
 		segmentList []string
-		target      *rest.Target
+		target      *Target
 	}
 	tests := []struct {
 		name   string
@@ -1132,7 +1132,7 @@ func TestEvaluator_isTargetIncludedOrExcludedInSegment(t *testing.T) {
 			},
 			args: args{
 				segmentList: []string{excluded},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -1145,7 +1145,7 @@ func TestEvaluator_isTargetIncludedOrExcludedInSegment(t *testing.T) {
 			},
 			args: args{
 				segmentList: []string{beta},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -1158,7 +1158,7 @@ func TestEvaluator_isTargetIncludedOrExcludedInSegment(t *testing.T) {
 			},
 			args: args{
 				segmentList: []string{alpha},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 			},
@@ -1171,7 +1171,7 @@ func TestEvaluator_isTargetIncludedOrExcludedInSegment(t *testing.T) {
 			},
 			args: args{
 				segmentList: []string{alpha},
-				target: &rest.Target{
+				target: &Target{
 					Identifier: "no_identifier",
 				},
 			},
@@ -1196,7 +1196,7 @@ func TestEvaluator_checkPreRequisite(t *testing.T) {
 	}
 	type args struct {
 		parent *rest.FeatureConfig
-		target *rest.Target
+		target *Target
 	}
 	tests := []struct {
 		name    string
@@ -1283,7 +1283,7 @@ func TestEvaluator_evaluate(t *testing.T) {
 	}
 	type args struct {
 		identifier string
-		target     *rest.Target
+		target     *Target
 		kind       string
 	}
 	tests := []struct {
@@ -1298,7 +1298,7 @@ func TestEvaluator_evaluate(t *testing.T) {
 			fields: fields{},
 			args: args{
 				identifier: simple,
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 				kind: "boolean",
@@ -1400,7 +1400,7 @@ func TestEvaluator_BoolVariation(t *testing.T) {
 	}
 	type args struct {
 		identifier   string
-		target       *rest.Target
+		target       *Target
 		defaultValue bool
 	}
 	tests := []struct {
@@ -1415,9 +1415,9 @@ func TestEvaluator_BoolVariation(t *testing.T) {
 				query: testRepo,
 			},
 			args: args{
-				"flagNotFound1000",
-				nil,
-				false,
+				identifier:   "flagNotFound1000",
+				target:       nil,
+				defaultValue: false,
 			},
 			want: false,
 		},
@@ -1427,9 +1427,9 @@ func TestEvaluator_BoolVariation(t *testing.T) {
 				query: testRepo,
 			},
 			args: args{
-				simple,
-				nil,
-				false,
+				identifier:   simple,
+				target:       nil,
+				defaultValue: false,
 			},
 			want: true,
 		},
@@ -1439,11 +1439,11 @@ func TestEvaluator_BoolVariation(t *testing.T) {
 				query: testRepo,
 			},
 			args: args{
-				simple,
-				&rest.Target{
+				identifier: simple,
+				target: &Target{
 					Identifier: harness,
 				},
-				false,
+				defaultValue: false,
 			},
 			want: true,
 		},
@@ -1466,7 +1466,7 @@ func TestEvaluator_StringVariation(t *testing.T) {
 	}
 	type args struct {
 		identifier   string
-		target       *rest.Target
+		target       *Target
 		defaultValue string
 	}
 	tests := []struct {
@@ -1481,9 +1481,9 @@ func TestEvaluator_StringVariation(t *testing.T) {
 				query: testRepo,
 			},
 			args: args{
-				"flagNotFound1000",
-				nil,
-				darktheme,
+				identifier:   "flagNotFound1000",
+				target:       nil,
+				defaultValue: darktheme,
 			},
 			want: darktheme,
 		},
@@ -1493,9 +1493,9 @@ func TestEvaluator_StringVariation(t *testing.T) {
 				query: testRepo,
 			},
 			args: args{
-				theme,
-				nil,
-				darktheme,
+				identifier:   theme,
+				target:       nil,
+				defaultValue: darktheme,
 			},
 			want: lighttheme,
 		},
@@ -1505,11 +1505,11 @@ func TestEvaluator_StringVariation(t *testing.T) {
 				query: testRepo,
 			},
 			args: args{
-				theme,
-				&rest.Target{
+				identifier: theme,
+				target: &Target{
 					Identifier: harness,
 				},
-				darktheme,
+				defaultValue: darktheme,
 			},
 			want: lighttheme,
 		},
@@ -1532,7 +1532,7 @@ func TestEvaluator_IntVariation(t *testing.T) {
 	}
 	type args struct {
 		identifier   string
-		target       *rest.Target
+		target       *Target
 		defaultValue int
 	}
 	tests := []struct {
@@ -1584,7 +1584,7 @@ func TestEvaluator_IntVariation(t *testing.T) {
 			},
 			args: args{
 				identifier: size,
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 				defaultValue: 50,
@@ -1610,7 +1610,7 @@ func TestEvaluator_NumberVariation(t *testing.T) {
 	}
 	type args struct {
 		identifier   string
-		target       *rest.Target
+		target       *Target
 		defaultValue float64
 	}
 	tests := []struct {
@@ -1662,7 +1662,7 @@ func TestEvaluator_NumberVariation(t *testing.T) {
 			},
 			args: args{
 				identifier: weight,
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 				defaultValue: 50.0,
@@ -1691,7 +1691,7 @@ func TestEvaluator_JSONVariation(t *testing.T) {
 	}
 	type args struct {
 		identifier   string
-		target       *rest.Target
+		target       *Target
 		defaultValue map[string]interface{}
 	}
 	tests := []struct {
@@ -1745,7 +1745,7 @@ func TestEvaluator_JSONVariation(t *testing.T) {
 			},
 			args: args{
 				identifier: org,
-				target: &rest.Target{
+				target: &Target{
 					Identifier: harness,
 				},
 				defaultValue: defaultValue,

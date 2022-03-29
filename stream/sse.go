@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/harness/ff-golang-server-sdk/cache"
+	"github.com/harness/ff-golang-server-sdk/pkg/repository"
+
 	"github.com/harness/ff-golang-server-sdk/dto"
 	"github.com/harness/ff-golang-server-sdk/logger"
 	"github.com/harness/ff-golang-server-sdk/rest"
@@ -19,7 +20,7 @@ import (
 type SSEClient struct {
 	api                 rest.ClientWithResponsesInterface
 	client              *sse.Client
-	cache               cache.Cache
+	repository          repository.Repository
 	logger              logger.Logger
 	onStreamError       func()
 	eventStreamListener EventStreamListener
@@ -32,7 +33,7 @@ func NewSSEClient(
 	apiKey string,
 	token string,
 	client *sse.Client,
-	cache cache.Cache,
+	repository repository.Repository,
 	api rest.ClientWithResponsesInterface,
 	logger logger.Logger,
 	onStreamError func(),
@@ -45,7 +46,7 @@ func NewSSEClient(
 	})
 	sseClient := &SSEClient{
 		client:              client,
-		cache:               cache,
+		repository:          repository,
 		api:                 api,
 		logger:              logger,
 		onStreamError:       onStreamError,
@@ -118,12 +119,7 @@ func (c *SSEClient) handleEvent(event Event) {
 		// and subscribe to that event
 		switch cfMsg.Event {
 		case dto.SseDeleteEvent:
-
-			c.cache.Remove(dto.Key{
-				Type: dto.KeyFeature,
-				Name: cfMsg.Identifier,
-			})
-
+			c.repository.DeleteFlag(cfMsg.Identifier)
 		case dto.SsePatchEvent, dto.SseCreateEvent:
 			fallthrough
 		default:
@@ -138,10 +134,7 @@ func (c *SSEClient) handleEvent(event Event) {
 				}
 
 				if response.JSON200 != nil {
-					c.cache.Set(dto.Key{
-						Type: dto.KeyFeature,
-						Name: cfMsg.Identifier,
-					}, *response.JSON200.Convert())
+					c.repository.SetFlag(*response.JSON200)
 				}
 			}
 
@@ -152,12 +145,7 @@ func (c *SSEClient) handleEvent(event Event) {
 		// need open client spec change
 		switch cfMsg.Event {
 		case dto.SseDeleteEvent:
-
-			c.cache.Remove(dto.Key{
-				Type: dto.KeySegment,
-				Name: cfMsg.Identifier,
-			})
-
+			c.repository.DeleteSegment(cfMsg.Identifier)
 		case dto.SsePatchEvent, dto.SseCreateEvent:
 			fallthrough
 		default:
@@ -171,10 +159,7 @@ func (c *SSEClient) handleEvent(event Event) {
 					return
 				}
 				if response.JSON200 != nil {
-					c.cache.Set(dto.Key{
-						Type: dto.KeySegment,
-						Name: cfMsg.Identifier,
-					}, response.JSON200.Convert())
+					c.repository.SetSegment(*response.JSON200)
 				}
 			}
 			updateWithTimeout()
