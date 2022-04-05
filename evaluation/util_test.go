@@ -2,6 +2,7 @@ package evaluation
 
 import (
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/harness/ff-golang-server-sdk/rest"
@@ -54,9 +55,10 @@ func Test_getAttrValue(t *testing.T) {
 		attr   string
 	}
 	tests := []struct {
-		name string
-		args args
-		want reflect.Value
+		name    string
+		args    args
+		want    reflect.Value
+		wantStr string
 	}{
 		{
 			name: "check identifier",
@@ -66,7 +68,8 @@ func Test_getAttrValue(t *testing.T) {
 				},
 				attr: identifier,
 			},
-			want: reflect.ValueOf(harness),
+			want:    reflect.ValueOf(harness),
+			wantStr: "harness",
 		},
 		{
 			name: "check name",
@@ -76,7 +79,8 @@ func Test_getAttrValue(t *testing.T) {
 				},
 				attr: "name",
 			},
-			want: reflect.ValueOf(harness),
+			want:    reflect.ValueOf(harness),
+			wantStr: "harness",
 		},
 		{
 			name: "check attributes",
@@ -89,13 +93,72 @@ func Test_getAttrValue(t *testing.T) {
 				},
 				attr: "email",
 			},
-			want: reflect.ValueOf(email),
+			want:    reflect.ValueOf(email),
+			wantStr: email,
+		},
+		{
+			name: "check integer attributes",
+			args: args{
+				target: &Target{
+					Identifier: identifier,
+					Attributes: &map[string]interface{}{
+						"age": 123,
+					},
+				},
+				attr: "age",
+			},
+			want:    reflect.ValueOf(123),
+			wantStr: "123",
+		},
+		{
+			name: "check int64 attributes",
+			args: args{
+				target: &Target{
+					Identifier: identifier,
+					Attributes: &map[string]interface{}{
+						"age": int64(123),
+					},
+				},
+				attr: "age",
+			},
+			want:    reflect.ValueOf(int64(123)),
+			wantStr: "123",
+		},
+		{
+			name: "check boolean attributes",
+			args: args{
+				target: &Target{
+					Identifier: identifier,
+					Attributes: &map[string]interface{}{
+						"active": true,
+					},
+				},
+				attr: "active",
+			},
+			want:    reflect.ValueOf(true),
+			wantStr: "true",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getAttrValue(tt.args.target, tt.args.attr); !reflect.DeepEqual(got.Interface(), tt.want.Interface()) {
+			got := getAttrValue(tt.args.target, tt.args.attr)
+			if !reflect.DeepEqual(got.Interface(), tt.want.Interface()) {
 				t.Errorf("getAttrValue() = %v, want %v", got, tt.want)
+			}
+
+			expObjString := ""
+			//nolint
+			switch got.Kind() {
+			case reflect.Int, reflect.Int64:
+				expObjString = strconv.FormatInt(got.Int(), 10)
+			case reflect.Bool:
+				expObjString = strconv.FormatBool(got.Bool())
+			case reflect.String:
+				expObjString = got.String()
+			}
+
+			if expObjString != tt.wantStr {
+				t.Errorf("getAttrValue() expObjString= %v, want %v", got.String(), tt.wantStr)
 			}
 		})
 	}
