@@ -3,6 +3,7 @@ package evaluation
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -83,7 +84,23 @@ func (e Evaluator) evaluateClause(clause *rest.Clause, target *Target) bool {
 		return false
 	}
 
-	object := attrValue.String()
+	object := ""
+	switch attrValue.Kind() {
+	case reflect.Int, reflect.Int64:
+		object = strconv.FormatInt(attrValue.Int(), 10)
+	case reflect.Bool:
+		object = strconv.FormatBool(attrValue.Bool())
+	case reflect.String:
+		object = attrValue.String()
+	case reflect.Array, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Func, reflect.Interface,
+		reflect.Invalid, reflect.Ptr, reflect.Slice, reflect.Struct, reflect.Uintptr, reflect.UnsafePointer,
+		reflect.Float32, reflect.Float64, reflect.Int16, reflect.Int32, reflect.Int8, reflect.Map, reflect.Uint,
+		reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint8:
+		object = fmt.Sprintf("%v", object)
+	default:
+		// Use string formatting as last ditch effort for any unexpected values
+		object = fmt.Sprintf("%v", object)
+	}
 
 	switch operator {
 	case startsWithOperator:
