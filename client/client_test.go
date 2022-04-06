@@ -199,3 +199,16 @@ var FeatureConfigsResponse = func(req *http.Request) (*http.Response, error) {
 
 	return httpmock.NewJsonResponse(200, FeatureConfigResponse)
 }
+
+func TestCfClient_Close(t *testing.T) {
+	client, err := newClient(&http.Client{})
+	if err != nil {
+		t.Error(err)
+	}
+
+	t.Log("When I close the client for the first time I should not get an error")
+	assert.Nil(t, client.Close())
+
+	t.Log("When I close the client for the second time I should an error")
+	assert.NotNil(t, client.Close())
+}

@@ -3,10 +3,12 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/harness/ff-golang-server-sdk/evaluation"
@@ -46,7 +48,6 @@ type CfClient struct {
 	config              *config
 	environmentID       string
 	token               string
-	cancelFunc          context.CancelFunc
 	streamConnected     bool
 	streamConnectedLock sync.RWMutex
 	authenticated       chan struct{}
@@ -55,16 +56,13 @@ type CfClient struct {
 	initializedLock     sync.RWMutex
 	analyticsService    *analyticsservice.AnalyticsService
 	clusterIdentifier   string
+	stop                chan struct{}
+	stopped             *atomicBool
 }
 
 // NewCfClient creates a new client instance that connects to CF with the default configuration.
 // For advanced configuration options use ConfigOptions functions
 func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
-
-	var (
-		ctx context.Context
-		err error
-	)
 
 	//  functional options for config
 	config := newDefaultConfig()
@@ -81,8 +79,9 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		analyticsService:  analyticsService,
 		clusterIdentifier: "1",
 		postEvalChan:      make(chan evaluation.PostEvalData),
+		stop:              make(chan struct{}),
+		stopped:           newAtomicBool(false),
 	}
-	ctx, client.cancelFunc = context.WithCancel(context.Background())
 
 	if sdkKey == "" {
 		return client, types.ErrSdkCantBeEmpty
@@ -97,13 +96,20 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		return nil, err
 	}
 
-	go client.initAuthentication(ctx)
-
-	go client.setAnalyticsServiceClient(ctx)
-
-	go client.pullCronJob(ctx)
-
+	client.start()
 	return client, nil
+}
+
+func (c *CfClient) start() {
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-c.stop
+		cancel()
+	}()
+
+	go c.initAuthentication(ctx)
+	go c.setAnalyticsServiceClient(ctx)
+	go c.pullCronJob(ctx)
 }
 
 // PostEvaluateProcessor push the data to the analytics service
@@ -432,7 +438,12 @@ func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultV
 // Close shuts down the Feature Flag client. After calling this, the client
 // should no longer be used
 func (c *CfClient) Close() error {
-	c.cancelFunc()
+	if c.stopped.get() {
+		return errors.New("client already closed")
+	}
+	close(c.stop)
+
+	c.stopped.set(true)
 	return nil
 }
 
@@ -447,4 +458,26 @@ func (c *CfClient) InterceptAddCluster(ctx context.Context, req *http.Request) e
 	q.Add("cluster", c.clusterIdentifier)
 	req.URL.RawQuery = q.Encode()
 	return nil
+}
+
+type atomicBool struct {
+	flag int32
+}
+
+func newAtomicBool(value bool) *atomicBool {
+	b := new(atomicBool)
+	b.set(value)
+	return b
+}
+
+func (a *atomicBool) set(value bool) {
+	var i int32 = 0
+	if value {
+		i = 1
+	}
+	atomic.StoreInt32(&(a.flag), i)
+}
+
+func (a *atomicBool) get() bool {
+	return atomic.LoadInt32(&(a.flag)) != int32(0)
 }
