@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -116,6 +117,34 @@ func (as *AnalyticsService) listener() {
 	}
 }
 
+func convertInterfaceToString(i interface{}) string {
+	if i == nil {
+		return "nil"
+	}
+
+	switch v := i.(type) {
+	case string:
+		return v
+	case int:
+		return strconv.Itoa(v)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case float64:
+		return fmt.Sprintf("%v", v)
+	case float32:
+		return fmt.Sprintf("%v", v)
+	case bool:
+		val := "false"
+		if v {
+			val = "true"
+		}
+		return val
+	default:
+		// As a last resort
+		return fmt.Sprintf("%v", v)
+	}
+}
+
 func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	as.mx.Lock()
 	// copy cache to send to server
@@ -136,7 +165,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 				if analytic.target.Attributes != nil {
 					targetAttributes = make([]metricsclient.KeyValue, 0, len(*analytic.target.Attributes))
 					for key, value := range *analytic.target.Attributes {
-						v, _ := value.(string)
+						v := convertInterfaceToString(value)
 						kv := metricsclient.KeyValue{
 							Key:   key,
 							Value: v,
