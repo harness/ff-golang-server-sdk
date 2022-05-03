@@ -63,6 +63,6 @@ func (t Target) GetOperator(attr string) (types.ValueType, error) {
 		reflect.Invalid, reflect.Map, reflect.Ptr, reflect.Struct, reflect.Uintptr, reflect.UnsafePointer:
 		fallthrough
 	default:
-		return nil, fmt.Errorf("unexpected type: %s", value.Kind().String())
+		return nil, fmt.Errorf("unexpected type: %s for target attribute: %s", value.Kind().String(), attr)
 	}
 }
