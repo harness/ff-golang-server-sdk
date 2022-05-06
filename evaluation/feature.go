@@ -228,6 +228,32 @@ func (fc FeatureConfig) Evaluate(target *Target) (Evaluation, error) {
 	}, err
 }
 
+// EvaluateWithPreReqFlags evaluates a feature flag against any flags that may be prerequisites returns an Evaluation object
+func (fc FeatureConfig) EvaluateWithPreReqFlags(target *Target, prereqFlags map[string]FeatureConfig) (Evaluation, error) {
+	var variation Variation
+	var err error
+
+	switch fc.GetKind() {
+	case reflect.Bool:
+		fallthrough
+	case reflect.String:
+		fallthrough
+	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8, reflect.Uint, reflect.Uint16,
+		reflect.Uint32, reflect.Uint64, reflect.Uint8:
+		fallthrough
+	case reflect.Float64, reflect.Float32:
+		variation, err = getVariationWithPrereqs(fc, target, prereqFlags)
+	case reflect.Map, reflect.Array, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Func, reflect.Interface,
+		reflect.Invalid, reflect.Ptr, reflect.Slice, reflect.Struct, reflect.Uintptr, reflect.UnsafePointer:
+		err = fmt.Errorf("unexpected type: %s for flag %s", fc.GetKind().String(), fc.Feature)
+	}
+
+	return Evaluation{
+		Flag:      fc.Feature,
+		Variation: variation,
+	}, err
+}
+
 // GetVariationName returns variation identifier for target
 func (fc FeatureConfig) GetVariationName(target *Target) string {
 	if fc.State == FeatureStateOff {
@@ -262,6 +288,51 @@ func (fc FeatureConfig) GetVariationName(target *Target) string {
 	}
 
 	return fc.Rules.GetVariationName(target, fc.Segments, fc.DefaultServe)
+}
+
+func prereqsSatisfied(fc FeatureConfig, target *Target, flags map[string]FeatureConfig) bool {
+	if flags == nil || fc.Prerequisites == nil {
+		return true
+	}
+
+	prereqsSatisfied := true
+	for _, pre := range fc.Prerequisites {
+
+		prereqFlag, ok := flags[pre.Feature]
+		if !ok {
+			continue
+		}
+
+		variation := fc.Variations.FindByIdentifier(fc.GetVariationName(target))
+		variationToMatch := prereqFlag.Variations.FindByIdentifier(prereqFlag.GetVariationName(target))
+
+		if variation.Value != variationToMatch.Value {
+			prereqsSatisfied = false
+		}
+	}
+
+	return prereqsSatisfied
+}
+
+func getVariationWithPrereqs(fc FeatureConfig, target *Target, prereqFlags map[string]FeatureConfig) (Variation, error) {
+	if !prereqsSatisfied(fc, target, prereqFlags) {
+		for _, var2 := range fc.Variations {
+			if var2.Identifier == fc.OffVariation {
+				return var2, nil
+			}
+		}
+	}
+
+	variation := fc.Variations.FindByIdentifier(fc.GetVariationName(target))
+	if variation == nil {
+		var targetID string
+		if target != nil {
+			targetID = target.Identifier
+		}
+
+		return Variation{}, fmt.Errorf("unable to get variation for feature %s and target %s", fc.Feature, targetID)
+	}
+	return *variation, nil
 }
 
 func getVariation(fc FeatureConfig, target *Target) (Variation, error) {
