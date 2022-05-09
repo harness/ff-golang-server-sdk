@@ -736,3 +736,201 @@ func TestFeatureConfig_GetSegmentIdentifiers(t *testing.T) {
 		})
 	}
 }
+
+func TestFeatureConfig_GetVariationName(t *testing.T) {
+	trueVariation := Variation{
+		Name:       stringPtr("True"),
+		Value:      "true",
+		Identifier: "true",
+	}
+
+	falseVariation := Variation{
+		Name:       stringPtr("False"),
+		Value:      "false",
+		Identifier: "false",
+	}
+	type fields struct {
+		DefaultServe         Serve
+		Environment          string
+		Feature              string
+		Kind                 string
+		OffVariation         string
+		Prerequisites        []Prerequisite
+		Project              string
+		Rules                ServingRules
+		State                FeatureState
+		VariationToTargetMap []VariationMap
+		Variations           Variations
+		Segments             map[string]*Segment
+	}
+	type args struct {
+		target *Target
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   string
+	}{
+		{
+			name: "target is null it should evaluate rule and expect true",
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("true"),
+				},
+				Environment:          "dev",
+				Feature:              "bool-flag",
+				Kind:                 "boolean",
+				OffVariation:         "false",
+				Prerequisites:        nil,
+				Project:              "default",
+				Rules:                nil,
+				State:                "on",
+				VariationToTargetMap: nil,
+				Variations: Variations{
+					trueVariation, falseVariation,
+				},
+				Segments: nil,
+			},
+			args: args{target: nil},
+			want: "true",
+		},
+		{
+			name: "target is not null it should evaluate variationMap with target and expect false",
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("true"),
+				},
+				Environment:   "dev",
+				Feature:       "bool-flag",
+				Kind:          "boolean",
+				OffVariation:  "false",
+				Prerequisites: nil,
+				Project:       "default",
+				Rules:         nil,
+				State:         "on",
+				VariationToTargetMap: []VariationMap{
+					{
+						TargetSegments: nil,
+						Targets:        []string{"harness"},
+						Variation:      "false",
+					},
+				},
+				Variations: Variations{
+					trueVariation, falseVariation,
+				},
+				Segments: nil,
+			},
+			args: args{
+				target: &Target{
+					Identifier: "harness",
+					Name:       "Harness",
+					Anonymous:  nil,
+					Attributes: nil,
+				},
+			},
+			want: "false",
+		},
+		{
+			name: "target is not null it should evaluate variationMap with segment and expect false",
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("true"),
+				},
+				Environment:   "dev",
+				Feature:       "bool-flag",
+				Kind:          "boolean",
+				OffVariation:  "false",
+				Prerequisites: nil,
+				Project:       "default",
+				Rules:         nil,
+				State:         "on",
+				VariationToTargetMap: []VariationMap{
+					{
+						TargetSegments: []string{"beta"},
+						Targets:        []string{"johndoe"},
+						Variation:      "false",
+					},
+				},
+				Variations: Variations{
+					trueVariation, falseVariation,
+				},
+				Segments: Segments{
+					"beta": &Segment{
+						Identifier: "beta",
+						Included:   []string{"harness"},
+					},
+				},
+			},
+			args: args{
+				target: &Target{
+					Identifier: "harness",
+					Name:       "Harness",
+					Anonymous:  nil,
+					Attributes: nil,
+				},
+			},
+			want: "false",
+		},
+		{
+			name: "target is not null it should evaluate variationMap with segments but segment not found and expect true",
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("true"),
+				},
+				Environment:   "dev",
+				Feature:       "bool-flag",
+				Kind:          "boolean",
+				OffVariation:  "false",
+				Prerequisites: nil,
+				Project:       "default",
+				Rules:         nil,
+				State:         "on",
+				VariationToTargetMap: []VariationMap{
+					{
+						TargetSegments: []string{"beta"},
+						Targets:        []string{"johndoe"},
+						Variation:      "false",
+					},
+				},
+				Variations: Variations{
+					trueVariation, falseVariation,
+				},
+				Segments: Segments{
+					"alpha": &Segment{
+						Identifier: "alpha",
+						Included:   []string{"harness"},
+					},
+				},
+			},
+			args: args{
+				target: &Target{
+					Identifier: "harness",
+					Name:       "Harness",
+					Anonymous:  nil,
+					Attributes: nil,
+				},
+			},
+			want: "true",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fc := FeatureConfig{
+				DefaultServe:         tt.fields.DefaultServe,
+				Environment:          tt.fields.Environment,
+				Feature:              tt.fields.Feature,
+				Kind:                 tt.fields.Kind,
+				OffVariation:         tt.fields.OffVariation,
+				Prerequisites:        tt.fields.Prerequisites,
+				Project:              tt.fields.Project,
+				Rules:                tt.fields.Rules,
+				State:                tt.fields.State,
+				VariationToTargetMap: tt.fields.VariationToTargetMap,
+				Variations:           tt.fields.Variations,
+				Segments:             tt.fields.Segments,
+			}
+			assert.Equalf(t, tt.want, fc.GetVariationName(tt.args.target), "GetVariationName(%v)", tt.args.target)
+		})
+	}
+}

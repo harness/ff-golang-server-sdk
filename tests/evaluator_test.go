@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
@@ -16,12 +17,18 @@ import (
 
 const source = "./ff-test-cases/tests"
 
+type test struct {
+	Flag     string      `json:"flag"`
+	Target   *string     `json:"target"`
+	Expected interface{} `json:"expected"`
+}
+
 type testFile struct {
 	Filename string
-	Flag     rest.FeatureConfig     `json:"flag"`
-	Segments []rest.Segment         `json:"segments"`
-	Targets  []evaluation.Target    `json:"targets"`
-	Expected map[string]interface{} `json:"expected"`
+	Flags    []rest.FeatureConfig `json:"flags"`
+	Segments []rest.Segment       `json:"segments"`
+	Targets  []evaluation.Target  `json:"targets"`
+	Tests    []test               `json:"tests"`
 }
 
 func loadFiles() []testFile {
@@ -62,66 +69,60 @@ func loadFile(filename string) (testFile, error) {
 }
 
 func TestEvaluator(t *testing.T) {
-	type args struct {
-		file     string
-		target   string
-		expected interface{}
-		testFile testFile
-	}
-
-	tests := make([]args, 0)
-	data := loadFiles()
-	lruCache, err := repository.NewLruCache(1000)
-	if err != nil {
-		t.Error(err)
-	}
-	repo := repository.New(lruCache)
-	evaluator, err := evaluation.NewEvaluator(repo, nil)
-	if err != nil {
-		t.Error(err)
-	}
-	for _, useCase := range data {
-		useCase.Flag.Feature += useCase.Filename
-		repo.SetFlag(useCase.Flag)
-		for _, segment := range useCase.Segments {
+	t.Parallel()
+	fixtures := loadFiles()
+	for _, fixture := range fixtures {
+		lruCache, err := repository.NewLruCache(1000)
+		if err != nil {
+			t.Error(err)
+		}
+		repo := repository.New(lruCache)
+		evaluator, err := evaluation.NewEvaluator(repo, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		for _, flag := range fixture.Flags {
+			repo.SetFlag(flag)
+		}
+		for _, segment := range fixture.Segments {
 			repo.SetSegment(segment)
 		}
-		for identifier, value := range useCase.Expected {
-			tests = append(tests, args{
-				file:     useCase.Filename,
-				target:   identifier,
-				expected: value,
-				testFile: useCase,
-			})
-		}
-	}
 
-	for _, testCase := range tests {
-		t.Run(testCase.testFile.Filename, func(t *testing.T) {
-			var target *evaluation.Target
-			if testCase.target != "_no_target" {
-				for i, val := range testCase.testFile.Targets {
-					if val.Identifier == testCase.target {
-						target = &testCase.testFile.Targets[i]
+		for _, testCase := range fixture.Tests {
+			testName := fmt.Sprintf("test fixture %s with flag %s", fixture.Filename, testCase.Flag)
+			if testCase.Target != nil {
+				testName = fmt.Sprintf("%s and target %s", testName, *testCase.Target)
+			}
+			t.Run(testName, func(t *testing.T) {
+				var target *evaluation.Target
+				if testCase.Target != nil {
+					for i, val := range fixture.Targets {
+						if val.Identifier == *testCase.Target {
+							target = &fixture.Targets[i]
+						}
 					}
 				}
-			}
-			var got interface{}
-			switch testCase.testFile.Flag.Kind {
-			case "boolean":
-				got = evaluator.BoolVariation(testCase.testFile.Flag.Feature, target, false)
-			case "string":
-				got = evaluator.StringVariation(testCase.testFile.Flag.Feature, target, "blue")
-			case "int":
-				got = evaluator.IntVariation(testCase.testFile.Flag.Feature, target, 100)
-			case "number":
-				got = evaluator.NumberVariation(testCase.testFile.Flag.Feature, target, 50.00)
-			case "json":
-				got = evaluator.JSONVariation(testCase.testFile.Flag.Feature, target, map[string]interface{}{})
-			}
-			if !reflect.DeepEqual(got, testCase.expected) {
-				t.Errorf("eval engine got = %v, want %v", got, testCase.expected)
-			}
-		})
+				var got interface{}
+				flag, err := repo.GetFlag(testCase.Flag)
+				if err != nil {
+					t.Errorf("flag %s not found", testCase.Flag)
+				}
+				switch flag.Kind {
+				case "boolean":
+					got = evaluator.BoolVariation(testCase.Flag, target, false)
+				case "string":
+					got = evaluator.StringVariation(testCase.Flag, target, "blue")
+				case "int":
+					got = evaluator.IntVariation(testCase.Flag, target, 100)
+				case "number":
+					got = evaluator.NumberVariation(testCase.Flag, target, 50.00)
+				case "json":
+					got = evaluator.JSONVariation(testCase.Flag, target, map[string]interface{}{})
+				}
+				if !reflect.DeepEqual(got, testCase.Expected) {
+					t.Errorf("eval engine got = %v, want %v", got, testCase.Expected)
+				}
+			})
+		}
 	}
 }
