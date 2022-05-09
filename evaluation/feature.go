@@ -259,27 +259,26 @@ func (fc FeatureConfig) GetVariationName(target *Target) string {
 	if fc.State == FeatureStateOff {
 		return fc.OffVariation
 	}
-	// TODO: variation to target
-	if target != nil {
-		if fc.VariationToTargetMap != nil && len(fc.VariationToTargetMap) > 0 {
-			for _, variationMap := range fc.VariationToTargetMap {
-				if variationMap.Targets != nil {
-					for _, t := range variationMap.Targets {
-						if target.Identifier == t {
-							return variationMap.Variation
-						}
+
+	if target != nil && len(fc.VariationToTargetMap) > 0 {
+		for _, variationMap := range fc.VariationToTargetMap {
+			if variationMap.Targets != nil {
+				for _, t := range variationMap.Targets {
+					if target.Identifier == t {
+						return variationMap.Variation
 					}
 				}
+			}
 
-				if variationMap.TargetSegments != nil {
-					for _, segmentIdentifier := range variationMap.TargetSegments {
-						segment, ok := fc.Segments[segmentIdentifier]
-						if !ok {
-							log.Errorf("The segment [%s] in variation map can not be found for feature %s in project %s", segmentIdentifier, fc.Feature, fc.Project)
-						} else {
-							if segment.Evaluate(target) {
-								return variationMap.Variation
-							}
+			if len(variationMap.TargetSegments) > 0 {
+				for _, segmentIdentifier := range variationMap.TargetSegments {
+					segment, ok := fc.Segments[segmentIdentifier]
+					if !ok {
+						log.Debugf("The segment [%s] in variation map can not be found for feature %s in project %s",
+							segmentIdentifier, fc.Feature, fc.Project)
+					} else {
+						if segment.Evaluate(target) {
+							return variationMap.Variation
 						}
 					}
 				}
