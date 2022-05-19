@@ -242,8 +242,10 @@ func (fc FeatureConfig) EvaluateWithPreReqFlags(target *Target, prereqFlags map[
 		reflect.Uint32, reflect.Uint64, reflect.Uint8:
 		fallthrough
 	case reflect.Float64, reflect.Float32:
+		fallthrough
+	case reflect.Map:
 		variation, err = getVariationWithPrereqs(fc, target, prereqFlags)
-	case reflect.Map, reflect.Array, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Func, reflect.Interface,
+	case reflect.Array, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Func, reflect.Interface,
 		reflect.Invalid, reflect.Ptr, reflect.Slice, reflect.Struct, reflect.Uintptr, reflect.UnsafePointer:
 		err = fmt.Errorf("unexpected type: %s for flag %s", fc.GetKind().String(), fc.Feature)
 	}
