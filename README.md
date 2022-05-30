@@ -1,4 +1,4 @@
-Harness Feature Flag Python SDK
+Harness Feature Flag Golang SDK
 ========================
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/drone/ff-golang-server-sdk)](https://goreportcard.com/report/github.com/drone/ff-golang-server-sdk)
@@ -30,7 +30,7 @@ an application.
 This quickstart assumes you have followed the instructions to [setup a Feature Flag project and have created a flag called `harnessappdemodarkmode` and created a server API Key](https://ngdocs.harness.io/article/1j7pdkqh7j-create-a-feature-flag#step_1_create_a_project).
 
 ### Install the SDK
-Install the python SDK using go
+Install the golang SDK using go
 ```golang
 go get github.com/harness/ff-golang-server-sdk
 ```
