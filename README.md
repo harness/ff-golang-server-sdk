@@ -1,4 +1,4 @@
-Harness Feature Flag Golang SDK
+Golang SDK For Harness Feature Flags
 ========================
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/drone/ff-golang-server-sdk)](https://goreportcard.com/report/github.com/drone/ff-golang-server-sdk)
@@ -12,11 +12,10 @@ Harness Feature Flag Golang SDK
 
 
 ## Intro
+Use this README to get started with our Feature Flags (FF) SDK for Golang. This guide outlines the basics of getting started with the SDK and provides a full code sample for you to try out.
+This sample doesn’t include configuration options, for in depth steps and configuring the SDK, for example, disabling streaming or using our Relay Proxy, see the  [Golang SDK Reference](https://ngdocs.harness.io/article/4c8wljx60w-feature-flag-sdks-go-application).
 
-Harness Feature Flags (FF) is a feature management solution that enables users to change the software’s functionality, without deploying new code. FF uses feature flags to hide code or behaviours without having to ship new versions of the software. A feature flag is like a powerful if statement.
-* For more information, see https://harness.io/products/feature-flags/
-* To read more, see https://ngdocs.harness.io/category/vjolt35atg-feature-flags
-* To sign up, https://app.harness.io/auth/#/signup/
+For a sample FF Golang SDK project, see our [test Golang project](examples/getting_started.go).
 
 ![FeatureFlags](./docs/images/ff-gui.png)
 
@@ -24,10 +23,11 @@ Harness Feature Flags (FF) is a feature management solution that enables users t
 [Golang 1.6](https://go.dev/doc/install) or newer (go version)<br>
 
 ## Quickstart
-The Feature Flag SDK provides a client that connects to the feature flag service, and fetches the value
-of feature flags.   The following section provides an example of how to install the SDK and initialize it from
-an application.
-This quickstart assumes you have followed the instructions to [setup a Feature Flag project and have created a flag called `harnessappdemodarkmode` and created a server API Key](https://ngdocs.harness.io/article/1j7pdkqh7j-create-a-feature-flag#step_1_create_a_project).
+To follow along with our test code sample, make sure you’ve:
+
+- [Created a Feature Flag on the Harness Platform](https://ngdocs.harness.io/article/1j7pdkqh7j-create-a-feature-flag) called harnessappdemodarkmode
+- [Created a server SDK key and made a copy of it](https://ngdocs.harness.io/article/1j7pdkqh7j-create-a-feature-flag#step_3_create_an_sdk_key)
+
 
 ### Install the SDK
 Install the golang SDK using go
@@ -113,10 +113,9 @@ docker run -e FF_API_KEY=$FF_API_KEY -v $(pwd):/app -w /app golang:1.17 go run e
 
 ### Additional Reading
 
-Further examples and config options are in the further reading section:
+For further examples and config options, see the [Golang SDK Reference](https://ngdocs.harness.io/article/4c8wljx60w-feature-flag-sdks-go-application).
 
-[Further Reading](docs/further_reading.md)
-
+For more information about Feature Flags, see our [Feature Flags documentation](https://ngdocs.harness.io/article/0a2u2ppp8s-getting-started-with-feature-flags).
 
 -------------------------
 [Harness](https://www.harness.io/) is a feature management platform that helps teams to build better software and to
