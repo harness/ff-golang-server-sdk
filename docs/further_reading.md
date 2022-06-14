@@ -31,6 +31,7 @@ The following example creates an instance of the logrus logger and provides it a
 
 ```golang
 logger := logrus.New()
+logger.SetLevel(logrus.ErrorLevel)
 
 // Create a feature flag client
 client, err := harness.NewCfClient(myApiKey, harness.WithLogger(logger))
