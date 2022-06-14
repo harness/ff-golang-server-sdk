@@ -36,7 +36,7 @@ go get github.com/harness/ff-golang-server-sdk
 ```
 
 ### Code Sample
-The following is a complete code example that you can use to test the harnessappdemodarkmode Flag you created on the Harness Platform. When you run the code it will:
+The following is a complete code example that you can use to test the `harnessappdemodarkmode` Flag you created on the Harness Platform. When you run the code it will:
 - Connect to the FF service.
 - Report the value of the Flag every 10 seconds until the connection is closed. Every time the harnessappdemodarkmode Flag is toggled on or off on the Harness Platform, the updated value is reported. 
 - Close the SDK.
