@@ -113,13 +113,9 @@ docker run -e FF_API_KEY=$FF_API_KEY -v $(pwd):/app -w /app golang:1.17 go run e
 
 ### Additional Reading
 
-Further examples and config options are in the further reading section:
+For further examples and config options, see the [Golang SDK Reference](https://ngdocs.harness.io/article/4c8wljx60w-feature-flag-sdks-go-application).
 
-- [Further Reading](docs/further_reading.md)
-
-- For more information, see https://harness.io/products/feature-flags/
-- To read more, see https://ngdocs.harness.io/category/vjolt35atg-feature-flags
-- To sign up, https://app.harness.io/auth/#/signup/
+For more information about Feature Flags, see our [Feature Flags documentation](https://ngdocs.harness.io/article/0a2u2ppp8s-getting-started-with-feature-flags).
 
 -------------------------
 [Harness](https://www.harness.io/) is a feature management platform that helps teams to build better software and to

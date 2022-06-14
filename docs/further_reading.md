@@ -72,13 +72,13 @@ client.Close()
 ```
 
 
-## Change default URL
+## Connect to Relay Proxy
 
 When using your Feature Flag SDKs with a [Harness Relay Proxy](https://ngdocs.harness.io/article/q0kvq8nd2o-relay-proxy) you need to change the default URL.
 You can pass the URLs in when creating the client. i.e.
 
 ```golang
 	client, err := harness.NewCfClient(apiKey,
-		harness.WithURL("https://config.feature-flags.uat.harness.io/api/1.0"),
-		harness.WithEventsURL("https://event.feature-flags.uat.harness.io/api/1.0"))
+		harness.WithURL("http://localhost:7000"),
+		harness.WithEventsURL("http://localhost:7000"))
 ```
