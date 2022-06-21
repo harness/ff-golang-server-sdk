@@ -934,3 +934,615 @@ func TestFeatureConfig_GetVariationName(t *testing.T) {
 		})
 	}
 }
+
+func TestFeatureConfig_prereqsSatisfied(t *testing.T) {
+	trueVariation := Variation{
+		Name:       stringPtr("True"),
+		Value:      "true",
+		Identifier: "true",
+	}
+
+	falseVariation := Variation{
+		Name:       stringPtr("False"),
+		Value:      "false",
+		Identifier: "false",
+	}
+	blueVariation := Variation{
+		Name:       stringPtr("blue"),
+		Value:      "blue",
+		Identifier: "blue",
+	}
+
+	redVariation := Variation{
+		Name:       stringPtr("red"),
+		Value:      "red",
+		Identifier: "red",
+	}
+	type fields struct {
+		DefaultServe         Serve
+		Environment          string
+		Feature              string
+		Kind                 string
+		OffVariation         string
+		Prerequisites        []Prerequisite
+		Project              string
+		Rules                ServingRules
+		State                FeatureState
+		VariationToTargetMap []VariationMap
+		Variations           Variations
+		Segments             map[string]*Segment
+	}
+
+	tests := []struct {
+		name     string
+		expected bool
+		fields   fields
+		target   *Target
+		flags    map[string]FeatureConfig
+	}{
+		{
+			name:     "flags is nil",
+			expected: true,
+			fields:   fields{},
+			target:   nil,
+			flags:    nil,
+		},
+		{
+			name:     "feature configs prereqs are nil",
+			expected: true,
+			fields:   fields{},
+			target:   nil,
+			flags:    nil,
+		},
+		{
+			name:     "there is one prerequisite that is met on a boolean flag with no target",
+			expected: true,
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("true"),
+				},
+				Environment:  "dev",
+				Feature:      "bool-flag",
+				Kind:         "boolean",
+				OffVariation: "false",
+				Prerequisites: []Prerequisite{
+					{Feature: "true-bool",
+						Variations: []string{"true"},
+					},
+				},
+				Project:              "default",
+				Rules:                nil,
+				State:                "on",
+				VariationToTargetMap: nil,
+				Variations: Variations{
+					trueVariation, falseVariation,
+				},
+			},
+			target: nil,
+			flags: map[string]FeatureConfig{
+				"true-bool": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "on",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+			},
+		},
+		{
+			name:     "there are two prerequisite that are met on a boolean flag with no target",
+			expected: true,
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("true"),
+				},
+				Environment:  "dev",
+				Feature:      "bool-flag",
+				Kind:         "boolean",
+				OffVariation: "false",
+				Prerequisites: []Prerequisite{
+					{Feature: "true-bool",
+						Variations: []string{"true"},
+					},
+					{Feature: "true-bool2",
+						Variations: []string{"true"},
+					},
+				},
+				Project:              "default",
+				Rules:                nil,
+				State:                "on",
+				VariationToTargetMap: nil,
+				Variations: Variations{
+					trueVariation, falseVariation,
+				},
+			},
+			target: nil,
+			flags: map[string]FeatureConfig{
+				"true-bool": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "on",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+				"true-bool2": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool2",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "on",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+			},
+		},
+		{
+			name:     "there is one prerequisite that is met on a multivariant flag with no target",
+			expected: true,
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("blue"),
+				},
+				Environment:  "dev",
+				Feature:      "mv-flag",
+				Kind:         "string",
+				OffVariation: "red",
+				Prerequisites: []Prerequisite{
+					{Feature: "true-bool",
+						Variations: []string{"true"},
+					},
+				},
+				Project:              "default",
+				Rules:                nil,
+				State:                "on",
+				VariationToTargetMap: nil,
+				Variations: Variations{
+					redVariation, blueVariation,
+				},
+			},
+			target: nil,
+			flags: map[string]FeatureConfig{
+				"true-bool": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "on",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+			},
+		},
+		{
+			name:     "there are two prerequisites that are met on a multivariant flag with no target",
+			expected: true,
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("blue"),
+				},
+				Environment:  "dev",
+				Feature:      "mv-flag",
+				Kind:         "string",
+				OffVariation: "red",
+				Prerequisites: []Prerequisite{
+					{Feature: "true-bool",
+						Variations: []string{"true"},
+					},
+					{Feature: "true-bool2",
+						Variations: []string{"true"},
+					},
+				},
+				Project:              "default",
+				Rules:                nil,
+				State:                "on",
+				VariationToTargetMap: nil,
+				Variations: Variations{
+					redVariation, blueVariation,
+				},
+			},
+			target: nil,
+			flags: map[string]FeatureConfig{
+				"true-bool": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "on",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+				"true-bool2": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool2",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "on",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+			},
+		},
+		{
+			name:     "there is one prerequisite that is not met on a boolean flag with no target",
+			expected: false,
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("true"),
+				},
+				Environment:  "dev",
+				Feature:      "bool-flag",
+				Kind:         "boolean",
+				OffVariation: "false",
+				Prerequisites: []Prerequisite{
+					{Feature: "true-bool",
+						Variations: []string{"true"},
+					},
+				},
+				Project:              "default",
+				Rules:                nil,
+				State:                "on",
+				VariationToTargetMap: nil,
+				Variations: Variations{
+					trueVariation, falseVariation,
+				},
+			},
+			target: nil,
+			flags: map[string]FeatureConfig{
+				"true-bool": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "off",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+			},
+		},
+		{
+			name:     "there is one prerequisite that is not met on a multivariant flag with no target",
+			expected: false,
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("blue"),
+				},
+				Environment:  "dev",
+				Feature:      "mv-flag",
+				Kind:         "string",
+				OffVariation: "red",
+				Prerequisites: []Prerequisite{
+					{Feature: "true-bool",
+						Variations: []string{"true"},
+					},
+				},
+				Project:              "default",
+				Rules:                nil,
+				State:                "on",
+				VariationToTargetMap: nil,
+				Variations: Variations{
+					redVariation, blueVariation,
+				},
+			},
+			target: nil,
+			flags: map[string]FeatureConfig{
+				"true-bool": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "off",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+			},
+		},
+		{
+			name:     "there are two prerequisites where one is met and the other not on a multivariant flag with no target",
+			expected: false,
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("blue"),
+				},
+				Environment:  "dev",
+				Feature:      "mv-flag",
+				Kind:         "string",
+				OffVariation: "red",
+				Prerequisites: []Prerequisite{
+					{Feature: "true-bool",
+						Variations: []string{"true"},
+					},
+					{Feature: "true-bool2",
+						Variations: []string{"true"},
+					},
+				},
+				Project:              "default",
+				Rules:                nil,
+				State:                "on",
+				VariationToTargetMap: nil,
+				Variations: Variations{
+					redVariation, blueVariation,
+				},
+			},
+			target: nil,
+			flags: map[string]FeatureConfig{
+				"true-bool": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "on",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+				"true-bool2": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool2",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "off",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+			},
+		},
+		{
+			name:     "there are two prerequisite where one is met and the other not on a boolean flag with no target",
+			expected: false,
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("true"),
+				},
+				Environment:  "dev",
+				Feature:      "bool-flag",
+				Kind:         "boolean",
+				OffVariation: "false",
+				Prerequisites: []Prerequisite{
+					{Feature: "true-bool",
+						Variations: []string{"true"},
+					},
+					{Feature: "true-bool2",
+						Variations: []string{"true"},
+					},
+				},
+				Project:              "default",
+				Rules:                nil,
+				State:                "on",
+				VariationToTargetMap: nil,
+				Variations: Variations{
+					trueVariation, falseVariation,
+				},
+			},
+			target: nil,
+			flags: map[string]FeatureConfig{
+				"true-bool": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "on",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+				"true-bool2": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool2",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "off",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+			},
+		},
+		{
+			name:     "there are two prerequisites where one is not met because of target rules on a multivariant flag",
+			expected: false,
+			fields: fields{
+				DefaultServe: Serve{
+					Variation: stringPtr("blue"),
+				},
+				Environment:  "dev",
+				Feature:      "mv-flag",
+				Kind:         "string",
+				OffVariation: "red",
+				Prerequisites: []Prerequisite{
+					{Feature: "true-bool",
+						Variations: []string{"true"},
+					},
+					{Feature: "true-bool2",
+						Variations: []string{"true"},
+					},
+				},
+				Project:              "default",
+				Rules:                nil,
+				State:                "on",
+				VariationToTargetMap: nil,
+				Variations: Variations{
+					redVariation, blueVariation,
+				},
+			},
+			target: &Target{
+				Identifier: "harness",
+				Name:       "Harness",
+				Anonymous:  nil,
+				Attributes: nil,
+			},
+			flags: map[string]FeatureConfig{
+				"true-bool": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:   "dev",
+					Feature:       "true-bool",
+					Kind:          "boolean",
+					OffVariation:  "false",
+					Prerequisites: nil,
+					Project:       "default",
+					Rules:         nil,
+					State:         "on",
+					VariationToTargetMap: []VariationMap{
+						{
+							TargetSegments: []string{"harness"},
+							Targets:        []string{"harness"},
+							Variation:      "false",
+						},
+					},
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+				"true-bool2": {
+					DefaultServe: Serve{
+						Variation: stringPtr("true"),
+					},
+					Environment:          "dev",
+					Feature:              "true-bool2",
+					Kind:                 "boolean",
+					OffVariation:         "false",
+					Prerequisites:        nil,
+					Project:              "default",
+					Rules:                nil,
+					State:                "on",
+					VariationToTargetMap: nil,
+					Variations: Variations{
+						trueVariation, falseVariation,
+					},
+					Segments: nil,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fc := FeatureConfig{
+				DefaultServe:         tt.fields.DefaultServe,
+				Environment:          tt.fields.Environment,
+				Feature:              tt.fields.Feature,
+				Kind:                 tt.fields.Kind,
+				OffVariation:         tt.fields.OffVariation,
+				Prerequisites:        tt.fields.Prerequisites,
+				Project:              tt.fields.Project,
+				Rules:                tt.fields.Rules,
+				State:                tt.fields.State,
+				VariationToTargetMap: tt.fields.VariationToTargetMap,
+				Variations:           tt.fields.Variations,
+				Segments:             tt.fields.Segments,
+			}
+
+			assert.Equal(t, tt.expected, prereqsSatisfied(fc, tt.target, tt.flags))
+		})
+	}
+}
