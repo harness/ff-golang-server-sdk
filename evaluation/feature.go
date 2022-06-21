@@ -297,6 +297,8 @@ func prereqsSatisfied(fc FeatureConfig, target *Target, flags map[string]Feature
 	}
 
 	prereqsSatisfied := true
+	satisfiedCount := 0
+
 	for _, pre := range fc.Prerequisites {
 
 		prereqFlag, ok := flags[pre.Feature]
@@ -304,12 +306,19 @@ func prereqsSatisfied(fc FeatureConfig, target *Target, flags map[string]Feature
 			continue
 		}
 
-		variation := fc.Variations.FindByIdentifier(fc.GetVariationName(target))
 		variationToMatch := prereqFlag.Variations.FindByIdentifier(prereqFlag.GetVariationName(target))
 
-		if variation.Value != variationToMatch.Value {
-			prereqsSatisfied = false
+		if pre.Feature == prereqFlag.Feature {
+			for _, x := range pre.Variations {
+				if x == variationToMatch.Value {
+					satisfiedCount++
+				}
+			}
 		}
+	}
+
+	if satisfiedCount != len(fc.Prerequisites) {
+		prereqsSatisfied = false
 	}
 
 	return prereqsSatisfied
