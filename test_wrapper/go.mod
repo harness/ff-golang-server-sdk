@@ -5,7 +5,6 @@ go 1.16
 replace github.com/harness/ff-golang-server-sdk => ../
 
 require (
-	github.com/deepmap/oapi-codegen v1.6.0 // indirect
 	github.com/getkin/kin-openapi v0.89.0
 	github.com/harness/ff-golang-server-sdk v0.0.24
 	github.com/labstack/echo/v4 v4.6.3

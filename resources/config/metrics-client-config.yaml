@@ -1,0 +1,3 @@
+package: metricsclient
+generate:
+  client: true

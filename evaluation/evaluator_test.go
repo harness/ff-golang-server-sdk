@@ -104,7 +104,7 @@ var (
 		map[string]rest.FeatureConfig{
 			simple: {
 				Feature: simple,
-				State:   rest.FeatureState_on,
+				State:   rest.On,
 				DefaultServe: rest.Serve{
 					Variation: &identifierTrue,
 				},
@@ -113,7 +113,7 @@ var (
 			},
 			theme: {
 				Feature: theme,
-				State:   rest.FeatureState_on,
+				State:   rest.On,
 				DefaultServe: rest.Serve{
 					Variation: &lighttheme,
 				},
@@ -122,7 +122,7 @@ var (
 			},
 			size: {
 				Feature: size,
-				State:   rest.FeatureState_on,
+				State:   rest.On,
 				DefaultServe: rest.Serve{
 					Variation: &mediumSize,
 				},
@@ -131,7 +131,7 @@ var (
 			},
 			weight: {
 				Feature: weight,
-				State:   rest.FeatureState_on,
+				State:   rest.On,
 				DefaultServe: rest.Serve{
 					Variation: &heavyWeight,
 				},
@@ -140,7 +140,7 @@ var (
 			},
 			org: {
 				Feature: org,
-				State:   rest.FeatureState_on,
+				State:   rest.On,
 				DefaultServe: rest.Serve{
 					Variation: &json2,
 				},
@@ -149,7 +149,7 @@ var (
 			},
 			invalidInt: {
 				Feature: invalidInt,
-				State:   rest.FeatureState_on,
+				State:   rest.On,
 				DefaultServe: rest.Serve{
 					Variation: &invalidIntValue,
 				},
@@ -163,7 +163,7 @@ var (
 			},
 			invalidNumber: {
 				Feature: invalidNumber,
-				State:   rest.FeatureState_on,
+				State:   rest.On,
 				DefaultServe: rest.Serve{
 					Variation: &invalidNumberValue,
 				},
@@ -177,7 +177,7 @@ var (
 			},
 			invalidJSON: {
 				Feature: invalidJSON,
-				State:   rest.FeatureState_on,
+				State:   rest.On,
 				DefaultServe: rest.Serve{
 					Variation: &invalidNumberValue,
 				},
@@ -191,7 +191,7 @@ var (
 			},
 			simpleWithPrereq: {
 				Feature: simpleWithPrereq,
-				State:   rest.FeatureState_on,
+				State:   rest.On,
 				DefaultServe: rest.Serve{
 					Variation: &identifierTrue,
 				},
@@ -206,7 +206,7 @@ var (
 			},
 			prereqNotFound: {
 				Feature: prereqNotFound,
-				State:   rest.FeatureState_on,
+				State:   rest.On,
 				DefaultServe: rest.Serve{
 					Variation: &identifierTrue,
 				},
@@ -222,7 +222,7 @@ var (
 			prereqVarNotFound: {
 				Feature:      prereqVarNotFound,
 				OffVariation: offVariation,
-				State:        rest.FeatureState_on,
+				State:        rest.On,
 				DefaultServe: rest.Serve{
 					Variation: &identifierTrue,
 				},
@@ -237,7 +237,7 @@ var (
 			},
 			notValidFlag: {
 				Feature: notValidFlag,
-				State:   rest.FeatureState_on,
+				State:   rest.On,
 				DefaultServe: rest.Serve{
 					Variation: &empty,
 				},
@@ -952,7 +952,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 			args: args{
 				fc: rest.FeatureConfig{
 					OffVariation: offVariation,
-					State:        rest.FeatureState_off,
+					State:        rest.Off,
 					Variations:   boolVariations,
 				},
 			},
@@ -964,7 +964,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 			args: args{
 				fc: rest.FeatureConfig{
 					OffVariation: offVariation,
-					State:        rest.FeatureState_off,
+					State:        rest.Off,
 					Variations:   boolVariations,
 				},
 				target: &Target{
@@ -978,7 +978,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 			name: "evaluate flag should return default serve variation",
 			args: args{
 				fc: rest.FeatureConfig{
-					State:      rest.FeatureState_on,
+					State:      rest.On,
 					Variations: boolVariations,
 					DefaultServe: rest.Serve{
 						Variation: &boolVariations[0].Value,
@@ -995,7 +995,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 			name: "evaluate flag should return default serve distribution",
 			args: args{
 				fc: rest.FeatureConfig{
-					State:      rest.FeatureState_on,
+					State:      rest.On,
 					Variations: boolVariations,
 					DefaultServe: rest.Serve{
 						Distribution: &rest.Distribution{
@@ -1023,7 +1023,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 			name: "evaluate flag should return rule serve",
 			args: args{
 				fc: rest.FeatureConfig{
-					State:      rest.FeatureState_on,
+					State:      rest.On,
 					Variations: boolVariations,
 					Rules: &[]rest.ServingRule{
 						{
@@ -1051,7 +1051,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 			name: "evaluate flag using variationMap and target should return 'true'",
 			args: args{
 				fc: rest.FeatureConfig{
-					State:      rest.FeatureState_on,
+					State:      rest.On,
 					Variations: boolVariations,
 					VariationToTargetMap: &[]rest.VariationMap{
 						{
@@ -1075,7 +1075,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 			name: "evaluate flag variation returns an error",
 			args: args{
 				fc: rest.FeatureConfig{
-					State: rest.FeatureState_on,
+					State: rest.On,
 				},
 				target: &Target{
 					Identifier: targetIdentifier,
@@ -1240,7 +1240,7 @@ func TestEvaluator_checkPreRequisite(t *testing.T) {
 			},
 			args: args{
 				parent: &rest.FeatureConfig{
-					State: rest.FeatureState_on,
+					State: rest.On,
 					Prerequisites: &[]rest.Prerequisite{
 						{
 							Feature:    simple,
@@ -1258,7 +1258,7 @@ func TestEvaluator_checkPreRequisite(t *testing.T) {
 			},
 			args: args{
 				parent: &rest.FeatureConfig{
-					State: rest.FeatureState_on,
+					State: rest.On,
 					Prerequisites: &[]rest.Prerequisite{
 						{
 							Feature:    "prereq not found",

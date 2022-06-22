@@ -1,0 +1,6 @@
+package: rest
+generate:
+  echo-server: false
+  client: true
+  models: false
+  embedded-spec: true
