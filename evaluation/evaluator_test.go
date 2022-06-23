@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/harness/ff-golang-server-sdk/logger"
+
 	"github.com/harness/ff-golang-server-sdk/rest"
 )
 
@@ -303,9 +305,11 @@ func (m TestRepository) GetFlag(identifier string) (rest.FeatureConfig, error) {
 }
 
 func TestNewEvaluator(t *testing.T) {
-	eval, _ := NewEvaluator(testRepo, nil)
+	noOpLogger := logger.NewNoOpLogger()
+	eval, _ := NewEvaluator(testRepo, nil, noOpLogger)
 	type args struct {
-		query Query
+		query  Query
+		logger logger.Logger
 	}
 	tests := []struct {
 		name    string
@@ -322,7 +326,8 @@ func TestNewEvaluator(t *testing.T) {
 		{
 			name: "should return test repo",
 			args: args{
-				query: testRepo,
+				query:  testRepo,
+				logger: noOpLogger,
 			},
 			want:    eval,
 			wantErr: false,
@@ -330,7 +335,7 @@ func TestNewEvaluator(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewEvaluator(tt.args.query, nil)
+			got, err := NewEvaluator(tt.args.query, nil, noOpLogger)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewEvaluator() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -616,7 +621,8 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := Evaluator{
-				query: tt.fields.query,
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
 			}
 			if got := e.evaluateClause(tt.args.clause, tt.args.target); got != tt.want {
 				t.Errorf("Evaluator.evaluateClause() = %v, want %v", got, tt.want)
@@ -797,7 +803,8 @@ func TestEvaluator_evaluateRules(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := Evaluator{
-				query: tt.fields.query,
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
 			}
 			if got := e.evaluateRules(tt.args.servingRules, tt.args.target); got != tt.want {
 				t.Errorf("Evaluator.evaluateRules() = %v, want %v", got, tt.want)
@@ -915,7 +922,8 @@ func TestEvaluator_evaluateVariationMap(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := Evaluator{
-				query: tt.fields.query,
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
 			}
 			if got := e.evaluateVariationMap(tt.args.variationsMap, tt.args.target); got != tt.want {
 				t.Errorf("Evaluator.evaluateVariationMap() = %v, want %v", got, tt.want)
@@ -1080,7 +1088,8 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := Evaluator{
-				query: tt.fields.query,
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
 			}
 			got, err := e.evaluateFlag(tt.args.fc, tt.args.target)
 			if (err != nil) != tt.wantErr {
@@ -1181,7 +1190,8 @@ func TestEvaluator_isTargetIncludedOrExcludedInSegment(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := Evaluator{
-				query: tt.fields.query,
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
 			}
 			if got := e.isTargetIncludedOrExcludedInSegment(tt.args.segmentList, tt.args.target); got != tt.want {
 				t.Errorf("Evaluator.isTargetIncludedOrExcludedInSegment() = %v, want %v", got, tt.want)
@@ -1263,7 +1273,8 @@ func TestEvaluator_checkPreRequisite(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := Evaluator{
-				query: tt.fields.query,
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
 			}
 			got, err := e.checkPreRequisite(tt.args.parent, tt.args.target)
 			if (err != nil) != tt.wantErr {
@@ -1380,7 +1391,8 @@ func TestEvaluator_evaluate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := Evaluator{
-				query: tt.fields.query,
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
 			}
 			got, err := e.evaluate(tt.args.identifier, tt.args.target, tt.args.kind)
 			if (err != nil) != tt.wantErr {
@@ -1451,7 +1463,8 @@ func TestEvaluator_BoolVariation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := Evaluator{
-				query: tt.fields.query,
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
 			}
 			if got := e.BoolVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
 				t.Errorf("Evaluator.BoolVariation() = %v, want %v", got, tt.want)
@@ -1517,7 +1530,8 @@ func TestEvaluator_StringVariation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := Evaluator{
-				query: tt.fields.query,
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
 			}
 			if got := e.StringVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
 				t.Errorf("Evaluator.StringVariation() = %v, want %v", got, tt.want)
@@ -1595,7 +1609,8 @@ func TestEvaluator_IntVariation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := Evaluator{
-				query: tt.fields.query,
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
 			}
 			if got := e.IntVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
 				t.Errorf("Evaluator.IntVariation() = %v, want %v", got, tt.want)
@@ -1673,7 +1688,8 @@ func TestEvaluator_NumberVariation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := Evaluator{
-				query: tt.fields.query,
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
 			}
 			if got := e.NumberVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
 				t.Errorf("Evaluator.NumberVariation() = %v, want %v", got, tt.want)
@@ -1758,7 +1774,8 @@ func TestEvaluator_JSONVariation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := Evaluator{
-				query: tt.fields.query,
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
 			}
 			if got := e.JSONVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Evaluator.JSONVariation() = %v, want %v", got, tt.want)
