@@ -114,7 +114,6 @@ func (c *CfClient) start() {
 
 // PostEvaluateProcessor push the data to the analytics service
 func (c *CfClient) PostEvaluateProcessor(data *evaluation.PostEvalData) {
-	c.config.Logger.Infof("post evaluation %v", data.FeatureConfig.Feature)
 	c.analyticsService.PushToQueue(data.FeatureConfig, data.Target, data.Variation)
 }
 
