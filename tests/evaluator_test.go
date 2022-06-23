@@ -3,11 +3,12 @@ package tests
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/harness/ff-golang-server-sdk/logger"
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/harness/ff-golang-server-sdk/logger"
 
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 

@@ -2,9 +2,10 @@ package evaluation
 
 import (
 	"fmt"
-	"github.com/harness/ff-golang-server-sdk/logger"
 	"reflect"
 	"testing"
+
+	"github.com/harness/ff-golang-server-sdk/logger"
 
 	"github.com/harness/ff-golang-server-sdk/rest"
 )
