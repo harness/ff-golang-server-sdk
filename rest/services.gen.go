@@ -740,11 +740,10 @@ type GetEvaluationsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *struct {
-		ItemCount int  `json:"itemCount"`
-		PageCount int  `json:"pageCount"`
-		PageIndex int  `json:"pageIndex"`
-		PageSize  int  `json:"pageSize"`
-		Version   *int `json:"version,omitempty"`
+		// Embedded struct due to allOf(#/components/schemas/Pagination)
+		Pagination `yaml:",inline"`
+		// Embedded struct due to allOf(#/components/schemas/Evaluations)
+		Evaluations `yaml:",inline"`
 	}
 }
 
@@ -1117,11 +1116,10 @@ func ParseGetEvaluationsResponse(rsp *http.Response) (*GetEvaluationsResponse, e
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest struct {
-			ItemCount int  `json:"itemCount"`
-			PageCount int  `json:"pageCount"`
-			PageIndex int  `json:"pageIndex"`
-			PageSize  int  `json:"pageSize"`
-			Version   *int `json:"version,omitempty"`
+			// Embedded struct due to allOf(#/components/schemas/Pagination)
+			Pagination `yaml:",inline"`
+			// Embedded struct due to allOf(#/components/schemas/Evaluations)
+			Evaluations `yaml:",inline"`
 		}
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err

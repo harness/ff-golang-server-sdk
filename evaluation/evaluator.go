@@ -203,7 +203,7 @@ func (e Evaluator) evaluateVariationMap(variationsMap []rest.VariationMap, targe
 
 func (e Evaluator) evaluateFlag(fc rest.FeatureConfig, target *Target) (rest.Variation, error) {
 	var variation = fc.OffVariation
-	if fc.State == rest.On {
+	if fc.State == rest.FeatureStateOn {
 		variation = ""
 		if fc.VariationToTargetMap != nil {
 			variation = e.evaluateVariationMap(*fc.VariationToTargetMap, target)

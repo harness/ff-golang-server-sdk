@@ -9,7 +9,7 @@ const (
 
 // Defines values for MetricsDataMetricsType.
 const (
-	FFMETRICS MetricsDataMetricsType = "FFMETRICS"
+	MetricsDataMetricsTypeFFMETRICS MetricsDataMetricsType = "FFMETRICS"
 )
 
 // Error defines model for Error.
@@ -53,19 +53,19 @@ type TargetData struct {
 }
 
 // EnvironmentPathParam defines model for environmentPathParam.
-type EnvironmentPathParam = string
+type EnvironmentPathParam string
 
 // InternalServerError defines model for InternalServerError.
-type InternalServerError = Error
+type InternalServerError Error
 
 // Unauthenticated defines model for Unauthenticated.
-type Unauthenticated = Error
+type Unauthenticated Error
 
 // Unauthorized defines model for Unauthorized.
-type Unauthorized = Error
+type Unauthorized Error
 
 // PostMetricsJSONBody defines parameters for PostMetrics.
-type PostMetricsJSONBody = Metrics
+type PostMetricsJSONBody Metrics
 
 // PostMetricsJSONRequestBody defines body for PostMetrics for application/json ContentType.
-type PostMetricsJSONRequestBody = PostMetricsJSONBody
+type PostMetricsJSONRequestBody PostMetricsJSONBody

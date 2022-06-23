@@ -9,16 +9,16 @@ const (
 
 // Defines values for FeatureConfigKind.
 const (
-	Boolean FeatureConfigKind = "boolean"
-	Int     FeatureConfigKind = "int"
-	Json    FeatureConfigKind = "json"
-	String  FeatureConfigKind = "string"
+	FeatureConfigKindBoolean FeatureConfigKind = "boolean"
+	FeatureConfigKindInt     FeatureConfigKind = "int"
+	FeatureConfigKindJson    FeatureConfigKind = "json"
+	FeatureConfigKindString  FeatureConfigKind = "string"
 )
 
 // Defines values for FeatureState.
 const (
-	Off FeatureState = "off"
-	On  FeatureState = "on"
+	FeatureStateOff FeatureState = "off"
+	FeatureStateOn  FeatureState = "on"
 )
 
 // AuthenticationRequest defines model for AuthenticationRequest.
@@ -67,7 +67,7 @@ type Evaluation struct {
 }
 
 // Evaluations defines model for Evaluations.
-type Evaluations = []Evaluation
+type Evaluations []Evaluation
 
 // FeatureConfig defines model for FeatureConfig.
 type FeatureConfig struct {
@@ -188,19 +188,19 @@ type WeightedVariation struct {
 }
 
 // InternalServerError defines model for InternalServerError.
-type InternalServerError = Error
+type InternalServerError Error
 
 // NotFound defines model for NotFound.
-type NotFound = Error
+type NotFound Error
 
 // Unauthenticated defines model for Unauthenticated.
-type Unauthenticated = Error
+type Unauthenticated Error
 
 // Unauthorized defines model for Unauthorized.
-type Unauthorized = Error
+type Unauthorized Error
 
 // AuthenticateJSONBody defines parameters for Authenticate.
-type AuthenticateJSONBody = AuthenticationRequest
+type AuthenticateJSONBody AuthenticationRequest
 
 // StreamParams defines parameters for Stream.
 type StreamParams struct {
@@ -208,4 +208,4 @@ type StreamParams struct {
 }
 
 // AuthenticateJSONRequestBody defines body for Authenticate for application/json ContentType.
-type AuthenticateJSONRequestBody = AuthenticateJSONBody
+type AuthenticateJSONRequestBody AuthenticateJSONBody

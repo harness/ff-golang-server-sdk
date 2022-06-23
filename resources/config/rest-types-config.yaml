@@ -4,3 +4,7 @@ generate:
   client: false
   models: true
   embedded-spec: false
+compatibility:
+  old-enum-conflicts: true
+  old-aliasing: true
+  old-merge-schemas: true
