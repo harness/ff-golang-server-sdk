@@ -91,7 +91,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		return nil, err
 	}
 	client.repository = repository.New(lruCache)
-	client.evaluator, err = evaluation.NewEvaluator(client.repository, client)
+	client.evaluator, err = evaluation.NewEvaluator(client.repository, client, config.Logger)
 	if err != nil {
 		return nil, err
 	}

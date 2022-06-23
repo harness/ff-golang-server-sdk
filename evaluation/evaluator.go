@@ -3,13 +3,13 @@ package evaluation
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/harness/ff-golang-server-sdk/logger"
 	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/harness/ff-golang-server-sdk/log"
 	"github.com/harness/ff-golang-server-sdk/rest"
 )
 
@@ -50,14 +50,16 @@ type PostEvaluateCallback interface {
 type Evaluator struct {
 	query            Query
 	postEvalCallback PostEvaluateCallback
+	logger           logger.Logger
 }
 
 // NewEvaluator constructs evaluator with query instance
-func NewEvaluator(query Query, postEvalCallback PostEvaluateCallback) (*Evaluator, error) {
+func NewEvaluator(query Query, postEvalCallback PostEvaluateCallback, logger logger.Logger) (*Evaluator, error) {
 	if query == nil {
 		return nil, ErrQueryProviderMissing
 	}
 	return &Evaluator{
+		logger:           logger,
 		query:            query,
 		postEvalCallback: postEvalCallback,
 	}, nil
@@ -233,13 +235,13 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 		}
 		// Should Target be excluded - if in excluded list we return false
 		if segment.Excluded != nil && isTargetInList(target, *segment.Excluded) {
-			log.Debugf("Target %s excluded from segment %s via exclude list", target.Name, segment.Name)
+			e.logger.Debugf("Target %s excluded from segment %s via exclude list", target.Name, segment.Name)
 			return false
 		}
 
 		// Should Target be included - if in included list we return true
 		if segment.Included != nil && isTargetInList(target, *segment.Included) {
-			log.Debugf(
+			e.logger.Debugf(
 				"Target %s included in segment %s via include list",
 				target.Name,
 				segment.Name)
@@ -249,7 +251,7 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 		// Should Target be included via segment rules
 		rules := segment.Rules
 		if rules != nil && e.evaluateClauses(*rules, target) {
-			log.Debugf(
+			e.logger.Debugf(
 				"Target %s included in segment %s via rules", target.Name, segment.Name)
 			return true
 		}
@@ -259,12 +261,12 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 
 func (e Evaluator) checkPreRequisite(fc *rest.FeatureConfig, target *Target) (bool, error) {
 	if e.query == nil {
-		log.Errorf(ErrQueryProviderMissing.Error())
+		e.logger.Errorf(ErrQueryProviderMissing.Error())
 		return true, ErrQueryProviderMissing
 	}
 	prerequisites := fc.Prerequisites
 	if prerequisites != nil {
-		log.Infof(
+		e.logger.Debugf(
 			"Checking pre requisites %v of parent feature %v",
 			prerequisites,
 			fc.Feature)
@@ -272,19 +274,19 @@ func (e Evaluator) checkPreRequisite(fc *rest.FeatureConfig, target *Target) (bo
 			prereqFeature := pre.Feature
 			prereqFeatureConfig, err := e.query.GetFlag(prereqFeature)
 			if err != nil {
-				log.Errorf(
+				e.logger.Errorf(
 					"Could not retrieve the pre requisite details of feature flag : %v", prereqFeature)
 				return true, nil
 			}
 
 			prereqEvaluatedVariation, err := e.evaluateFlag(prereqFeatureConfig, target)
 			if err != nil {
-				log.Errorf(
+				e.logger.Errorf(
 					"Could not evaluate the prerequisite details of feature flag : %v", prereqFeature)
 				return true, nil
 			}
 
-			log.Infof(
+			e.logger.Debugf(
 				"Pre requisite flag %v has variation %v for target %v",
 				prereqFeatureConfig.Feature,
 				prereqEvaluatedVariation,
@@ -293,7 +295,7 @@ func (e Evaluator) checkPreRequisite(fc *rest.FeatureConfig, target *Target) (bo
 			// Compare if the pre requisite variation is a possible valid value of
 			// the pre requisite FF
 			validPrereqVariations := pre.Variations
-			log.Infof(
+			e.logger.Debugf(
 				"Pre requisite flag %v should have the variations %v",
 				prereqFeatureConfig.Feature,
 				validPrereqVariations)
@@ -311,7 +313,7 @@ func (e Evaluator) checkPreRequisite(fc *rest.FeatureConfig, target *Target) (bo
 func (e Evaluator) evaluate(identifier string, target *Target, kind string) (rest.Variation, error) {
 
 	if e.query == nil {
-		log.Errorf(ErrQueryProviderMissing.Error())
+		e.logger.Errorf(ErrQueryProviderMissing.Error())
 		return rest.Variation{}, ErrQueryProviderMissing
 	}
 	flag, err := e.query.GetFlag(identifier)
@@ -349,7 +351,7 @@ func (e Evaluator) evaluate(identifier string, target *Target, kind string) (res
 func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue bool) bool {
 	variation, err := e.evaluate(identifier, target, "boolean")
 	if err != nil {
-		log.Errorf("Error while evaluating boolean flag '%s', err: %v", identifier, err)
+		e.logger.Errorf("Error while evaluating boolean flag '%s', err: %v", identifier, err)
 		return defaultValue
 	}
 	return strings.ToLower(variation.Value) == "true"
@@ -360,7 +362,7 @@ func (e Evaluator) StringVariation(identifier string, target *Target, defaultVal
 
 	variation, err := e.evaluate(identifier, target, "string")
 	if err != nil {
-		log.Errorf("Error while evaluating string flag '%s', err: %v", identifier, err)
+		e.logger.Errorf("Error while evaluating string flag '%s', err: %v", identifier, err)
 		return defaultValue
 	}
 	return variation.Value
@@ -371,7 +373,7 @@ func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue 
 
 	variation, err := e.evaluate(identifier, target, "int")
 	if err != nil {
-		log.Errorf("Error while evaluating int flag '%s', err: %v", identifier, err)
+		e.logger.Errorf("Error while evaluating int flag '%s', err: %v", identifier, err)
 		return defaultValue
 	}
 	val, err := strconv.Atoi(variation.Value)
@@ -386,7 +388,7 @@ func (e Evaluator) NumberVariation(identifier string, target *Target, defaultVal
 
 	variation, err := e.evaluate(identifier, target, "number")
 	if err != nil {
-		log.Errorf("Error while evaluating number flag '%s', err: %v", identifier, err)
+		e.logger.Errorf("Error while evaluating number flag '%s', err: %v", identifier, err)
 		return defaultValue
 	}
 	val, err := strconv.ParseFloat(variation.Value, 64)
@@ -402,7 +404,7 @@ func (e Evaluator) JSONVariation(identifier string, target *Target,
 
 	variation, err := e.evaluate(identifier, target, "json")
 	if err != nil {
-		log.Errorf("Error while evaluating json flag '%s', err: %v", identifier, err)
+		e.logger.Errorf("Error while evaluating json flag '%s', err: %v", identifier, err)
 		return defaultValue
 	}
 	val := make(map[string]interface{})
