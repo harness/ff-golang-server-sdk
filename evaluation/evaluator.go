@@ -3,12 +3,13 @@ package evaluation
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/harness/ff-golang-server-sdk/logger"
 	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/harness/ff-golang-server-sdk/logger"
 
 	"github.com/harness/ff-golang-server-sdk/rest"
 )
