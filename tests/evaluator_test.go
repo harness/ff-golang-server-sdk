@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/harness/ff-golang-server-sdk/logger"
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
@@ -77,7 +78,7 @@ func TestEvaluator(t *testing.T) {
 			t.Error(err)
 		}
 		repo := repository.New(lruCache)
-		evaluator, err := evaluation.NewEvaluator(repo, nil)
+		evaluator, err := evaluation.NewEvaluator(repo, nil, logger.NewNoOpLogger())
 		if err != nil {
 			t.Error(err)
 		}
