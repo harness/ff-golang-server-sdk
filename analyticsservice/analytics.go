@@ -228,7 +228,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 		md := metricsclient.MetricsData{
 			Timestamp:   time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)),
 			Count:       analytic.count,
-			MetricsType: ffMetricType,
+			MetricsType: metricsclient.MetricsDataMetricsType(ffMetricType),
 			Attributes:  metricAttributes,
 		}
 		metricData = append(metricData, md)

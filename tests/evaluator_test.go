@@ -110,15 +110,15 @@ func TestEvaluator(t *testing.T) {
 					t.Errorf("flag %s not found", testCase.Flag)
 				}
 				switch flag.Kind {
-				case "boolean":
+				case rest.FeatureConfigKindBoolean:
 					got = evaluator.BoolVariation(testCase.Flag, target, false)
-				case "string":
+				case rest.FeatureConfigKindString:
 					got = evaluator.StringVariation(testCase.Flag, target, "blue")
-				case "int":
+				case rest.FeatureConfigKindInt:
 					got = evaluator.IntVariation(testCase.Flag, target, 100)
 				case "number":
 					got = evaluator.NumberVariation(testCase.Flag, target, 50.00)
-				case "json":
+				case rest.FeatureConfigKindJson:
 					got = evaluator.JSONVariation(testCase.Flag, target, map[string]interface{}{})
 				}
 				if !reflect.DeepEqual(got, testCase.Expected) {

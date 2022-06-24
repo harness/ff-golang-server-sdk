@@ -1,0 +1,10 @@
+package: rest
+generate:
+  echo-server: false
+  client: true
+  models: false
+  embedded-spec: true
+compatibility:
+  old-enum-conflicts: true
+  old-aliasing: true
+  old-merge-schemas: true

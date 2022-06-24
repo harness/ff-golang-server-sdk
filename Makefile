@@ -8,10 +8,10 @@ endif
 all: tidy generate build check test
 
 generate:
-	oapi-codegen -generate client,spec -package=rest ./resources/client-v1.yaml > rest/services.gen.go
-	oapi-codegen -generate types -package=rest ./resources/client-v1.yaml > rest/types.gen.go
-	oapi-codegen -generate client -package=metricsclient ./resources/metrics-v1.yaml > metricsclient/services.gen.go
-	oapi-codegen -generate types -package=metricsclient ./resources/metrics-v1.yaml > metricsclient/types.gen.go
+	oapi-codegen --config ./resources/config/rest-client-config.yaml ./resources/client-v1.yaml > rest/services.gen.go
+	oapi-codegen --config ./resources/config/rest-types-config.yaml ./resources/client-v1.yaml > rest/types.gen.go
+	oapi-codegen --config ./resources/config/metrics-client-config.yaml ./resources/metrics-v1.yaml > metricsclient/services.gen.go
+	oapi-codegen --config ./resources/config/metrics-types-config.yaml ./resources/metrics-v1.yaml > metricsclient/types.gen.go
 
 tidy:
 	go mod tidy
@@ -95,7 +95,7 @@ $(GOPATH)/bin/gosec:
 
 $(GOPATH)/bin/oapi-codegen:
 	@echo "🔘 Installing oapicodegen ... (`date '+%H:%M:%S'`)"
-	@go get github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.6.0
+	@go get github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.11.0
 
 PHONY+= tools
 tools: $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint $(GOPATH)/bin/gosec $(GOPATH)/bin/goimports $(GOPATH)/bin/oapi-codegen
