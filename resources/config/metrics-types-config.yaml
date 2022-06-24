@@ -1,0 +1,7 @@
+package: metricsclient
+generate:
+  models: true
+compatibility:
+  old-enum-conflicts: true
+  old-aliasing: true
+  old-merge-schemas: true
