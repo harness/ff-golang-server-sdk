@@ -136,7 +136,7 @@ var (
 					Variation: &heavyWeight,
 				},
 				Variations: numberVariations,
-				Kind:       "number",
+				Kind:       "int",
 			},
 			org: {
 				Feature: org,
@@ -173,7 +173,7 @@ var (
 						Value:      invalidNumberValue,
 					},
 				},
-				Kind: "number",
+				Kind: "int",
 			},
 			invalidJSON: {
 				Feature: invalidJSON,
