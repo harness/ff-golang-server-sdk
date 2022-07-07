@@ -386,8 +386,8 @@ func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue 
 
 // NumberVariation returns number evaluation for target
 func (e Evaluator) NumberVariation(identifier string, target *Target, defaultValue float64) float64 {
-
-	variation, err := e.evaluate(identifier, target, "number")
+	//all numbers are stored as ints in the database
+	variation, err := e.evaluate(identifier, target, "int")
 	if err != nil {
 		e.logger.Errorf("Error while evaluating number flag '%s', err: %v", identifier, err)
 		return defaultValue
