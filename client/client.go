@@ -304,7 +304,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 }
 
 func (c *CfClient) makeTicker(interval uint) *time.Ticker {
-	return time.NewTicker(time.Minute * time.Duration(interval))
+	return time.NewTicker(time.Second * time.Duration(interval))
 }
 
 func (c *CfClient) pullCronJob(ctx context.Context) {

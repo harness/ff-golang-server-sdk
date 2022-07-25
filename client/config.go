@@ -16,7 +16,7 @@ import (
 type config struct {
 	url                 string
 	eventsURL           string
-	pullInterval        uint // in minutes
+	pullInterval        uint // in seconds
 	Cache               cache.Cache
 	Store               storage.Storage
 	Logger              logger.Logger
@@ -41,7 +41,7 @@ func newDefaultConfig() *config {
 	return &config{
 		url:          "https://config.ff.harness.io/api/1.0",
 		eventsURL:    "https://events.ff.harness.io/api/1.0",
-		pullInterval: 1,
+		pullInterval: 60,
 		Cache:        defaultCache,
 		Store:        defaultStore,
 		Logger:       defaultLogger,
