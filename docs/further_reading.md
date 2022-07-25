@@ -11,7 +11,7 @@ You can provide options by passing them in when the client is created e.g.
 client, err := harness.NewCfClient(myApiKey, 
 	harness.WithURL("https://config.ff.harness.io/api/1.0"), 
 	harness.WithEventsURL("https://events.ff.harness.io/api/1.0"), 
-	harness.WithPullInterval(1),
+	harness.WithPullInterval(60),
 	harness.WithStreamEnabled(false))
 
 ```
@@ -20,7 +20,7 @@ client, err := harness.NewCfClient(myApiKey,
 |-----------------|----------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------|
 | baseUrl         | harness.WithURL("https://config.ff.harness.io/api/1.0")        | the URL used to fetch feature flag evaluations. You should change this when using the Feature Flag proxy to http://localhost:7000                | https://config.ff.harness.io/api/1.0 |
 | eventsUrl       | harness.WithEventsURL("https://events.ff.harness.io/api/1.0"), | the URL used to post metrics data to the feature flag service. You should change this when using the Feature Flag proxy to http://localhost:7000 | https://events.ff.harness.io/api/1.0 |
-| pollInterval    | harness.WithPullInterval(1))                                   | when running in stream mode, the interval in minutes that we poll for changes.                                                                   | 1                                   |
+| pollInterval    | harness.WithPullInterval(60))                                  | when running in stream mode, the interval in seconds that we poll for changes.                                                                   | 1                                   |
 | enableStream    | harness.WithStreamEnabled(false),                              | Enable streaming mode.                                                                                                                           | true                                 |
 | enableAnalytics | *Not Supported*                                                | Enable analytics.  Metrics data is posted every 60s                                                                                              | *Not Supported*                      |
 
