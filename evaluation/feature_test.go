@@ -1546,3 +1546,203 @@ func TestFeatureConfig_prereqsSatisfied(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckPreReqsForPreReqs(t *testing.T) {
+	trueVariation := Variation{
+		Name:       stringPtr("True"),
+		Value:      "true",
+		Identifier: "true",
+	}
+
+	falseVariation := Variation{
+		Name:       stringPtr("False"),
+		Value:      "false",
+		Identifier: "false",
+	}
+
+	blueVariation := Variation{
+		Name:       stringPtr("blue"),
+		Value:      "blue",
+		Identifier: "blue",
+	}
+
+	redVariation := Variation{
+		Name:       stringPtr("red"),
+		Value:      "red",
+		Identifier: "red",
+	}
+
+	flags := map[string]FeatureConfig{
+		"flag1": {
+			DefaultServe: Serve{
+				Variation: stringPtr("true"),
+			},
+			Environment:          "dev",
+			Feature:              "flag1",
+			Kind:                 "boolean",
+			OffVariation:         "false",
+			Prerequisites:        nil,
+			Project:              "default",
+			Rules:                nil,
+			State:                "on",
+			VariationToTargetMap: nil,
+			Variations: Variations{
+				trueVariation, falseVariation,
+			},
+			Segments: nil,
+		},
+		"flag2": {
+			DefaultServe: Serve{
+				Variation: stringPtr("true"),
+			},
+			Environment:  "dev",
+			Feature:      "flag2",
+			Kind:         "boolean",
+			OffVariation: "false",
+			Prerequisites: []Prerequisite{
+				{Feature: "flag1",
+					Variations: []string{"true"},
+				},
+			},
+			Project:              "default",
+			Rules:                nil,
+			State:                "on",
+			VariationToTargetMap: nil,
+			Variations: Variations{
+				trueVariation, falseVariation,
+			},
+			Segments: nil,
+		},
+		"flag3": {
+			DefaultServe: Serve{
+				Variation: stringPtr("true"),
+			},
+			Environment:  "dev",
+			Feature:      "flag3",
+			Kind:         "boolean",
+			OffVariation: "false",
+			Prerequisites: []Prerequisite{
+				{Feature: "flag2",
+					Variations: []string{"true"},
+				},
+			},
+			Project:              "default",
+			Rules:                nil,
+			State:                "on",
+			VariationToTargetMap: nil,
+			Variations: Variations{
+				trueVariation, falseVariation,
+			},
+			Segments: nil,
+		},
+		"mv1": {
+			DefaultServe: Serve{
+				Variation: stringPtr("red"),
+			},
+			Environment:  "dev",
+			Feature:      "mv1",
+			Kind:         "string",
+			OffVariation: "blue",
+			Prerequisites: []Prerequisite{
+				{Feature: "flag1",
+					Variations: []string{"true"},
+				},
+			},
+			Project:              "default",
+			Rules:                nil,
+			State:                "on",
+			VariationToTargetMap: nil,
+			Variations: Variations{
+				redVariation, blueVariation,
+			},
+			Segments: nil,
+		},
+	}
+	tests := []struct {
+		name              string
+		expected          bool
+		preReqFlagPreReqs []Prerequisite
+		flags             map[string]FeatureConfig
+		target            *Target
+	}{
+		{
+			name:              "Given I have no preReqFlagPreReqs",
+			expected:          true,
+			flags:             nil,
+			preReqFlagPreReqs: nil,
+			target:            nil,
+		},
+		{
+			name:     "Given I have a preReqFlagPreReqs that has no nested preregs that will match",
+			expected: true,
+			flags:    flags,
+			preReqFlagPreReqs: []Prerequisite{
+				{Feature: "flag1",
+					Variations: []string{"true"},
+				},
+			},
+			target: nil,
+		},
+		{
+			name:     "Given I have a preReqFlagPreReqs that has no nested prereqs that will not match",
+			expected: false,
+			flags:    flags,
+			preReqFlagPreReqs: []Prerequisite{
+				{Feature: "flag1",
+					Variations: []string{"false"},
+				},
+			},
+			target: nil,
+		},
+		{
+			name:     "Given I have a preReqFlagPreReqs that has nested prereqs that will match i.e. flag 3 depends on flag 2, which depends on flag 1",
+			expected: true,
+			flags:    flags,
+			preReqFlagPreReqs: []Prerequisite{
+				{Feature: "flag3",
+					Variations: []string{"true"},
+				},
+			},
+			target: nil,
+		},
+		{
+			name:     "Given I have a preReqFlagPreReqs that has nested prereqs that will not match",
+			expected: false,
+			flags:    flags,
+			preReqFlagPreReqs: []Prerequisite{
+				{Feature: "flag3",
+					Variations: []string{"false"},
+				},
+			},
+			target: nil,
+		},
+		{
+			name:     "Given I have a preReqFlagPreReqs of a mv flag that has nested prereqs that will not match",
+			expected: false,
+			flags:    flags,
+			preReqFlagPreReqs: []Prerequisite{
+				{Feature: "mv1",
+					Variations: []string{"blue"},
+				},
+			},
+			target: nil,
+		},
+		{
+			name:     "Given I have a preReqFlagPreReqs of a mv flag that has nested prereqs that will match",
+			expected: true,
+			flags:    flags,
+			preReqFlagPreReqs: []Prerequisite{
+				{Feature: "mv1",
+					Variations: []string{"red"},
+				},
+			},
+			target: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, checkPreReqsForPreReqs(tt.preReqFlagPreReqs, tt.flags, tt.target))
+		})
+	}
+}
