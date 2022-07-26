@@ -306,7 +306,7 @@ func prereqsSatisfied(fc FeatureConfig, target *Target, flags map[string]Feature
 
 		if prereqFlag.Prerequisites != nil {
 			res := checkPreReqsForPreReqs(prereqFlag.Prerequisites, flags, target)
-			if res == false {
+			if !res {
 				return false
 			}
 		}
@@ -557,7 +557,7 @@ func checkPreReqsForPreReqs(preReqFlagPreReqs []Prerequisite, flags map[string]F
 
 		if len(nestedPreReq.Prerequisites) > 0 {
 			nested := checkPreReqsForPreReqs(nestedPreReq.Prerequisites, flags, target)
-			if nested == false {
+			if !nested {
 				return false
 			}
 		}
