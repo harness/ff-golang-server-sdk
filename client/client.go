@@ -112,7 +112,6 @@ func (c *CfClient) start() {
 	go c.initAuthentication(ctx)
 	go c.setAnalyticsServiceClient(ctx)
 	go c.pullCronJob(ctx)
-	go c.pullCronJob(ctx)
 }
 
 // PostEvaluateProcessor push the data to the analytics service
@@ -394,6 +393,8 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 
 	<-c.authenticated
+	c.mux.RLock()
+	defer c.mux.RUnlock()
 	if !c.config.enableAnalytics {
 		log.Println(time.Now().Format("2006-01-02 15:04:05") + " Posting analytics data disabled.")
 		return
