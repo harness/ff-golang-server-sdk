@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -101,6 +102,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 }
 
 func (c *CfClient) start() {
+
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		<-c.stop
@@ -109,6 +111,7 @@ func (c *CfClient) start() {
 
 	go c.initAuthentication(ctx)
 	go c.setAnalyticsServiceClient(ctx)
+	go c.pullCronJob(ctx)
 	go c.pullCronJob(ctx)
 }
 
@@ -389,7 +392,13 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 }
 
 func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
+
 	<-c.authenticated
+	if !c.config.enableAnalytics {
+		log.Println(time.Now().Format("2006-01-02 15:04:05") + " Posting analytics data disabled.")
+		return
+	}
+	log.Println(time.Now().Format("2006-01-02 15:04:05") + " Posting analytics data enabled.")
 	c.analyticsService.Start(ctx, &c.metricsapi, c.environmentID)
 }
 
