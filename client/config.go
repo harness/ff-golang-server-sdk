@@ -33,7 +33,7 @@ func newDefaultConfig() *config {
 	if err != nil {
 		log.Printf("Error creating zap logger instance, %v", err)
 	}
-	defaultCache, _ := cache.NewLruCache(10000, defaultLogger) // size of cache∂
+	defaultCache, _ := cache.NewLruCache(10000, defaultLogger) // size of cache
 	defaultStore := storage.NewFileStore("defaultProject", storage.GetHarnessDir(), defaultLogger)
 
 	retryClient := retryablehttp.NewClient()
