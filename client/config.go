@@ -25,6 +25,7 @@ type config struct {
 	enableStore         bool
 	target              evaluation.Target
 	eventStreamListener stream.EventStreamListener
+	enableAnalytics     bool
 }
 
 func newDefaultConfig() *config {
@@ -32,21 +33,22 @@ func newDefaultConfig() *config {
 	if err != nil {
 		log.Printf("Error creating zap logger instance, %v", err)
 	}
-	defaultCache, _ := cache.NewLruCache(10000, defaultLogger) // size of cache
+	defaultCache, _ := cache.NewLruCache(10000, defaultLogger) // size of cache∂
 	defaultStore := storage.NewFileStore("defaultProject", storage.GetHarnessDir(), defaultLogger)
 
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = 10
 
 	return &config{
-		url:          "https://config.ff.harness.io/api/1.0",
-		eventsURL:    "https://events.ff.harness.io/api/1.0",
-		pullInterval: 60,
-		Cache:        defaultCache,
-		Store:        defaultStore,
-		Logger:       defaultLogger,
-		httpClient:   retryClient.StandardClient(),
-		enableStream: true,
-		enableStore:  true,
+		url:             "https://config.ff.harness.io/api/1.0",
+		eventsURL:       "https://events.ff.harness.io/api/1.0",
+		pullInterval:    60,
+		Cache:           defaultCache,
+		Store:           defaultStore,
+		Logger:          defaultLogger,
+		httpClient:      retryClient.StandardClient(),
+		enableStream:    true,
+		enableStore:     true,
+		enableAnalytics: true,
 	}
 }
