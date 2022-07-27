@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -396,10 +395,10 @@ func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 	if !c.config.enableAnalytics {
-		log.Println(time.Now().Format("2006-01-02 15:04:05") + " Posting analytics data disabled.")
+		c.config.Logger.Info("Posting analytics data disabled")
 		return
 	}
-	log.Println(time.Now().Format("2006-01-02 15:04:05") + " Posting analytics data enabled.")
+	c.config.Logger.Info("Posting analytics data enabled")
 	c.analyticsService.Start(ctx, &c.metricsapi, c.environmentID)
 }
 
