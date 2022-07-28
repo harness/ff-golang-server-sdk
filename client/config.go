@@ -25,6 +25,7 @@ type config struct {
 	enableStore         bool
 	target              evaluation.Target
 	eventStreamListener stream.EventStreamListener
+	enableAnalytics     bool
 }
 
 func newDefaultConfig() *config {
@@ -39,14 +40,15 @@ func newDefaultConfig() *config {
 	retryClient.RetryMax = 10
 
 	return &config{
-		url:          "https://config.ff.harness.io/api/1.0",
-		eventsURL:    "https://events.ff.harness.io/api/1.0",
-		pullInterval: 60,
-		Cache:        defaultCache,
-		Store:        defaultStore,
-		Logger:       defaultLogger,
-		httpClient:   retryClient.StandardClient(),
-		enableStream: true,
-		enableStore:  true,
+		url:             "https://config.ff.harness.io/api/1.0",
+		eventsURL:       "https://events.ff.harness.io/api/1.0",
+		pullInterval:    60,
+		Cache:           defaultCache,
+		Store:           defaultStore,
+		Logger:          defaultLogger,
+		httpClient:      retryClient.StandardClient(),
+		enableStream:    true,
+		enableStore:     true,
+		enableAnalytics: true,
 	}
 }

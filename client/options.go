@@ -14,6 +14,13 @@ import (
 // using options pattern
 type ConfigOption func(config *config)
 
+// WithAnalyticsEnabled en/disable cache and analytics data being sent.
+func WithAnalyticsEnabled(val bool) ConfigOption {
+	return func(config *config) {
+		config.enableAnalytics = val
+	}
+}
+
 // WithURL set baseUrl for communicating with ff server
 func WithURL(url string) ConfigOption {
 	return func(config *config) {

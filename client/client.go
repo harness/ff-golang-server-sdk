@@ -101,6 +101,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 }
 
 func (c *CfClient) start() {
+
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		<-c.stop
@@ -389,7 +390,15 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 }
 
 func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
+
 	<-c.authenticated
+	c.mux.RLock()
+	defer c.mux.RUnlock()
+	if !c.config.enableAnalytics {
+		c.config.Logger.Info("Posting analytics data disabled")
+		return
+	}
+	c.config.Logger.Info("Posting analytics data enabled")
 	c.analyticsService.Start(ctx, &c.metricsapi, c.environmentID)
 }
 
