@@ -304,6 +304,13 @@ func prereqsSatisfied(fc FeatureConfig, target *Target, flags map[string]Feature
 			continue
 		}
 
+		if prereqFlag.Prerequisites != nil {
+			res := checkPreReqsForPreReqs(prereqFlag.Prerequisites, flags, target)
+			if !res {
+				return false
+			}
+		}
+
 		variationToMatch := prereqFlag.Variations.FindByIdentifier(prereqFlag.GetVariationName(target))
 
 		if pre.Feature == prereqFlag.Feature {
@@ -539,4 +546,30 @@ type VariationMap struct {
 type WeightedVariation struct {
 	Variation string
 	Weight    int
+}
+
+func checkPreReqsForPreReqs(preReqFlagPreReqs []Prerequisite, flags map[string]FeatureConfig, target *Target) bool {
+	for _, preReq := range preReqFlagPreReqs {
+		nestedPreReq, ok := flags[preReq.Feature]
+		if !ok {
+			continue
+		}
+
+		if len(nestedPreReq.Prerequisites) > 0 {
+			nested := checkPreReqsForPreReqs(nestedPreReq.Prerequisites, flags, target)
+			if !nested {
+				return false
+			}
+		}
+
+		preReqVariationToMatch := nestedPreReq.Variations.FindByIdentifier(nestedPreReq.GetVariationName(target))
+		if preReq.Feature == nestedPreReq.Feature {
+			for _, variation := range preReq.Variations {
+				if variation != preReqVariationToMatch.Value {
+					return false
+				}
+			}
+		}
+	}
+	return true
 }

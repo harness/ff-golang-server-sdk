@@ -11,14 +11,14 @@ import (
 
 var (
 	flagName string = getEnvOrDefault("FF_FLAG_NAME", "harnessappdemodarkmode")
-	apiKey   string = getEnvOrDefault("FF_API_KEY", "changeme")
+	sdkKey   string = getEnvOrDefault("FF_API_KEY", "changeme")
 )
 
 func main() {
 	log.Println("Harness SDK Getting Started")
 
 	// Create a feature flag client
-	client, err := harness.NewCfClient(apiKey)
+	client, err := harness.NewCfClient(sdkKey)
 	if err != nil {
 		log.Fatalf("could not connect to CF servers %s\n", err)
 	}
@@ -26,9 +26,9 @@ func main() {
 
 	// Create a target (different targets can get different results based on rules)
 	target := evaluation.Target{
-		Identifier: "golangsdk",
-		Name:       "GolangSDK",
-		Attributes: &map[string]interface{}{"location": "emea"},
+		Identifier: "HT_1",
+		Name:       "Harness_Target_1",
+		Attributes: &map[string]interface{}{"email": "demo@harness.io"},
 	}
 
 	// Loop forever reporting the state of the flag
