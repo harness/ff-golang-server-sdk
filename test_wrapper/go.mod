@@ -1,6 +1,6 @@
 module github.com/harness/ff-golang-server-sdk/test_wrapper
 
-go 1.16
+go 1.18
 
 replace github.com/harness/ff-golang-server-sdk => ../
 
