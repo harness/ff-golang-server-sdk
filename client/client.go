@@ -86,11 +86,18 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	if sdkKey == "" {
 		return client, types.ErrSdkCantBeEmpty
 	}
-	lruCache, err := repository.NewLruCache(10000)
-	if err != nil {
-		return nil, err
+
+	var err error
+	if client.config != nil {
+		client.repository = repository.New(config.Cache)
+	} else {
+		lruCache, err := repository.NewLruCache(10000)
+		if err != nil {
+			return nil, err
+		}
+		client.repository = repository.New(lruCache)
 	}
-	client.repository = repository.New(lruCache)
+
 	client.evaluator, err = evaluation.NewEvaluator(client.repository, client, config.Logger)
 	if err != nil {
 		return nil, err
