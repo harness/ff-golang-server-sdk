@@ -366,7 +366,7 @@ func (c *CfClient) retrieveFlags(ctx context.Context) error {
 	}
 
 	for _, flag := range *flags.JSON200 {
-		c.repository.SetFlag(flag)
+		c.repository.SetFlag(flag, true)
 	}
 	c.config.Logger.Info("Retrieving flags finished")
 	return nil
@@ -390,7 +390,7 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 	}
 
 	for _, segment := range *segments.JSON200 {
-		c.repository.SetSegment(segment)
+		c.repository.SetSegment(segment, true)
 	}
 	c.config.Logger.Info("Retrieving segments finished")
 	return nil

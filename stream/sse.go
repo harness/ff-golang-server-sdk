@@ -134,7 +134,7 @@ func (c *SSEClient) handleEvent(event Event) {
 				}
 
 				if response.JSON200 != nil {
-					c.repository.SetFlag(*response.JSON200)
+					c.repository.SetFlag(*response.JSON200, false)
 				}
 			}
 
@@ -159,7 +159,7 @@ func (c *SSEClient) handleEvent(event Event) {
 					return
 				}
 				if response.JSON200 != nil {
-					c.repository.SetSegment(*response.JSON200)
+					c.repository.SetSegment(*response.JSON200, false)
 				}
 			}
 			updateWithTimeout()
