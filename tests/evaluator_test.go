@@ -84,10 +84,10 @@ func TestEvaluator(t *testing.T) {
 			t.Error(err)
 		}
 		for _, flag := range fixture.Flags {
-			repo.SetFlag(flag)
+			repo.SetFlag(flag, false)
 		}
 		for _, segment := range fixture.Segments {
-			repo.SetSegment(segment)
+			repo.SetSegment(segment, false)
 		}
 
 		for _, testCase := range fixture.Tests {
