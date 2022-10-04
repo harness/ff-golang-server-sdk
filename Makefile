@@ -78,7 +78,7 @@ sec: $(GOPATH)/bin/gosec
 
 $(GOPATH)/bin/golangci-lint:
 	@echo "🔘 Installing golangci-lint... (`date '+%H:%M:%S'`)"
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin v1.47.3
 
 $(GOPATH)/bin/golint:
 	@echo "🔘 Installing golint ... (`date '+%H:%M:%S'`)"
