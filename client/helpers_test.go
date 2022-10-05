@@ -53,11 +53,9 @@ func MakeStringFeatureConfigs(name, defaultVariation, offVariation, state string
 
 	// If there are any PreReqs then we need to store them as flags as well.
 	for _, x := range preReqs {
-		var state string
+		state := "off"
 		if x.Variations[0] == "true" {
 			state = "on"
-		} else {
-			state = "off"
 		}
 		featureConfig = append(featureConfig, MakeBoolFeatureConfig(x.Feature, "true", "false", state, nil))
 	}
