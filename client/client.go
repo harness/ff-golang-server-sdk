@@ -86,11 +86,19 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	if sdkKey == "" {
 		return client, types.ErrSdkCantBeEmpty
 	}
+
+	var err error
+
 	lruCache, err := repository.NewLruCache(10000)
 	if err != nil {
 		return nil, err
 	}
 	client.repository = repository.New(lruCache)
+
+	if client.config != nil {
+		client.repository = repository.New(config.Cache)
+	}
+
 	client.evaluator, err = evaluation.NewEvaluator(client.repository, client, config.Logger)
 	if err != nil {
 		return nil, err
@@ -359,7 +367,7 @@ func (c *CfClient) retrieveFlags(ctx context.Context) error {
 	}
 
 	for _, flag := range *flags.JSON200 {
-		c.repository.SetFlag(flag)
+		c.repository.SetFlag(flag, true)
 	}
 	c.config.Logger.Info("Retrieving flags finished")
 	return nil
@@ -383,7 +391,7 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 	}
 
 	for _, segment := range *segments.JSON200 {
-		c.repository.SetSegment(segment)
+		c.repository.SetSegment(segment, true)
 	}
 	c.config.Logger.Info("Retrieving segments finished")
 	return nil

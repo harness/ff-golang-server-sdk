@@ -13,8 +13,8 @@ type Repository interface {
 	GetFlag(identifier string) (rest.FeatureConfig, error)
 	GetSegment(identifier string) (rest.Segment, error)
 
-	SetFlag(featureConfig rest.FeatureConfig)
-	SetSegment(segment rest.Segment)
+	SetFlag(featureConfig rest.FeatureConfig, initialLoad bool)
+	SetSegment(segment rest.Segment, initialLoad bool)
 
 	DeleteFlag(identifier string)
 	DeleteSegment(identifier string)
@@ -107,9 +107,11 @@ func (r FFRepository) GetSegment(identifier string) (rest.Segment, error) {
 }
 
 // SetFlag places a flag in the repository with the new value
-func (r FFRepository) SetFlag(featureConfig rest.FeatureConfig) {
-	if r.isFlagOutdated(featureConfig) {
-		return
+func (r FFRepository) SetFlag(featureConfig rest.FeatureConfig, initialLoad bool) {
+	if !initialLoad {
+		if r.isFlagOutdated(featureConfig) {
+			return
+		}
 	}
 	flagKey := formatFlagKey(featureConfig.Feature)
 	if r.storage != nil {
@@ -127,9 +129,11 @@ func (r FFRepository) SetFlag(featureConfig rest.FeatureConfig) {
 }
 
 // SetSegment places a segment in the repository with the new value
-func (r FFRepository) SetSegment(segment rest.Segment) {
-	if r.isSegmentOutdated(segment) {
-		return
+func (r FFRepository) SetSegment(segment rest.Segment, initialLoad bool) {
+	if !initialLoad {
+		if r.isSegmentOutdated(segment) {
+			return
+		}
 	}
 	segmentKey := formatSegmentKey(segment.Identifier)
 	if r.storage != nil {
@@ -202,9 +206,9 @@ func (r FFRepository) Close() {
 }
 
 func formatFlagKey(identifier string) string {
-	return "flags/" + identifier
+	return "flag/" + identifier
 }
 
 func formatSegmentKey(identifier string) string {
-	return "segments/" + identifier
+	return "target-segment/" + identifier
 }
