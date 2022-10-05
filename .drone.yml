@@ -5,14 +5,14 @@ name: default
 
 steps:
 - name: check
-  image: golang:1.16.2
+  image: golang:1.18.6
   commands:
   - make check
   volumes:
   - name: gopath
     path: /go
 - name: test
-  image: golang:1.16.2
+  image: golang:1.18.6
   commands:
   - make test
   volumes:

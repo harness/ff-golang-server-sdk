@@ -78,7 +78,7 @@ sec: $(GOPATH)/bin/gosec
 
 $(GOPATH)/bin/golangci-lint:
 	@echo "🔘 Installing golangci-lint... (`date '+%H:%M:%S'`)"
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin v1.47.3
 
 $(GOPATH)/bin/golint:
 	@echo "🔘 Installing golint ... (`date '+%H:%M:%S'`)"
@@ -95,7 +95,7 @@ $(GOPATH)/bin/gosec:
 
 $(GOPATH)/bin/oapi-codegen:
 	@echo "🔘 Installing oapicodegen ... (`date '+%H:%M:%S'`)"
-	@go get github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.11.0
+	@go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.11.0
 
 PHONY+= tools
 tools: $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint $(GOPATH)/bin/gosec $(GOPATH)/bin/goimports $(GOPATH)/bin/oapi-codegen
