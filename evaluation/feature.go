@@ -315,7 +315,7 @@ func prereqsSatisfied(fc FeatureConfig, target *Target, flags map[string]Feature
 
 		if pre.Feature == prereqFlag.Feature {
 			for _, variation := range pre.Variations {
-				if variation != variationToMatch.Value {
+				if variation != variationToMatch.Identifier {
 					return false
 				}
 			}
