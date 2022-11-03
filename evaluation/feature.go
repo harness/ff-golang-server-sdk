@@ -565,7 +565,7 @@ func checkPreReqsForPreReqs(preReqFlagPreReqs []Prerequisite, flags map[string]F
 		preReqVariationToMatch := nestedPreReq.Variations.FindByIdentifier(nestedPreReq.GetVariationName(target))
 		if preReq.Feature == nestedPreReq.Feature {
 			for _, variation := range preReq.Variations {
-				if variation != preReqVariationToMatch.Value {
+				if variation != preReqVariationToMatch.Identifier {
 					return false
 				}
 			}
