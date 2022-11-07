@@ -546,13 +546,13 @@ func TestFeatureConfig_EvaluateWithPreReqFlags(t *testing.T) {
 	onBool := Variation{
 		Name:       stringPtr("On"),
 		Value:      "true",
-		Identifier: "on",
+		Identifier: "true",
 	}
 
 	offBool := Variation{
 		Name:       stringPtr("Off"),
 		Value:      "false",
-		Identifier: "off",
+		Identifier: "false",
 	}
 
 	target := Target{
