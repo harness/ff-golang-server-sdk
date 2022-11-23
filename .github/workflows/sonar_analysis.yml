@@ -2,9 +2,7 @@ name: Static Code Analysis
 on:
   push:
     branches:
-      - master # or the name of your main branch
-  pull_request:
-    types: [opened, synchronize, reopened]
+      - main # or the name of your main branch
 jobs:
   build:
     name: Build
