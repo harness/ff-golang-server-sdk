@@ -312,7 +312,7 @@ func (e Evaluator) checkPreRequisite(fc *rest.FeatureConfig, target *Target) (bo
 	return true, nil
 }
 
-// public wrapper for the evaluate.
+// Evaluate exposes evaluate to the caller.
 func (e Evaluator) Evaluate(identifier string, target *Target, kind string) (rest.Variation, error) {
 
 	return e.evaluate(identifier, target, kind)
