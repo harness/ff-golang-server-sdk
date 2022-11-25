@@ -179,6 +179,18 @@ func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target
 	return ""
 }
 
+// evaluateGroupRules evaluates the groups rules.  Note Group rule are represented by a rest.Clause, instead
+// of a rest.Rule.   Unlike feature clauses which are AND'd, in a case of  a group these must be OR'd.
+func (e Evaluator) evaluateGroupRules(rules []rest.Clause, target *Target) (bool, rest.Clause) {
+	for _, r := range rules {
+		rule := r
+		if e.evaluateClause(&rule, target) {
+			return true, r
+		}
+	}
+	return false, rest.Clause{}
+}
+
 func (e Evaluator) evaluateVariationMap(variationsMap []rest.VariationMap, target *Target) string {
 	if variationsMap == nil || target == nil {
 		return ""
@@ -252,11 +264,14 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 		// Should Target be included via segment rules
 		rules := segment.Rules
 		// if rules is nil pointer or points to the empty slice
-		if (rules != nil && len(*rules) > 0) && e.evaluateClauses(*rules, target) {
-			e.logger.Debugf(
-				"Target %s included in segment %s via rules", target.Name, segment.Name)
-			return true
+		if rules != nil && len(*rules) > 0 {
+			if included, clause := e.evaluateGroupRules(*rules, target); included {
+				e.logger.Debugf(
+					"Target [%s] included in group [%s] via rule %+v", target.Name, segment.Name, clause)
+				return true
+			}
 		}
+
 	}
 	return false
 }
