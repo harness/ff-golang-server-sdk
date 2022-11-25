@@ -251,7 +251,8 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 
 		// Should Target be included via segment rules
 		rules := segment.Rules
-		if rules != nil && e.evaluateClauses(*rules, target) {
+		// if rules is nil pointer or points to the empty slice
+		if (rules != nil && len(*rules) > 0) && e.evaluateClauses(*rules, target) {
 			e.logger.Debugf(
 				"Target %s included in segment %s via rules", target.Name, segment.Name)
 			return true
@@ -311,6 +312,12 @@ func (e Evaluator) checkPreRequisite(fc *rest.FeatureConfig, target *Target) (bo
 	return true, nil
 }
 
+// Evaluate exposes evaluate to the caller.
+func (e Evaluator) Evaluate(identifier string, target *Target, kind string) (rest.Variation, error) {
+
+	return e.evaluate(identifier, target, kind)
+}
+
 func (e Evaluator) evaluate(identifier string, target *Target, kind string) (rest.Variation, error) {
 
 	if e.query == nil {
@@ -326,7 +333,7 @@ func (e Evaluator) evaluate(identifier string, target *Target, kind string) (res
 	}
 
 	if flag.Prerequisites != nil {
-		prereq, err := e.checkPreRequisite(&flag, target)
+		prereq, err := e.checkPreRequisite(&flag, target) // equivalent of evaluateWithPreReqq
 		if err != nil || !prereq {
 			return findVariation(flag.Variations, flag.OffVariation)
 		}
