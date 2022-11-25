@@ -183,8 +183,8 @@ func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target
 // of a rest.Rule.   Unlike feature clauses which are AND'd, in a case of  a group these must be OR'd.
 func (e Evaluator) evaluateGroupRules(rules []rest.Clause, target *Target) (bool, rest.Clause) {
 	for _, r := range rules {
-		rule := &r
-		if e.evaluateClause(rule, target) {
+		rule := r
+		if e.evaluateClause(&rule, target) {
 			return true, r
 		}
 	}
