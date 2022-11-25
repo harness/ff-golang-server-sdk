@@ -28,8 +28,8 @@ test:
 	go test -race -v --cover ./...
 
 report:
-	go test ./... -covermode=atomic -coverpkg=./...  -coverprofile=c.out
-	gocov convert ./c.out | gocov-html > ~/go-sdk-test-report.html
+	go test -race -v -covermode=atomic -coverprofile=cover.out ./... | tee /dev/stderr | go-junit-report -set-exit-code > junit.xml
+	gocov convert ./cover.out | gocov-html > coverage-report.html
 
 
 build-test-wrapper:
