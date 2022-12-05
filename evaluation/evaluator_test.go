@@ -303,6 +303,14 @@ func (m TestRepository) GetFlag(identifier string) (rest.FeatureConfig, error) {
 	}
 	return flag, nil
 }
+func (m TestRepository) GetFlags() ([]rest.FeatureConfig, error) {
+
+	var flags []rest.FeatureConfig
+	for _, f := range m.flags {
+		flags = append(flags, f)
+	}
+	return flags, nil
+}
 
 func TestNewEvaluator(t *testing.T) {
 	noOpLogger := logger.NewNoOpLogger()
@@ -1330,18 +1338,6 @@ func TestEvaluator_evaluate(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "flag kind mismatch",
-			fields: fields{
-				query: testRepo,
-			},
-			args: args{
-				identifier: simple,
-				kind:       "string",
-			},
-			want:    rest.Variation{},
-			wantErr: true,
-		},
-		{
 			name: "prereq flag simple should return true",
 			fields: fields{
 				query: testRepo,
@@ -1394,12 +1390,12 @@ func TestEvaluator_evaluate(t *testing.T) {
 				query:  tt.fields.query,
 				logger: logger.NewNoOpLogger(),
 			}
-			got, err := e.evaluate(tt.args.identifier, tt.args.target, tt.args.kind)
+			got, err := e.evaluate(tt.args.identifier, tt.args.target)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Evaluator.evaluate() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !reflect.DeepEqual(got.Variation, tt.want) {
 				t.Errorf("Evaluator.evaluate() = %v, want %v", got, tt.want)
 			}
 		})

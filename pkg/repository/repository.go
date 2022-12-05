@@ -12,6 +12,7 @@ import (
 type Repository interface {
 	GetFlag(identifier string) (rest.FeatureConfig, error)
 	GetSegment(identifier string) (rest.Segment, error)
+	GetFlags() ([]rest.FeatureConfig, error)
 
 	SetFlag(featureConfig rest.FeatureConfig, initialLoad bool)
 	SetSegment(segment rest.Segment, initialLoad bool)
@@ -82,6 +83,11 @@ func (r FFRepository) getFlagAndCache(identifier string, cacheable bool) (rest.F
 // GetFlag returns flag from cache or offline storage
 func (r FFRepository) GetFlag(identifier string) (rest.FeatureConfig, error) {
 	return r.getFlagAndCache(identifier, true)
+}
+
+// GetFlags returns all the flags /* Not implemented */
+func (r FFRepository) GetFlags() ([]rest.FeatureConfig, error) {
+	return []rest.FeatureConfig{}, nil
 }
 
 func (r FFRepository) getSegmentAndCache(identifier string, cacheable bool) (rest.Segment, error) {
