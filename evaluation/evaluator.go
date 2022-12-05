@@ -32,6 +32,17 @@ const (
 type Query interface {
 	GetSegment(identifier string) (rest.Segment, error)
 	GetFlag(identifier string) (rest.FeatureConfig, error)
+	GetFlags() ([]rest.FeatureConfig, error)
+}
+
+// FlagVariations list of FlagVariations
+type FlagVariations []FlagVariation
+
+// FlagVariation contains all required for ff-server to evaluate.
+type FlagVariation struct {
+	FlagIdentifier string
+	Kind           rest.FeatureConfigKind
+	Variation      rest.Variation
 }
 
 // PostEvalData holds information for post evaluation processing
@@ -327,28 +338,55 @@ func (e Evaluator) checkPreRequisite(fc *rest.FeatureConfig, target *Target) (bo
 	return true, nil
 }
 
-// Evaluate exposes evaluate to the caller.
-func (e Evaluator) Evaluate(identifier string, target *Target, kind string) (rest.Variation, error) {
-
-	return e.evaluate(identifier, target, kind)
+// EvaluateAll evaluates all the flags
+func (e Evaluator) EvaluateAll(target *Target) (FlagVariations, error) {
+	return e.evaluateAll(target)
 }
 
-func (e Evaluator) evaluate(identifier string, target *Target, kind string) (rest.Variation, error) {
+// takes uses feature store.List function to get all the flags.
+func (e Evaluator) evaluateAll(target *Target) ([]FlagVariation, error) {
+	var variations []FlagVariation
+	flags, err := e.query.GetFlags()
+	if err != nil {
+		return variations, err
+	}
+	for _, f := range flags {
+		v, _ := e.getVariationForTheFlag(f, target)
+		variations = append(variations, FlagVariation{f.Feature, f.Kind, v})
+	}
+
+	return variations, nil
+}
+
+// Evaluate exposes evaluate to the caller.
+func (e Evaluator) Evaluate(identifier string, target *Target) (FlagVariation, error) {
+	return e.evaluate(identifier, target)
+}
+
+// this is evaluating flag.
+func (e Evaluator) evaluate(identifier string, target *Target) (FlagVariation, error) {
 
 	if e.query == nil {
 		e.logger.Errorf(ErrQueryProviderMissing.Error())
-		return rest.Variation{}, ErrQueryProviderMissing
+		return FlagVariation{}, ErrQueryProviderMissing
 	}
 	flag, err := e.query.GetFlag(identifier)
 	if err != nil {
-		return rest.Variation{}, err
-	}
-	if string(flag.Kind) != kind {
-		return rest.Variation{}, fmt.Errorf("%w, expected: %s, got: %s", ErrFlagKindMismatch, kind, flag.Kind)
+		return FlagVariation{}, err
 	}
 
+	variation, err := e.getVariationForTheFlag(flag, target)
+	if err != nil {
+		return FlagVariation{}, err
+	}
+	return FlagVariation{flag.Feature, flag.Kind, variation}, nil
+}
+
+// evaluates the flag and returns a proper variation.
+func (e Evaluator) getVariationForTheFlag(flag rest.FeatureConfig, target *Target) (rest.Variation, error) {
+
 	if flag.Prerequisites != nil {
-		prereq, err := e.checkPreRequisite(&flag, target) // equivalent of evaluateWithPreReqq
+		prereq, err := e.checkPreRequisite(&flag, target)
 		if err != nil || !prereq {
 			return findVariation(flag.Variations, flag.OffVariation)
 		}
@@ -371,34 +409,33 @@ func (e Evaluator) evaluate(identifier string, target *Target, kind string) (res
 
 // BoolVariation returns boolean evaluation for target
 func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue bool) bool {
-	variation, err := e.evaluate(identifier, target, "boolean")
+	//flagVariation, err := e.evaluate(identifier, target, "boolean")
+	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
 		e.logger.Errorf("Error while evaluating boolean flag '%s', err: %v", identifier, err)
 		return defaultValue
 	}
-	return strings.ToLower(variation.Value) == "true"
+	return strings.ToLower(flagVariation.Variation.Value) == "true"
 }
 
 // StringVariation returns string evaluation for target
 func (e Evaluator) StringVariation(identifier string, target *Target, defaultValue string) string {
-
-	variation, err := e.evaluate(identifier, target, "string")
+	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
 		e.logger.Errorf("Error while evaluating string flag '%s', err: %v", identifier, err)
 		return defaultValue
 	}
-	return variation.Value
+	return flagVariation.Variation.Value
 }
 
 // IntVariation returns int evaluation for target
 func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue int) int {
-
-	variation, err := e.evaluate(identifier, target, "int")
+	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
 		e.logger.Errorf("Error while evaluating int flag '%s', err: %v", identifier, err)
 		return defaultValue
 	}
-	val, err := strconv.Atoi(variation.Value)
+	val, err := strconv.Atoi(flagVariation.Variation.Value)
 	if err != nil {
 		return defaultValue
 	}
@@ -408,12 +445,12 @@ func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue 
 // NumberVariation returns number evaluation for target
 func (e Evaluator) NumberVariation(identifier string, target *Target, defaultValue float64) float64 {
 	//all numbers are stored as ints in the database
-	variation, err := e.evaluate(identifier, target, "int")
+	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
 		e.logger.Errorf("Error while evaluating number flag '%s', err: %v", identifier, err)
 		return defaultValue
 	}
-	val, err := strconv.ParseFloat(variation.Value, 64)
+	val, err := strconv.ParseFloat(flagVariation.Variation.Value, 64)
 	if err != nil {
 		return defaultValue
 	}
@@ -423,14 +460,13 @@ func (e Evaluator) NumberVariation(identifier string, target *Target, defaultVal
 // JSONVariation returns json evaluation for target
 func (e Evaluator) JSONVariation(identifier string, target *Target,
 	defaultValue map[string]interface{}) map[string]interface{} {
-
-	variation, err := e.evaluate(identifier, target, "json")
+	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
 		e.logger.Errorf("Error while evaluating json flag '%s', err: %v", identifier, err)
 		return defaultValue
 	}
 	val := make(map[string]interface{})
-	err = json.Unmarshal([]byte(variation.Value), &val)
+	err = json.Unmarshal([]byte(flagVariation.Variation.Value), &val)
 	if err != nil {
 		return defaultValue
 	}
