@@ -1,0 +1,12 @@
+version = 1
+
+[[analyzers]]
+name = "test-coverage"
+enabled = true
+
+[[analyzers]]
+name = "go"
+enabled = true
+
+  [analyzers.meta]
+  import_root = "github.com/davejohnston/ff-golang-server-sdk"
