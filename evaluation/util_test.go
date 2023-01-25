@@ -48,6 +48,90 @@ func Test_getAttrValueIsNil(t *testing.T) {
 	}
 }
 
+func Test_reflectValueToString(t *testing.T) {
+	type args struct {
+		attr interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "string value",
+			args: args{
+				attr: "email@harness.io",
+			},
+			want: "email@harness.io",
+		},
+		{
+			name: "int value",
+			args: args{
+				attr: 20,
+			},
+			want: "20",
+		},
+		{
+			name: "int64 value",
+			args: args{
+				attr: int64(20),
+			},
+			want: "20",
+		},
+		{
+			name: "float32 value",
+			args: args{
+				attr: float32(20),
+			},
+			want: "20",
+		},
+		{
+			name: "float32 digit value",
+			args: args{
+				attr: float32(20.5678),
+			},
+			want: "20.5678",
+		},
+		{
+			name: "float64 value",
+			args: args{
+				attr: float64(20),
+			},
+			want: "20",
+		},
+		{
+			name: "float64 digit value",
+			args: args{
+				attr: float64(20.5678),
+			},
+			want: "20.5678",
+		},
+		{
+			name: "bool true value",
+			args: args{
+				attr: true,
+			},
+			want: "true",
+		},
+		{
+			name: "bool false value",
+			args: args{
+				attr: false,
+			},
+			want: "false",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			value := reflect.ValueOf(tt.args.attr)
+			got := reflectValueToString(value)
+			if got != tt.want {
+				t.Errorf("valueToString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func Test_getAttrValue(t *testing.T) {
 	email := "john@doe.com"
 	type args struct {

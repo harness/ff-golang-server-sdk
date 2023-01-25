@@ -3,6 +3,7 @@ package evaluation
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/harness/ff-golang-server-sdk/log"
@@ -35,6 +36,27 @@ func getAttrValue(target *Target, attr string) reflect.Value {
 		}
 	}
 	return value
+}
+
+func reflectValueToString(val reflect.Value) string {
+	stringValue := ""
+	switch val.Kind() {
+	case reflect.Int, reflect.Int64:
+		stringValue = strconv.FormatInt(val.Int(), 10)
+	case reflect.Bool:
+		stringValue = strconv.FormatBool(val.Bool())
+	case reflect.String:
+		stringValue = val.String()
+	case reflect.Array, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Func, reflect.Interface,
+		reflect.Invalid, reflect.Ptr, reflect.Slice, reflect.Struct, reflect.Uintptr, reflect.UnsafePointer,
+		reflect.Float32, reflect.Float64, reflect.Int16, reflect.Int32, reflect.Int8, reflect.Map, reflect.Uint,
+		reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint8:
+		stringValue = fmt.Sprintf("%v", val)
+	default:
+		// Use string formatting as last ditch effort for any unexpected values
+		stringValue = fmt.Sprintf("%v", val)
+	}
+	return stringValue
 }
 
 func findVariation(variations []rest.Variation, identifier string) (rest.Variation, error) {
