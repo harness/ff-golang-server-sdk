@@ -35,6 +35,9 @@ report:
 build-test-wrapper:
 	docker build -t us.gcr.io/${PROJECT_ID}/${IMAGE}:latest -f ./docker/Dockerfile .
 
+flag_cleanup_demo:
+	docker run -v ${CURDIR}:/go-sdk -e PLUGIN_DEBUG=true -e PLUGIN_PATH_TO_CODEBASE="/go-sdk/examples/code_cleanup" -e PLUGIN_PATH_TO_CONFIGURATIONS="/go-sdk/examples/code_cleanup/config" -e PLUGIN_LANGUAGE="go" -e PLUGIN_SUBSTITUTIONS="stale_flag_name=harnessappdemodarkmode,treated=true" harness/flag_cleanup:latest
+
 # Format go code and error if any changes are made
 PHONY+= format
 format:

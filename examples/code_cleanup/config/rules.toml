@@ -1,0 +1,21 @@
+# Find any instance where we call the function isEnabled() with a feature flag constant
+# e.g. where @stale_flag_name is harnessappdemodarkmode this would match a call looking like isEnabled("harnessappdemodarkmode")
+# note extra params dont matter - this rule will also match isEnabled("otherparam", "harnessappdemodarkmode", morestuff)
+[[rules]]
+name = "FlagCleanup"
+query = """
+(
+    (call_expression
+        function: (identifier) @func_id
+        arguments: (argument_list
+            (interpreted_string_literal) @arg_id
+        )
+    )
+    (#eq? @func_id "isEnabled")
+    (#eq? @arg_id "\\"@stale_flag_name\\"")
+) @call_exp
+"""
+replace = "@treated"
+replace_node = "call_exp"
+groups = ["replace_expression_with_boolean_literal"]
+holes = ["stale_flag_name", "treated"]
