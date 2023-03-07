@@ -125,3 +125,6 @@ For more information about Feature Flags, see our [Feature Flags documentation](
 test features quicker.
 
 -------------------------
+
+### Code Cleanup (Beta)
+The go sdk supports automated code cleanup. For more info see the [docs](/examples/code_cleanup/README.md)
