@@ -29,7 +29,7 @@ type config struct {
 
 func newDefaultConfig(log logger.Logger) *config {
 	defaultCache, _ := cache.NewLruCache(10000, log) // size of cache
-	defaultStore := storage.NewFileStore("defaultProject", storage.GetHarnessDir(), log)
+	defaultStore := storage.NewFileStore("defaultProject", storage.GetHarnessDir(log), log)
 
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = 10

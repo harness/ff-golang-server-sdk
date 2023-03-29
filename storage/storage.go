@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"log"
 	"os"
 	"path"
 	"time"
@@ -42,17 +41,17 @@ type Storage interface {
 }
 
 // GetHarnessDir returns home folder for harness ff server files
-func GetHarnessDir() string {
+func GetHarnessDir(logger logger.Logger) string {
 	home, err := homedir.Dir()
 	if err != nil {
-		log.Printf("error while getting home dir: %v", err)
+		logger.Warnf("error while getting home dir: %v", err)
 		return ""
 	}
 	harnessDir := path.Join(home, "harness")
 	if _, err := os.Stat(harnessDir); os.IsNotExist(err) {
 		err := os.Mkdir(harnessDir, os.ModePerm)
 		if err != nil {
-			log.Println(err)
+			logger.Warn(err)
 		}
 	}
 	return harnessDir
