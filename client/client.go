@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/harness/ff-golang-server-sdk/evaluation"
+	"github.com/harness/ff-golang-server-sdk/logger"
 
 	"github.com/harness/ff-golang-server-sdk/pkg/repository"
 
@@ -36,7 +38,6 @@ import (
 // When an application is shutting down or no longer needs to use the CfClient instance, it
 // should call Close() to ensure that all of its connections and goroutines are shut down and
 // that any pending analytics events have been delivered.
-//
 type CfClient struct {
 	evaluator           *evaluation.Evaluator
 	repository          repository.Repository
@@ -65,7 +66,7 @@ type CfClient struct {
 func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 
 	//  functional options for config
-	config := newDefaultConfig()
+	config := newDefaultConfig(getLogger(options...))
 	for _, opt := range options {
 		opt(config)
 	}
@@ -496,4 +497,20 @@ func (a *atomicBool) set(value bool) {
 
 func (a *atomicBool) get() bool {
 	return atomic.LoadInt32(&(a.flag)) != int32(0)
+}
+
+// getLogger returns either the custom passed in logger or our default zap logger
+func getLogger(options ...ConfigOption) logger.Logger {
+	dummyConfig := &config{}
+	for _, opt := range options {
+		opt(dummyConfig)
+	}
+	if dummyConfig.Logger == nil {
+		defaultLogger, err := logger.NewZapLogger(false)
+		if err != nil {
+			log.Printf("Error creating zap logger instance, %v", err)
+		}
+		dummyConfig.Logger = defaultLogger
+	}
+	return dummyConfig.Logger
 }
