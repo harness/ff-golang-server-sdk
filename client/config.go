@@ -1,7 +1,6 @@
 package client
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/harness/ff-golang-server-sdk/evaluation"
@@ -28,16 +27,13 @@ type config struct {
 	enableAnalytics     bool
 }
 
-func newDefaultConfig() *config {
-	defaultLogger, err := logger.NewZapLogger(false)
-	if err != nil {
-		log.Printf("Error creating zap logger instance, %v", err)
-	}
-	defaultCache, _ := cache.NewLruCache(10000, defaultLogger) // size of cache
-	defaultStore := storage.NewFileStore("defaultProject", storage.GetHarnessDir(), defaultLogger)
+func newDefaultConfig(log logger.Logger) *config {
+	defaultCache, _ := cache.NewLruCache(10000, log) // size of cache
+	defaultStore := storage.NewFileStore("defaultProject", storage.GetHarnessDir(), log)
 
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = 10
+	retryClient.Logger = logger.NewRetryableLogger(log)
 
 	return &config{
 		url:             "https://config.ff.harness.io/api/1.0",
@@ -45,7 +41,7 @@ func newDefaultConfig() *config {
 		pullInterval:    60,
 		Cache:           defaultCache,
 		Store:           defaultStore,
-		Logger:          defaultLogger,
+		Logger:          log,
 		httpClient:      retryClient.StandardClient(),
 		enableStream:    true,
 		enableStore:     true,
