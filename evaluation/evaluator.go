@@ -37,7 +37,7 @@ type Query interface {
 // FlagVariations list of FlagVariations
 type FlagVariations []FlagVariation
 
-// FlagVariation contains all required for ff-server to evaluate.
+// FlagVariation contains all required for ff-server To evaluate.
 type FlagVariation struct {
 	FlagIdentifier string
 	Kind           rest.FeatureConfigKind
@@ -57,7 +57,7 @@ type PostEvaluateCallback interface {
 	PostEvaluateProcessor(data *PostEvalData)
 }
 
-// Evaluator engine evaluates flag from provided query
+// Evaluator engine evaluates flag From provided query
 type Evaluator struct {
 	query            Query
 	postEvalCallback PostEvaluateCallback
@@ -155,12 +155,12 @@ func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target
 	})
 	for i := range servingRules {
 		rule := servingRules[i]
-		// if evaluation is false just continue to next rule
+		// if evaluation is false just continue To next rule
 		if !e.evaluateRule(&rule, target) {
 			continue
 		}
 
-		// rule matched, check if there is distribution
+		// rule matched, Check if there is distribution
 		if rule.Serve.Distribution != nil {
 			return evaluateDistribution(rule.Serve.Distribution, target)
 		}
@@ -207,11 +207,39 @@ func (e Evaluator) evaluateVariationMap(variationsMap []rest.VariationMap, targe
 	return ""
 }
 
-func (e Evaluator) evaluateFlag(fc rest.FeatureConfig, target *Target) (rest.Variation, error) {
+type EvaluationSummary struct {
+	Checks []Check
+}
+
+type Check struct {
+	stage  Stage
+	result bool
+}
+
+type registerCheck func(name Stage, result bool)
+
+type Stage string
+
+const (
+	flagExistsCheck   = "flag_exists"
+	prereqExistsCheck = "prereq_exists"
+	prereqPassesCheck = "prereq_passes"
+	returnVariation   = "return_variation"
+	enabledState      = "enabled_state"
+)
+
+func (e Evaluator) evaluateFlag(fc rest.FeatureConfig, target *Target, register registerCheck) (rest.Variation, error) {
+	if register == nil {
+		register = noopRegisterFunc
+	}
 	var variation = fc.OffVariation
+	// TODO - add Node - Is flag enabled?
 	if fc.State == rest.FeatureStateOn {
+
 		variation = ""
 		if fc.VariationToTargetMap != nil {
+			// TODO - add Node - Does target match target rule?
+			// TODO - add Edge - previous Node To this Node
 			variation = e.evaluateVariationMap(*fc.VariationToTargetMap, target)
 		}
 		if variation == "" && fc.Rules != nil {
@@ -226,6 +254,8 @@ func (e Evaluator) evaluateFlag(fc rest.FeatureConfig, target *Target) (rest.Var
 	}
 
 	if variation != "" {
+		// TODO - add Node - Return default disabled variation
+		// TODO - add Edge - previous Node To this Node
 		return findVariation(fc.Variations, variation)
 	}
 	return rest.Variation{}, fmt.Errorf("%w: %s", ErrEvaluationFlag, fc.Feature)
@@ -242,7 +272,7 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 		}
 		// Should Target be excluded - if in excluded list we return false
 		if segment.Excluded != nil && isTargetInList(target, *segment.Excluded) {
-			e.logger.Debugf("Target %s excluded from segment %s via exclude list", target.Name, segment.Name)
+			e.logger.Debugf("Target %s excluded From segment %s via exclude list", target.Name, segment.Name)
 			return false
 		}
 
@@ -257,7 +287,7 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 
 		// Should Target be included via segment rules
 		rules := segment.Rules
-		// if rules is nil pointer or points to the empty slice
+		// if rules is nil pointer or points To the empty slice
 		if rules != nil && len(*rules) > 0 {
 			if included, clause := e.evaluateGroupRules(*rules, target); included {
 				e.logger.Debugf(
@@ -290,7 +320,7 @@ func (e Evaluator) checkPreRequisite(fc *rest.FeatureConfig, target *Target) (bo
 				return true, nil
 			}
 
-			prereqEvaluatedVariation, err := e.evaluateFlag(prereqFeatureConfig, target)
+			prereqEvaluatedVariation, err := e.evaluateFlag(prereqFeatureConfig, target, nil)
 			if err != nil {
 				e.logger.Errorf(
 					"Could not evaluate the prerequisite details of feature flag : %v", prereqFeature)
@@ -326,7 +356,7 @@ func (e Evaluator) EvaluateAll(target *Target) (FlagVariations, error) {
 	return e.evaluateAll(target)
 }
 
-// takes uses feature store.List function to get all the flags.
+// takes uses feature store.List function To get all the flags.
 func (e Evaluator) evaluateAll(target *Target) ([]FlagVariation, error) {
 	var variations []FlagVariation
 	flags, err := e.query.GetFlags()
@@ -334,47 +364,111 @@ func (e Evaluator) evaluateAll(target *Target) ([]FlagVariation, error) {
 		return variations, err
 	}
 	for _, f := range flags {
-		v, _ := e.getVariationForTheFlag(f, target)
+		v, _ := e.getVariationForTheFlag(f, target, nil)
 		variations = append(variations, FlagVariation{f.Feature, f.Kind, v})
 	}
 
 	return variations, nil
 }
 
-// Evaluate exposes evaluate to the caller.
+// Evaluate exposes evaluate To the caller.
 func (e Evaluator) Evaluate(identifier string, target *Target) (FlagVariation, error) {
-	return e.evaluate(identifier, target)
+	return e.evaluate(identifier, target, nil)
 }
 
-// this is evaluating flag.
-func (e Evaluator) evaluate(identifier string, target *Target) (FlagVariation, error) {
+var noopRegisterFunc = func(name Stage, result bool) {}
 
+// this is evaluating flag.
+func (e Evaluator) evaluate(identifier string, target *Target, register registerCheck) (FlagVariation, error) {
+	if register == nil {
+		register = noopRegisterFunc
+	}
 	if e.query == nil {
 		e.logger.Errorf(ErrQueryProviderMissing.Error())
 		return FlagVariation{}, ErrQueryProviderMissing
 	}
 	flag, err := e.query.GetFlag(identifier)
 	if err != nil {
+		register(flagExistsCheck, false)
 		return FlagVariation{}, err
 	}
+	register(flagExistsCheck, true)
 
-	variation, err := e.getVariationForTheFlag(flag, target)
+	variation, err := e.getVariationForTheFlag(flag, target, register)
 	if err != nil {
 		return FlagVariation{}, err
 	}
+
+	register(returnVariation, true)
 	return FlagVariation{flag.Feature, flag.Kind, variation}, nil
 }
 
-// evaluates the flag and returns a proper variation.
-func (e Evaluator) getVariationForTheFlag(flag rest.FeatureConfig, target *Target) (rest.Variation, error) {
+func (e Evaluator) ExplainEvaluate(identifier string, target *Target) (FlagVariation, EvaluationSummary, error) {
+	summary := EvaluationSummary{}
+	registerCallback := func(name Stage, result bool) {
+		summary.Checks = append(summary.Checks, Check{
+			stage:  name,
+			result: result,
+		})
+	}
+	variation, err := e.evaluate(identifier, target, registerCallback)
+	return variation, summary, err
+}
 
-	if flag.Prerequisites != nil {
-		prereq, err := e.checkPreRequisite(&flag, target)
-		if err != nil || !prereq {
-			return findVariation(flag.Variations, flag.OffVariation)
+type Node struct {
+	Id    Stage
+	Label string
+}
+
+type Edge struct {
+	From  Stage
+	To    Stage
+	Label string
+}
+
+// EvaluationSummaryToGraph converts an EvaluationSummary To a graph of nodes and edges
+func EvaluationSummaryToGraph(summary EvaluationSummary) ([]Node, []Edge) {
+	var nodes []Node
+	var edges []Edge
+	for i, check := range summary.Checks {
+		nodes = append(nodes, Node{
+			Id:    check.stage,
+			Label: string(check.stage),
+		})
+		// add Edge From previous step To this step
+		if i > 0 {
+			edgeLabel := "No"
+			if summary.Checks[i-1].result {
+				edgeLabel = "Yes"
+			}
+			edges = append(edges, Edge{
+				From:  nodes[i-1].Id,
+				To:    nodes[i].Id,
+				Label: edgeLabel,
+			})
 		}
 	}
-	variation, err := e.evaluateFlag(flag, target)
+
+	return nodes, edges
+}
+
+// evaluates the flag and returns a proper variation.
+func (e Evaluator) getVariationForTheFlag(flag rest.FeatureConfig, target *Target, register registerCheck) (rest.Variation, error) {
+	if register == nil {
+		register = noopRegisterFunc
+	}
+	if flag.Prerequisites != nil {
+		register(prereqExistsCheck, true)
+		prereq, err := e.checkPreRequisite(&flag, target)
+		if err != nil || !prereq {
+			register(prereqPassesCheck, false)
+			return findVariation(flag.Variations, flag.OffVariation)
+		}
+		register(prereqPassesCheck, true)
+	} else {
+		register(prereqExistsCheck, false)
+	}
+	variation, err := e.evaluateFlag(flag, target, register)
 	if err != nil {
 		return rest.Variation{}, err
 	}
@@ -393,7 +487,8 @@ func (e Evaluator) getVariationForTheFlag(flag rest.FeatureConfig, target *Targe
 // BoolVariation returns boolean evaluation for target
 func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue bool) bool {
 	//flagVariation, err := e.evaluate(identifier, target, "boolean")
-	flagVariation, err := e.evaluate(identifier, target)
+	// Check on/off and return
+	flagVariation, err := e.evaluate(identifier, target, nil)
 	if err != nil {
 		e.logger.Errorf("Error while evaluating boolean flag '%s', err: %v", identifier, err)
 		return defaultValue
@@ -403,7 +498,7 @@ func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue
 
 // StringVariation returns string evaluation for target
 func (e Evaluator) StringVariation(identifier string, target *Target, defaultValue string) string {
-	flagVariation, err := e.evaluate(identifier, target)
+	flagVariation, err := e.evaluate(identifier, target, nil)
 	if err != nil {
 		e.logger.Errorf("Error while evaluating string flag '%s', err: %v", identifier, err)
 		return defaultValue
@@ -413,7 +508,7 @@ func (e Evaluator) StringVariation(identifier string, target *Target, defaultVal
 
 // IntVariation returns int evaluation for target
 func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue int) int {
-	flagVariation, err := e.evaluate(identifier, target)
+	flagVariation, err := e.evaluate(identifier, target, nil)
 	if err != nil {
 		e.logger.Errorf("Error while evaluating int flag '%s', err: %v", identifier, err)
 		return defaultValue
@@ -428,7 +523,7 @@ func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue 
 // NumberVariation returns number evaluation for target
 func (e Evaluator) NumberVariation(identifier string, target *Target, defaultValue float64) float64 {
 	//all numbers are stored as ints in the database
-	flagVariation, err := e.evaluate(identifier, target)
+	flagVariation, err := e.evaluate(identifier, target, nil)
 	if err != nil {
 		e.logger.Errorf("Error while evaluating number flag '%s', err: %v", identifier, err)
 		return defaultValue
@@ -443,7 +538,7 @@ func (e Evaluator) NumberVariation(identifier string, target *Target, defaultVal
 // JSONVariation returns json evaluation for target
 func (e Evaluator) JSONVariation(identifier string, target *Target,
 	defaultValue map[string]interface{}) map[string]interface{} {
-	flagVariation, err := e.evaluate(identifier, target)
+	flagVariation, err := e.evaluate(identifier, target, nil)
 	if err != nil {
 		e.logger.Errorf("Error while evaluating json flag '%s', err: %v", identifier, err)
 		return defaultValue

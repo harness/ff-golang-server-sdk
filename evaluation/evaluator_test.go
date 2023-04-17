@@ -445,7 +445,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			want: false,
 		},
 		{
-			name:   "check match operator",
+			name:   "Check match operator",
 			fields: fields{},
 			args: args{
 				clause: &rest.Clause{
@@ -460,7 +460,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			want: true,
 		},
 		{
-			name:   "check match operator (error)",
+			name:   "Check match operator (error)",
 			fields: fields{},
 			args: args{
 				clause: &rest.Clause{
@@ -475,7 +475,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			want: false,
 		},
 		{
-			name:   "check in operator",
+			name:   "Check in operator",
 			fields: fields{},
 			args: args{
 				clause: &rest.Clause{
@@ -490,7 +490,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			want: true,
 		},
 		{
-			name:   "check in operator (not found) should return false",
+			name:   "Check in operator (not found) should return false",
 			fields: fields{},
 			args: args{
 				clause: &rest.Clause{
@@ -505,7 +505,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			want: false,
 		},
 		{
-			name:   "check equal operator",
+			name:   "Check equal operator",
 			fields: fields{},
 			args: args{
 				clause: &rest.Clause{
@@ -520,7 +520,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			want: true,
 		},
 		{
-			name:   "check equal sensitive operator",
+			name:   "Check equal sensitive operator",
 			fields: fields{},
 			args: args{
 				clause: &rest.Clause{
@@ -535,7 +535,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			want: false,
 		},
 		{
-			name:   "check gt operator",
+			name:   "Check gt operator",
 			fields: fields{},
 			args: args{
 				clause: &rest.Clause{
@@ -550,7 +550,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			want: true,
 		},
 		{
-			name:   "check gt operator - negative path",
+			name:   "Check gt operator - negative path",
 			fields: fields{},
 			args: args{
 				clause: &rest.Clause{
@@ -565,7 +565,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			want: false,
 		},
 		{
-			name:   "check starts with operator",
+			name:   "Check starts with operator",
 			fields: fields{},
 			args: args{
 				clause: &rest.Clause{
@@ -580,7 +580,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			want: true,
 		},
 		{
-			name:   "check ends with operator",
+			name:   "Check ends with operator",
 			fields: fields{},
 			args: args{
 				clause: &rest.Clause{
@@ -595,7 +595,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			want: true,
 		},
 		{
-			name:   "check contains operator",
+			name:   "Check contains operator",
 			fields: fields{},
 			args: args{
 				clause: &rest.Clause{
@@ -610,7 +610,7 @@ func TestEvaluator_evaluateClause(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "check segments operator",
+			name: "Check segments operator",
 			fields: fields{
 				query: testRepo,
 			},
@@ -1099,7 +1099,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 				query:  tt.fields.query,
 				logger: logger.NewNoOpLogger(),
 			}
-			got, err := e.evaluateFlag(tt.args.fc, tt.args.target)
+			got, err := e.evaluateFlag(tt.args.fc, tt.args.target, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Evaluator.evaluateFlag() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1390,13 +1390,153 @@ func TestEvaluator_evaluate(t *testing.T) {
 				query:  tt.fields.query,
 				logger: logger.NewNoOpLogger(),
 			}
-			got, err := e.evaluate(tt.args.identifier, tt.args.target)
+			got, err := e.evaluate(tt.args.identifier, tt.args.target, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Evaluator.evaluate() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got.Variation, tt.want) {
 				t.Errorf("Evaluator.evaluate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEvaluator_explainEvaluate(t *testing.T) {
+	type fields struct {
+		query Query
+	}
+	type args struct {
+		identifier string
+		target     *Target
+		kind       string
+	}
+	tests := []struct {
+		name        string
+		fields      fields
+		args        args
+		want        rest.Variation
+		wantSummary EvaluationSummary
+		wantErr     bool
+	}{
+		{
+			name: "happy path",
+			fields: fields{
+				query: testRepo,
+			},
+			args: args{
+				identifier: simple,
+				kind:       "boolean",
+			},
+			want: boolVariations[0],
+			wantSummary: EvaluationSummary{Checks: []Check{
+				{
+					stage:  flagExistsCheck,
+					result: true,
+				},
+				{
+					stage:  prereqExistsCheck,
+					result: false,
+				},
+				{
+					stage:  returnVariation,
+					result: true,
+				}}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := Evaluator{
+				query:  tt.fields.query,
+				logger: logger.NewNoOpLogger(),
+			}
+			got, summary, err := e.ExplainEvaluate(tt.args.identifier, tt.args.target)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Evaluator.evaluate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got.Variation, tt.want) {
+				t.Errorf("Evaluator.evaluate() = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(summary, tt.wantSummary) {
+				t.Errorf("Evaluator.evaluate() = %v, want %v", summary, tt.wantSummary)
+			}
+		})
+	}
+}
+
+func TestEvaluator_evaluationSummaryToGraph(t *testing.T) {
+	type fields struct {
+		query Query
+	}
+
+	type want struct {
+		nodes []Node
+		edges []Edge
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		input  EvaluationSummary
+		want   want
+	}{
+		{
+			name: "happy path",
+			fields: fields{
+				query: testRepo,
+			},
+			input: EvaluationSummary{Checks: []Check{
+				{
+					stage:  flagExistsCheck,
+					result: true,
+				},
+				{
+					stage:  prereqExistsCheck,
+					result: false,
+				},
+				{
+					stage:  returnVariation,
+					result: true,
+				}}},
+			want: want{
+				nodes: []Node{
+					{
+						Id:    flagExistsCheck,
+						Label: flagExistsCheck,
+					},
+					{
+						Id:    prereqExistsCheck,
+						Label: prereqExistsCheck,
+					},
+					{
+						Id:    returnVariation,
+						Label: returnVariation,
+					},
+				},
+				edges: []Edge{
+					{
+						From:  flagExistsCheck,
+						To:    prereqExistsCheck,
+						Label: "Yes",
+					},
+					{
+						From:  prereqExistsCheck,
+						To:    returnVariation,
+						Label: "No",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actualNodes, actualEdges := EvaluationSummaryToGraph(tt.input)
+
+			if !reflect.DeepEqual(actualNodes, tt.want.nodes) {
+				t.Errorf("EvaluationSummaryToGraph() = %v, want nodes %v", actualNodes, tt.want.nodes)
+			}
+			if !reflect.DeepEqual(actualEdges, tt.want.edges) {
+				t.Errorf("EvaluationSummaryToGraph() = %v, want %v", actualEdges, tt.want.edges)
 			}
 		})
 	}
