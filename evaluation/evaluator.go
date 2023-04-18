@@ -438,14 +438,16 @@ func (e Evaluator) ExplainEvaluate(identifier string, target *Target) (FlagVaria
 }
 
 type Node struct {
-	Id    Stage
-	Label string
+	Id      Stage
+	Label   string
+	Enabled bool
 }
 
 type Edge struct {
-	From  Stage
-	To    Stage
-	Label string
+	From    Stage
+	To      Stage
+	Label   string
+	Enabled bool
 }
 
 // EvaluationSummaryToGraph converts an EvaluationSummary To a graph of nodes and edges
@@ -454,8 +456,9 @@ func EvaluationSummaryToGraph(summary EvaluationSummary) ([]Node, []Edge) {
 	var edges []Edge
 	for i, check := range summary.Checks {
 		nodes = append(nodes, Node{
-			Id:    check.stage,
-			Label: string(check.stage),
+			Id:      check.stage,
+			Label:   string(check.stage),
+			Enabled: true,
 		})
 		// add Edge From previous step To this step
 		if i > 0 {
@@ -464,9 +467,10 @@ func EvaluationSummaryToGraph(summary EvaluationSummary) ([]Node, []Edge) {
 				edgeLabel = "Yes"
 			}
 			edges = append(edges, Edge{
-				From:  nodes[i-1].Id,
-				To:    nodes[i].Id,
-				Label: edgeLabel,
+				From:    nodes[i-1].Id,
+				To:      nodes[i].Id,
+				Label:   edgeLabel,
+				Enabled: true,
 			})
 		}
 	}
