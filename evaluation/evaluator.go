@@ -221,11 +221,16 @@ type registerCheck func(name Stage, result bool)
 type Stage string
 
 const (
-	flagExistsCheck   = "flag_exists"
-	prereqExistsCheck = "prereq_exists"
-	prereqPassesCheck = "prereq_passes"
-	returnVariation   = "return_variation"
-	enabledState      = "enabled_state"
+	flagExistsCheck             = "flag_exists"
+	flagEnabledCheck            = "flag_enabled"
+	prereqExistsCheck           = "prereq_exists"
+	prereqPassesCheck           = "prereq_passes"
+	targetRulesExistsCheck      = "target_rules_exists"
+	targetRulesPassesCheck      = "target_rules_passes"
+	targetGroupRulesExistsCheck = "target_group_rules_exists"
+	targetGroupRulesPassesCheck = "target_group_rules_passes"
+	distributionCheck           = "evaluate_distribution"
+	returnVariation             = "return_variation"
 )
 
 func (e Evaluator) evaluateFlag(fc rest.FeatureConfig, target *Target, register registerCheck) (rest.Variation, error) {
@@ -233,29 +238,46 @@ func (e Evaluator) evaluateFlag(fc rest.FeatureConfig, target *Target, register 
 		register = noopRegisterFunc
 	}
 	var variation = fc.OffVariation
-	// TODO - add Node - Is flag enabled?
 	if fc.State == rest.FeatureStateOn {
-
+		register(flagEnabledCheck, true)
 		variation = ""
 		if fc.VariationToTargetMap != nil {
-			// TODO - add Node - Does target match target rule?
-			// TODO - add Edge - previous Node To this Node
+			register(targetRulesExistsCheck, true)
 			variation = e.evaluateVariationMap(*fc.VariationToTargetMap, target)
+			// register if a variation was selected or not
+			if variation == "" {
+				register(targetRulesPassesCheck, true)
+			} else {
+				register(targetRulesPassesCheck, false)
+			}
+		} else {
+			register(targetRulesExistsCheck, false)
 		}
 		if variation == "" && fc.Rules != nil {
+			register(targetGroupRulesExistsCheck, true)
 			variation = e.evaluateRules(*fc.Rules, target)
+
+			// register if a variation was selected or not
+			if variation == "" {
+				register(targetGroupRulesPassesCheck, true)
+			} else {
+				register(targetGroupRulesPassesCheck, false)
+			}
+		} else {
+			register(targetGroupRulesExistsCheck, false)
 		}
-		if variation == "" {
+		if variation == "" && fc.DefaultServe.Distribution != nil {
+			register(distributionCheck, true)
 			variation = evaluateDistribution(fc.DefaultServe.Distribution, target)
 		}
 		if variation == "" && fc.DefaultServe.Variation != nil {
 			variation = *fc.DefaultServe.Variation
 		}
+	} else {
+		register(flagEnabledCheck, false)
 	}
 
 	if variation != "" {
-		// TODO - add Node - Return default disabled variation
-		// TODO - add Edge - previous Node To this Node
 		return findVariation(fc.Variations, variation)
 	}
 	return rest.Variation{}, fmt.Errorf("%w: %s", ErrEvaluationFlag, fc.Feature)
