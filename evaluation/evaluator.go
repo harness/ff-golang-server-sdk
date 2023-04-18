@@ -441,6 +441,7 @@ type Node struct {
 	Id      Stage
 	Label   string
 	Enabled bool
+	Info    string
 }
 
 type Edge struct {
