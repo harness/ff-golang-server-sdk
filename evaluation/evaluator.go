@@ -241,7 +241,7 @@ func (e Evaluator) evaluateFlag(fc rest.FeatureConfig, target *Target, register 
 	if fc.State == rest.FeatureStateOn {
 		register(flagEnabledCheck, true)
 		variation = ""
-		if fc.VariationToTargetMap != nil {
+		if fc.VariationToTargetMap != nil && len(*fc.VariationToTargetMap) > 0 {
 			register(targetRulesExistsCheck, true)
 			variation = e.evaluateVariationMap(*fc.VariationToTargetMap, target)
 			// register if a variation was selected or not
@@ -253,7 +253,7 @@ func (e Evaluator) evaluateFlag(fc rest.FeatureConfig, target *Target, register 
 		} else {
 			register(targetRulesExistsCheck, false)
 		}
-		if variation == "" && fc.Rules != nil {
+		if variation == "" && fc.Rules != nil && len(*fc.Rules) > 0 {
 			register(targetGroupRulesExistsCheck, true)
 			variation = e.evaluateRules(*fc.Rules, target)
 
