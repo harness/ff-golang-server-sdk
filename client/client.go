@@ -212,6 +212,16 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 		c.mux.RLock()
 		defer c.mux.RUnlock()
 		c.streamConnected = false
+
+		// If an eventStreamListener has been passed to the Proxy lets notify it of the disconnected
+		// to let it know something is up with the stream it has been listening to
+		if c.config.eventStreamListener != nil {
+			c.config.eventStreamListener.Pub(context.Background(), stream.Event{
+				APIKey:      c.sdkKey,
+				Environment: c.environmentID,
+				Err:         stream.ErrStreamDisconnect,
+			})
+		}
 	}
 	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.repository, c.api, c.config.Logger, streamErr,
 		c.config.eventStreamListener)
