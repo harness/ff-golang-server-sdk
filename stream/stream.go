@@ -2,9 +2,13 @@ package stream
 
 import (
 	"context"
+	"errors"
 
 	"github.com/r3labs/sse"
 )
+
+// ErrStreamDisconnect is a stream disconnect error
+var ErrStreamDisconnect error = errors.New("stream disconnect")
 
 // Connection is simple interface for streams
 type Connection interface {
@@ -28,4 +32,9 @@ type Event struct {
 	Environment string
 	// SSEEvent is the SSEEvent that was sent from the FeatureFlags server to the SDK
 	SSEEvent *sse.Event
+
+	// Err holds any errors encountered by the sdk while listening on the stream and this
+	// field should be used to pass those errors on to the EventStreamListener to let it
+	// know something has gone wrong on the stream it's listening on
+	Err error
 }
