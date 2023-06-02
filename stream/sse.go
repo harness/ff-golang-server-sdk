@@ -98,8 +98,13 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		})
 		if err != nil {
 			c.logger.Errorf("Error initializing stream: %s", err.Error())
-			c.onStreamError()
 		}
+
+		// The SSE library we use swallows the EOF error returned if a connection is closed by the server
+		// so we need to call onStreamError any time we've exited SubscribeWithContext. If we don't do
+		// this and the server closes the connection the Go SDK will still think it's connected to the stream
+		// even though it isn't
+		c.onStreamError()
 	}()
 
 	return out
