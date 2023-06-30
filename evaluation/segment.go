@@ -35,7 +35,6 @@ type SegmentRules Clauses
 // Evaluate SegmentRules.  This determines if a segment rule is being used to include a target with
 // the segment.  SegmentRules are similar to ServingRules except a ServingRule can contain multiple clauses
 // but a Segment rule only contains one clause.
-//
 func (c SegmentRules) Evaluate(target *Target, segments Segments) bool {
 	// OR operation
 	for _, clause := range c {

@@ -15,7 +15,7 @@ type LRUCache struct {
 	lastUpdate time.Time
 }
 
-//NewLruCache creates a new LRU instance
+// NewLruCache creates a new LRU instance
 func NewLruCache(size int, logger logger.Logger) (*LRUCache, error) {
 	cache, err := lru.New(size)
 	if err != nil {

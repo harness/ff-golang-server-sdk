@@ -1,10 +1,11 @@
 package main
 
 import (
-	harness "github.com/harness/ff-golang-server-sdk/client"
-	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"log"
 	"os"
+
+	harness "github.com/harness/ff-golang-server-sdk/client"
+	"github.com/harness/ff-golang-server-sdk/evaluation"
 )
 
 var (

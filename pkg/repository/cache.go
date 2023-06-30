@@ -22,7 +22,7 @@ type LRUCache struct {
 
 var _ Cache = &LRUCache{}
 
-//NewLruCache creates a new LRU instance
+// NewLruCache creates a new LRU instance
 func NewLruCache(size int) (LRUCache, error) {
 	cache, err := lru.New(size)
 	if err != nil {
