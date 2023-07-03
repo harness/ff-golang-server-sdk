@@ -2,6 +2,7 @@ package client
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/stream"
@@ -29,7 +30,10 @@ type config struct {
 
 func newDefaultConfig(log logger.Logger) *config {
 	defaultCache, _ := cache.NewLruCache(10000, log) // size of cache
-	defaultStore := storage.NewFileStore("defaultProject", storage.GetHarnessDir(log), log)
+	var defaultStore storage.Storage
+	if _, present := os.LookupEnv("DISABLE_LOCAL_CACHE"); !present {
+		defaultStore = storage.NewFileStore("defaultProject", storage.GetHarnessDir(log), log)
+	}
 
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = 10
