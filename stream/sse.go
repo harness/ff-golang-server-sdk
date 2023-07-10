@@ -24,6 +24,8 @@ type SSEClient struct {
 	logger              logger.Logger
 	onStreamError       func()
 	eventStreamListener EventStreamListener
+
+	proxyMode bool
 }
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -38,6 +40,8 @@ func NewSSEClient(
 	logger logger.Logger,
 	onStreamError func(),
 	eventStreamListener EventStreamListener,
+
+	proxyMode bool,
 ) *SSEClient {
 	client.Headers["Authorization"] = fmt.Sprintf("Bearer %s", token)
 	client.Headers["API-Key"] = apiKey
@@ -51,6 +55,7 @@ func NewSSEClient(
 		logger:              logger,
 		onStreamError:       onStreamError,
 		eventStreamListener: eventStreamListener,
+		proxyMode:           proxyMode,
 	}
 	return sseClient
 }
@@ -142,8 +147,25 @@ func (c *SSEClient) handleEvent(event Event) {
 					c.repository.SetFlag(*response.JSON200, false)
 				}
 			}
-
 			updateWithTimeout()
+
+			if c.proxyMode {
+				updateFeaturesWithTimeout := func() {
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+					defer cancel()
+
+					response, err := c.api.GetFeatureConfigWithResponse(ctx, event.Environment)
+					if err != nil {
+						c.logger.Errorf("error while pulling flags, err: %s", err.Error())
+						return
+					}
+
+					if response.JSON200 != nil {
+						c.repository.SetFlags(false, event.Environment, *response.JSON200...)
+					}
+				}
+				updateFeaturesWithTimeout()
+			}
 		}
 
 	case dto.KeySegment:
@@ -168,6 +190,24 @@ func (c *SSEClient) handleEvent(event Event) {
 				}
 			}
 			updateWithTimeout()
+
+			if c.proxyMode {
+				updateSegmentsWithTimeout := func() {
+					ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+					defer cancel()
+
+					response, err := c.api.GetAllSegmentsWithResponse(ctx, event.Environment)
+					if err != nil {
+						c.logger.Errorf("error while pulling segment, err: %s", err.Error())
+						return
+					}
+
+					if response.JSON200 != nil {
+						c.repository.SetSegments(false, event.Environment, *response.JSON200...)
+					}
+				}
+				updateSegmentsWithTimeout()
+			}
 		}
 	}
 
