@@ -15,7 +15,9 @@ type Repository interface {
 	GetFlags() ([]rest.FeatureConfig, error)
 
 	SetFlag(featureConfig rest.FeatureConfig, initialLoad bool)
+	SetFlags(initialLoad bool, envID string, featureConfig ...rest.FeatureConfig)
 	SetSegment(segment rest.Segment, initialLoad bool)
+	SetSegments(initialLoad bool, envID string, segment ...rest.Segment)
 
 	DeleteFlag(identifier string)
 	DeleteSegment(identifier string)
@@ -26,8 +28,10 @@ type Repository interface {
 // Callback provides events when repository data being modified
 type Callback interface {
 	OnFlagStored(identifier string)
+	OnFlagsStored(envID string)
 	OnFlagDeleted(identifier string)
 	OnSegmentStored(identifier string)
+	OnSegmentsStored(envID string)
 	OnSegmentDeleted(identifier string)
 }
 
@@ -134,6 +138,30 @@ func (r FFRepository) SetFlag(featureConfig rest.FeatureConfig, initialLoad bool
 	}
 }
 
+// SetFlags places all the flags in the repository
+func (r FFRepository) SetFlags(initialLoad bool, envID string, featureConfigs ...rest.FeatureConfig) {
+	if !initialLoad {
+		if r.areFlagsOutdated(featureConfigs...) {
+			return
+		}
+	}
+
+	key := formatFlagsKey(envID)
+
+	if r.storage != nil {
+		if err := r.storage.Set(key, featureConfigs); err != nil {
+			log.Errorf("error while storing flags for env=%s into repository", envID)
+		}
+		r.cache.Remove(key)
+	} else {
+		r.cache.Set(key, featureConfigs)
+	}
+
+	if r.callback != nil {
+		r.callback.OnFlagsStored(envID)
+	}
+}
+
 // SetSegment places a segment in the repository with the new value
 func (r FFRepository) SetSegment(segment rest.Segment, initialLoad bool) {
 	if !initialLoad {
@@ -153,6 +181,30 @@ func (r FFRepository) SetSegment(segment rest.Segment, initialLoad bool) {
 
 	if r.callback != nil {
 		r.callback.OnSegmentStored(segment.Identifier)
+	}
+}
+
+// SetSegments places all the segments in the repository
+func (r FFRepository) SetSegments(initialLoad bool, envID string, segments ...rest.Segment) {
+	if !initialLoad {
+		if r.areSegmentsOutdated(segments...) {
+			return
+		}
+	}
+
+	key := formatSegmentsKey(envID)
+
+	if r.storage != nil {
+		if err := r.storage.Set(key, segments); err != nil {
+			log.Errorf("error while storing flags for env=%s into repository", envID)
+		}
+		r.cache.Remove(key)
+	} else {
+		r.cache.Set(key, segments)
+	}
+
+	if r.callback != nil {
+		r.callback.OnFlagsStored(envID)
 	}
 }
 
@@ -197,6 +249,15 @@ func (r FFRepository) isFlagOutdated(featureConfig rest.FeatureConfig) bool {
 	return *oldFlag.Version >= *featureConfig.Version
 }
 
+func (r FFRepository) areFlagsOutdated(flags ...rest.FeatureConfig) bool {
+	for _, flag := range flags {
+		if r.isFlagOutdated(flag) {
+			return true
+		}
+	}
+	return false
+}
+
 func (r FFRepository) isSegmentOutdated(segment rest.Segment) bool {
 	oldSegment, err := r.getSegmentAndCache(segment.Identifier, false)
 	if err != nil || oldSegment.Version == nil {
@@ -204,6 +265,15 @@ func (r FFRepository) isSegmentOutdated(segment rest.Segment) bool {
 	}
 
 	return *oldSegment.Version >= *segment.Version
+}
+
+func (r FFRepository) areSegmentsOutdated(segments ...rest.Segment) bool {
+	for _, segment := range segments {
+		if r.isSegmentOutdated(segment) {
+			return true
+		}
+	}
+	return false
 }
 
 // Close all resources
@@ -215,6 +285,14 @@ func formatFlagKey(identifier string) string {
 	return "flag/" + identifier
 }
 
+func formatFlagsKey(envID string) string {
+	return "flags/" + envID
+}
+
 func formatSegmentKey(identifier string) string {
 	return "target-segment/" + identifier
+}
+
+func formatSegmentsKey(envID string) string {
+	return "target-segments/" + envID
 }

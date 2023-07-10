@@ -104,3 +104,10 @@ func WithEventStreamListener(e stream.EventStreamListener) ConfigOption {
 		config.eventStreamListener = e
 	}
 }
+
+// WithProxyMode should be used when the SDK is being used inside the ff proxy to control the cache and handle sse events
+func WithProxyMode(b bool) ConfigOption {
+	return func(config *config) {
+		config.proxyMode = b
+	}
+}

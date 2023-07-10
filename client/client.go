@@ -224,7 +224,7 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 		}
 	}
 	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.repository, c.api, c.config.Logger, streamErr,
-		c.config.eventStreamListener)
+		c.config.eventStreamListener, c.config.proxyMode)
 
 	// Connect kicks off a goroutine that attempts to establish a stream connection
 	// while this is happening we set streamConnected to true - if any errors happen
@@ -377,6 +377,7 @@ func (c *CfClient) retrieveFlags(ctx context.Context) error {
 		return nil
 	}
 
+	c.repository.SetFlags(true, c.environmentID, *flags.JSON200...)
 	for _, flag := range *flags.JSON200 {
 		c.repository.SetFlag(flag, true)
 	}
@@ -401,6 +402,7 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 		return nil
 	}
 
+	c.repository.SetSegments(true, c.environmentID, *segments.JSON200...)
 	for _, segment := range *segments.JSON200 {
 		c.repository.SetSegment(segment, true)
 	}

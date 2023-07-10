@@ -26,6 +26,7 @@ type config struct {
 	target              evaluation.Target
 	eventStreamListener stream.EventStreamListener
 	enableAnalytics     bool
+	proxyMode           bool
 }
 
 func newDefaultConfig(log logger.Logger) *config {
@@ -50,5 +51,6 @@ func newDefaultConfig(log logger.Logger) *config {
 		enableStream:    true,
 		enableStore:     true,
 		enableAnalytics: true,
+		proxyMode:       false,
 	}
 }
