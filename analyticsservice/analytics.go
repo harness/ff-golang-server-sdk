@@ -265,15 +265,15 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 
 		resp, err := mClient.PostMetricsWithResponse(ctx, metricsclient.EnvironmentPathParam(as.environmentID), analyticsPayload)
 		if err != nil {
-			as.logger.Error(err)
+			as.logger.Warn(err)
 			return
 		}
 		if resp == nil {
-			as.logger.Error("Empty response from metrics server")
+			as.logger.Warn("Empty response from metrics server")
 			return
 		}
 		if resp.StatusCode() != 200 {
-			as.logger.Errorf("Non 200 response from metrics server: %d", resp.StatusCode())
+			as.logger.Warn("Non 200 response from metrics server: %d", resp.StatusCode())
 			return
 		}
 
