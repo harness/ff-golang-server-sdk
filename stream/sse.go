@@ -102,7 +102,7 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 		})
 		if err != nil {
-			c.logger.Errorf("Error initializing stream: %s", err.Error())
+			c.logger.Warnf("Error initializing stream: %s", err.Error())
 		}
 
 		// The SSE library we use swallows the EOF error returned if a connection is closed by the server
