@@ -208,7 +208,7 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	sseClient := sse.NewClient(fmt.Sprintf("%s/stream?cluster=%s", c.config.url, c.clusterIdentifier))
 
 	streamErr := func() {
-		c.config.Logger.Error("Stream disconnected. Swapping to polling mode")
+		c.config.Logger.Warn("Stream disconnected. Swapping to polling mode")
 		c.mux.RLock()
 		defer c.mux.RUnlock()
 		c.streamConnected = false
