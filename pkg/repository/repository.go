@@ -67,6 +67,16 @@ func NewWithStorageAndCallback(cache Cache, storage storage.Storage, callback Ca
 	}
 }
 
+func (r FFRepository) getFlags(envID string) ([]rest.FeatureConfig, error) {
+	flagsKey := formatFlagsKey(envID)
+	flags, ok := r.cache.Get(flagsKey)
+	if ok {
+		return flags.([]rest.FeatureConfig), nil
+	}
+
+	return []rest.FeatureConfig{}, fmt.Errorf("%w with environment: %s", ErrFeatureConfigNotFound, envID)
+}
+
 func (r FFRepository) getFlagAndCache(identifier string, cacheable bool) (rest.FeatureConfig, error) {
 	flagKey := formatFlagKey(identifier)
 	flag, ok := r.cache.Get(flagKey)
@@ -119,7 +129,8 @@ func (r FFRepository) GetSegment(identifier string) (rest.Segment, error) {
 // SetFlag places a flag in the repository with the new value
 func (r FFRepository) SetFlag(featureConfig rest.FeatureConfig, initialLoad bool) {
 	if !initialLoad {
-		if r.isFlagOutdated(featureConfig) {
+		// If the flag is up to date then we don't need to bother updating the cache
+		if !r.isFlagOutdated(featureConfig) {
 			return
 		}
 	}
@@ -141,7 +152,8 @@ func (r FFRepository) SetFlag(featureConfig rest.FeatureConfig, initialLoad bool
 // SetFlags places all the flags in the repository
 func (r FFRepository) SetFlags(initialLoad bool, envID string, featureConfigs ...rest.FeatureConfig) {
 	if !initialLoad {
-		if r.areFlagsOutdated(featureConfigs...) {
+		// If the flags are all up to date then we don't need to bother updating the cache and can exit
+		if !r.areFlagsOutdated(envID, featureConfigs...) {
 			return
 		}
 	}
@@ -165,7 +177,8 @@ func (r FFRepository) SetFlags(initialLoad bool, envID string, featureConfigs ..
 // SetSegment places a segment in the repository with the new value
 func (r FFRepository) SetSegment(segment rest.Segment, initialLoad bool) {
 	if !initialLoad {
-		if r.isSegmentOutdated(segment) {
+		// If the segment isn't outdated then we can exit as we don't need to refresh the cache
+		if !r.isSegmentOutdated(segment) {
 			return
 		}
 	}
@@ -187,7 +200,8 @@ func (r FFRepository) SetSegment(segment rest.Segment, initialLoad bool) {
 // SetSegments places all the segments in the repository
 func (r FFRepository) SetSegments(initialLoad bool, envID string, segments ...rest.Segment) {
 	if !initialLoad {
-		if r.areSegmentsOutdated(segments...) {
+		// If segments aren't outdated then we can exit as we don't need to refresh the cache
+		if !r.areSegmentsOutdated(segments...) {
 			return
 		}
 	}
@@ -204,7 +218,7 @@ func (r FFRepository) SetSegments(initialLoad bool, envID string, segments ...re
 	}
 
 	if r.callback != nil {
-		r.callback.OnFlagsStored(envID)
+		r.callback.OnSegmentsStored(envID)
 	}
 }
 
@@ -243,15 +257,52 @@ func (r FFRepository) DeleteSegment(identifier string) {
 func (r FFRepository) isFlagOutdated(featureConfig rest.FeatureConfig) bool {
 	oldFlag, err := r.getFlagAndCache(featureConfig.Feature, false)
 	if err != nil || oldFlag.Version == nil {
-		return false
+		// If we get an error here return true to force a cache update
+		return true
 	}
 
-	return *oldFlag.Version >= *featureConfig.Version
+	return *oldFlag.Version < *featureConfig.Version
 }
 
-func (r FFRepository) areFlagsOutdated(flags ...rest.FeatureConfig) bool {
+func (r FFRepository) getFlagsAndCache(envID string, cacheable bool) ([]rest.FeatureConfig, error) {
+	flagKey := formatFlagsKey(envID)
+	flag, ok := r.cache.Get(flagKey)
+	if ok {
+		return flag.([]rest.FeatureConfig), nil
+	}
+
+	if r.storage != nil {
+		flag, ok := r.storage.Get(flagKey)
+		if ok && cacheable {
+			r.cache.Set(flagKey, flag)
+			return flag.([]rest.FeatureConfig), nil
+		}
+	}
+	return []rest.FeatureConfig{}, fmt.Errorf("%w with identifier: %s", ErrFeatureConfigNotFound, envID)
+}
+
+func (r FFRepository) areFlagsOutdated(envID string, flags ...rest.FeatureConfig) bool {
+
+	oldFlags, err := r.getFlags(envID)
+	if err != nil {
+		// If we get an error return true to force a cache refresh
+		return true
+	}
+
+	oldFlagMap := map[string]rest.FeatureConfig{}
+	for _, v := range oldFlags {
+		oldFlagMap[v.Feature] = v
+	}
+
 	for _, flag := range flags {
-		if r.isFlagOutdated(flag) {
+		of, ok := oldFlagMap[flag.Feature]
+		if !ok {
+			// If a new flag isn't in the oldFlagMap then the list of old flags are outdated and we'll
+			// want to refresh the cache
+			return true
+		}
+
+		if *of.Version < *flag.Version {
 			return true
 		}
 	}
@@ -261,10 +312,11 @@ func (r FFRepository) areFlagsOutdated(flags ...rest.FeatureConfig) bool {
 func (r FFRepository) isSegmentOutdated(segment rest.Segment) bool {
 	oldSegment, err := r.getSegmentAndCache(segment.Identifier, false)
 	if err != nil || oldSegment.Version == nil {
-		return false
+		// If we get an error here return true to force a cache update
+		return true
 	}
 
-	return *oldSegment.Version >= *segment.Version
+	return *oldSegment.Version < *segment.Version
 }
 
 func (r FFRepository) areSegmentsOutdated(segments ...rest.Segment) bool {
