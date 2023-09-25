@@ -3,6 +3,8 @@ package repository
 import (
 	"fmt"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/harness/ff-golang-server-sdk/log"
 	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/harness/ff-golang-server-sdk/storage"
@@ -20,7 +22,9 @@ type Repository interface {
 	SetSegments(initialLoad bool, envID string, segment ...rest.Segment)
 
 	DeleteFlag(identifier string)
+	DeleteFlags(envID string, identifier string)
 	DeleteSegment(identifier string)
+	DeleteSegments(envID string, identifier string)
 
 	Close()
 }
@@ -29,10 +33,12 @@ type Repository interface {
 type Callback interface {
 	OnFlagStored(identifier string)
 	OnFlagsStored(envID string)
+	OnFlagsDeleted(envID string, identifier string)
 	OnFlagDeleted(identifier string)
 	OnSegmentStored(identifier string)
 	OnSegmentsStored(envID string)
 	OnSegmentDeleted(identifier string)
+	OnSegmentsDeleted(envID string, identifier string)
 }
 
 // FFRepository holds cache and optionally offline data
@@ -75,6 +81,16 @@ func (r FFRepository) getFlags(envID string) ([]rest.FeatureConfig, error) {
 	}
 
 	return []rest.FeatureConfig{}, fmt.Errorf("%w with environment: %s", ErrFeatureConfigNotFound, envID)
+}
+
+func (r FFRepository) getSegments(envID string) ([]rest.Segment, error) {
+	segmentsKey := formatSegmentsKey(envID)
+	flags, ok := r.cache.Get(segmentsKey)
+	if ok {
+		return flags.([]rest.Segment), nil
+	}
+
+	return []rest.Segment{}, fmt.Errorf("%w with environment: %s", ErrFeatureConfigNotFound, envID)
 }
 
 func (r FFRepository) getFlagAndCache(identifier string, cacheable bool) (rest.FeatureConfig, error) {
@@ -201,7 +217,7 @@ func (r FFRepository) SetSegment(segment rest.Segment, initialLoad bool) {
 func (r FFRepository) SetSegments(initialLoad bool, envID string, segments ...rest.Segment) {
 	if !initialLoad {
 		// If segments aren't outdated then we can exit as we don't need to refresh the cache
-		if !r.areSegmentsOutdated(segments...) {
+		if !r.areSegmentsOutdated(envID, segments...) {
 			return
 		}
 	}
@@ -238,6 +254,42 @@ func (r FFRepository) DeleteFlag(identifier string) {
 	}
 }
 
+// DeleteFlags removes a flag from the flags key.
+//
+// We can't just delete the key here the way we can for a single flag because then we'd be removing flags that
+// haven't been deleted. So we have to first fetch value, then remove the specific flag that has been deleted
+// and update the key in the cache/storage
+func (r FFRepository) DeleteFlags(envID string, identifier string) {
+	flagsKey := formatFlagsKey(envID)
+	if r.storage != nil {
+		// remove from storage
+		if err := r.storage.Remove(flagsKey); err != nil {
+			log.Errorf("error while removing flags %s from repository", envID)
+		}
+	}
+
+	value, ok := r.cache.Get(flagsKey)
+	if !ok {
+		log.Errorf("error fetching flags from cache for env=%s", envID)
+		return
+	}
+
+	featureConfigs, ok := value.([]rest.FeatureConfig)
+	if !ok {
+		log.Errorf("failed to delete flags, expected type to be []rest.FeatureConfig but got %T", featureConfigs)
+		return
+	}
+
+	updatedFeatureConfigs := slices.DeleteFunc(featureConfigs, func(element rest.FeatureConfig) bool {
+		return element.Feature == identifier
+	})
+	r.cache.Set(flagsKey, updatedFeatureConfigs)
+
+	if r.callback != nil {
+		r.callback.OnFlagsDeleted(envID, identifier)
+	}
+}
+
 // DeleteSegment removes a segment from the repository
 func (r FFRepository) DeleteSegment(identifier string) {
 	segmentKey := formatSegmentKey(identifier)
@@ -251,6 +303,42 @@ func (r FFRepository) DeleteSegment(identifier string) {
 	r.cache.Remove(segmentKey)
 	if r.callback != nil {
 		r.callback.OnSegmentDeleted(identifier)
+	}
+}
+
+// DeleteSegments removes a Segment from the segments key.
+//
+// We can't just delete the key here the way we can for a single flag because then we'd be removing segments that
+// haven't been deleted. So we have to first fetch value, then remove the specific segment that has been deleted
+// and update the key in the cache/storage
+func (r FFRepository) DeleteSegments(envID string, identifier string) {
+	segmentsKey := formatSegmentsKey(envID)
+	if r.storage != nil {
+		// remove from storage
+		if err := r.storage.Remove(segmentsKey); err != nil {
+			log.Errorf("error while removing segments %s from repository", envID)
+		}
+	}
+
+	value, ok := r.cache.Get(segmentsKey)
+	if !ok {
+		log.Errorf("error fetching segments from cache for env=%s", envID)
+		return
+	}
+
+	segments, ok := value.([]rest.Segment)
+	if !ok {
+		log.Errorf("failed to delete flags, expected type to be []rest.Segment but got %T", segments)
+		return
+	}
+
+	updatedSegments := slices.DeleteFunc(segments, func(element rest.Segment) bool {
+		return element.Identifier == identifier
+	})
+	r.cache.Set(segmentsKey, updatedSegments)
+
+	if r.callback != nil {
+		r.callback.OnSegmentsDeleted(envID, identifier)
 	}
 }
 
@@ -319,7 +407,32 @@ func (r FFRepository) isSegmentOutdated(segment rest.Segment) bool {
 	return *oldSegment.Version < *segment.Version
 }
 
-func (r FFRepository) areSegmentsOutdated(segments ...rest.Segment) bool {
+func (r FFRepository) areSegmentsOutdated(envID string, segments ...rest.Segment) bool {
+	oldSegments, err := r.getSegments(envID)
+	if err != nil {
+		// If we get an error return true to force a cache refresh
+		return true
+	}
+
+	oldSegmentsMap := map[string]rest.Segment{}
+	for _, v := range oldSegments {
+		oldSegmentsMap[v.Identifier] = v
+	}
+
+	for _, seg := range segments {
+		os, ok := oldSegmentsMap[seg.Identifier]
+		if !ok {
+			// If a new flag isn't in the oldFlagMap then the list of old flags are outdated and we'll
+			// want to refresh the cache
+			return true
+		}
+
+		if *os.Version < *seg.Version {
+			return true
+		}
+	}
+	return false
+
 	for _, segment := range segments {
 		if r.isSegmentOutdated(segment) {
 			return true
