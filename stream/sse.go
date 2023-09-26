@@ -130,6 +130,7 @@ func (c *SSEClient) handleEvent(event Event) {
 		switch cfMsg.Event {
 		case dto.SseDeleteEvent:
 			c.repository.DeleteFlag(cfMsg.Identifier)
+			c.repository.DeleteFlags(event.Environment, cfMsg.Identifier)
 		case dto.SsePatchEvent, dto.SseCreateEvent:
 			fallthrough
 		default:
@@ -173,6 +174,7 @@ func (c *SSEClient) handleEvent(event Event) {
 		switch cfMsg.Event {
 		case dto.SseDeleteEvent:
 			c.repository.DeleteSegment(cfMsg.Identifier)
+			c.repository.DeleteSegments(event.Environment, cfMsg.Identifier)
 		case dto.SsePatchEvent, dto.SseCreateEvent:
 			fallthrough
 		default:

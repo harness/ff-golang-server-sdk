@@ -161,6 +161,10 @@ func (m *mockCache) Get(key interface{}) (value interface{}, ok bool) {
 		return m.features, true
 	}
 
+	if s == "target-segments/123" {
+		return m.segments, true
+	}
+
 	if strings.Contains(s, "target-segment") {
 		seg := strings.TrimPrefix(s, "target-segment/")
 
@@ -274,6 +278,10 @@ func (m *mockCallback) OnSegmentsStored(envID string) {
 }
 
 func (m *mockCallback) OnSegmentDeleted(identifier string) {}
+
+func (m *mockCallback) OnSegmentsDeleted(envID string, identifier string) {}
+
+func (m *mockCallback) OnFlagsDeleted(envID string, identifier string) {}
 
 func TestFFRepository_SetFlags(t *testing.T) {
 	type args struct {
