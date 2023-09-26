@@ -15,6 +15,7 @@ type Repository interface {
 	GetFlag(identifier string) (rest.FeatureConfig, error)
 	GetSegment(identifier string) (rest.Segment, error)
 	GetFlags() ([]rest.FeatureConfig, error)
+	GetFlagMap() (map[string]*rest.FeatureConfig, error)
 
 	SetFlag(featureConfig rest.FeatureConfig, initialLoad bool)
 	SetFlags(initialLoad bool, envID string, featureConfig ...rest.FeatureConfig)
@@ -118,6 +119,11 @@ func (r FFRepository) GetFlag(identifier string) (rest.FeatureConfig, error) {
 // GetFlags returns all the flags /* Not implemented */
 func (r FFRepository) GetFlags() ([]rest.FeatureConfig, error) {
 	return []rest.FeatureConfig{}, nil
+}
+
+// GetFlagMap returns all flags as a mao /* Not Implemented *.
+func (r FFRepository) GetFlagMap() (map[string]*rest.FeatureConfig, error) {
+	return map[string]*rest.FeatureConfig{}, nil
 }
 
 func (r FFRepository) getSegmentAndCache(identifier string, cacheable bool) (rest.Segment, error) {
