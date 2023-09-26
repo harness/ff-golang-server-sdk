@@ -2,6 +2,7 @@ package evaluation
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -27,11 +28,16 @@ const (
 	equalSensitiveOperator = "equal_sensitive"
 )
 
+var (
+	ErrNilFlag = errors.New("flag is nil")
+)
+
 // Query provides methods for segment and flag retrieval
 type Query interface {
 	GetSegment(identifier string) (rest.Segment, error)
 	GetFlag(identifier string) (rest.FeatureConfig, error)
 	GetFlags() ([]rest.FeatureConfig, error)
+	GetFlagMap() (map[string]*rest.FeatureConfig, error)
 }
 
 // FlagVariations list of FlagVariations
@@ -329,7 +335,7 @@ func (e Evaluator) EvaluateAll(target *Target) (FlagVariations, error) {
 // takes uses feature store.List function to get all the flags.
 func (e Evaluator) evaluateAll(target *Target) ([]FlagVariation, error) {
 	var variations []FlagVariation
-	flags, err := e.query.GetFlags()
+	flags, err := e.query.GetFlagMap()
 	if err != nil {
 		return variations, err
 	}
@@ -358,7 +364,7 @@ func (e Evaluator) evaluate(identifier string, target *Target) (FlagVariation, e
 		return FlagVariation{}, err
 	}
 
-	variation, err := e.getVariationForTheFlag(flag, target)
+	variation, err := e.getVariationForTheFlag(&flag, target)
 	if err != nil {
 		return FlagVariation{}, err
 	}
@@ -366,21 +372,24 @@ func (e Evaluator) evaluate(identifier string, target *Target) (FlagVariation, e
 }
 
 // evaluates the flag and returns a proper variation.
-func (e Evaluator) getVariationForTheFlag(flag rest.FeatureConfig, target *Target) (rest.Variation, error) {
+func (e Evaluator) getVariationForTheFlag(flag *rest.FeatureConfig, target *Target) (rest.Variation, error) {
+	if flag == nil {
+		return rest.Variation{}, ErrNilFlag
+	}
 
 	if flag.Prerequisites != nil {
-		prereq, err := e.checkPreRequisite(&flag, target)
+		prereq, err := e.checkPreRequisite(flag, target)
 		if err != nil || !prereq {
 			return findVariation(flag.Variations, flag.OffVariation)
 		}
 	}
-	variation, err := e.evaluateFlag(flag, target)
+	variation, err := e.evaluateFlag(*flag, target)
 	if err != nil {
 		return rest.Variation{}, err
 	}
 	if e.postEvalCallback != nil {
 		data := PostEvalData{
-			FeatureConfig: &flag,
+			FeatureConfig: flag,
 			Target:        target,
 			Variation:     &variation,
 		}

@@ -312,6 +312,14 @@ func (m TestRepository) GetFlags() ([]rest.FeatureConfig, error) {
 	return flags, nil
 }
 
+func (m TestRepository) GetFlagMap() (map[string]*rest.FeatureConfig, error) {
+	var flags map[string]*rest.FeatureConfig
+	for _, f := range m.flags {
+		flags[f.Feature] = &f
+	}
+	return flags, nil
+}
+
 func TestNewEvaluator(t *testing.T) {
 	noOpLogger := logger.NewNoOpLogger()
 	eval, _ := NewEvaluator(testRepo, nil, noOpLogger)
