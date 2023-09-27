@@ -105,14 +105,11 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		return nil, err
 	}
 
-	err = client.start()
-	if err != nil {
-		return nil, err
-	}
+	client.start()
 	return client, nil
 }
 
-func (c *CfClient) start() error {
+func (c *CfClient) start() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -246,7 +243,10 @@ func (c *CfClient) initAuthentication(ctx context.Context) {
 		var specificErr NonRetryableAuthError
 		if errors.As(err, &specificErr) {
 			fmt.Printf("Authentication failed with a non-retryable error: '%s %s' Default variations will now be served", specificErr.StatusCode, specificErr.Message)
+			return
 		}
+
+		// TODO handle case for retryable error
 		c.config.Logger.Errorf("Authentication failed with error: '%s'. Retrying in 1 minute.", err)
 		// TODO add backoff, and don't wait a minute. Also, set configurable max waitTime.
 		time.Sleep(1 * time.Minute)
