@@ -1,8 +1,21 @@
 package client
 
-import "errors"
+import "fmt"
 
-var (
-	// ErrUnauthorized displays error message for unauthorized users
-	ErrUnauthorized = errors.New("unauthorized")
-)
+type NonRetryableAuthError struct {
+	StatusCode string
+	Message    string
+}
+
+func (e NonRetryableAuthError) Error() string {
+	return fmt.Sprintf("unauthorized: %s: %s", e.StatusCode, e.Message)
+}
+
+type RetryableAuthError struct {
+	StatusCode string
+	Message    string
+}
+
+func (e RetryableAuthError) Error() string {
+	return fmt.Sprintf("server error: %s: %s", e.StatusCode, e.Message)
+}

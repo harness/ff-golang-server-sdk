@@ -240,7 +240,8 @@ func (c *CfClient) initAuthentication(ctx context.Context) {
 		if err == nil {
 			return
 		}
-		c.config.Logger.Errorf("Authentication failed. Trying again in 1 minute: %s", err)
+
+		c.config.Logger.Errorf("Authentication failed with error: '%s'. Retrying in 1 minute.", err)
 		time.Sleep(1 * time.Minute)
 	}
 }
@@ -262,9 +263,29 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	// should be login to harness and get account data (JWT token)
-	if response.JSON200 == nil {
-		return fmt.Errorf("error while authenticating %v", ErrUnauthorized)
+	if response.JSON401 != nil {
+		//return NonRetryableAuthError{StatusCode: response.JSON403.Code, Message: response.JSON403.Message}
+		return *response.JSON401
+	}
+
+	// should be login to harness and get account data (JWT token)
+	if response.JSON403 != nil {
+		return NonRetryableAuthError{StatusCode: response.JSON403.Code, Message: response.JSON403.Message}
+	}
+
+	// should be login to harness and get account data (JWT token)
+	if response.JSON404 != nil {
+		return NonRetryableAuthError{StatusCode: response.JSON404.Code, Message: response.JSON404.Message}
+	}
+
+	// should be login to harness and get account data (JWT token)
+	if response.JSON200 != nil {
+		return RetryableAuthError{
+			StatusCode: "",
+			Message:    "",
+		}
 	}
 
 	c.token = response.JSON200.AuthToken
