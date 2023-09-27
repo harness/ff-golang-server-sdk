@@ -111,3 +111,15 @@ func WithProxyMode(b bool) ConfigOption {
 		config.proxyMode = b
 	}
 }
+
+func WithWaitForInitialized(b bool) ConfigOption {
+	return func(config *config) {
+		config.waitForInitialized = b
+	}
+}
+
+func WithMaxAuthRetries(i int) ConfigOption {
+	return func(config *config) {
+		config.maxAuthRetries = i
+	}
+}

@@ -1,7 +1,11 @@
 package client_test
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"github.com/harness/ff-golang-server-sdk/types"
+	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -15,11 +19,38 @@ import (
 )
 
 const (
-	sdkKey = "27bed8d2-2610-462b-90eb-d80fd594b623"
-	URL    = "http://localhost/api/1.0"
+	ValidSDKKey = "27bed8d2-2610-462b-90eb-d80fd594b623"
+	EmptySDKKey = ""
+	URL         = "http://localhost/api/1.0"
+
 	//nolint
-	AuthToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0IjoiMTA0MjM5NzYtODQ1MS00NmZjLTg2NzctYmNiZDM3MTA3M2JhIiwiZW52aXJvbm1lbnQiOiI3ZWQxMDI1ZC1hOWIxLTQxMjktYTg4Zi1lMjdlZjM2MDk4MmQiLCJwcm9qZWN0SWRlbnRpZmllciI6IiIsImVudmlyb25tZW50SWRlbnRpZmllciI6IlByZVByb2R1Y3Rpb24iLCJhY2NvdW50SUQiOiIiLCJvcmdhbml6YXRpb24iOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDAiLCJjbHVzdGVySWRlbnRpZmllciI6IjEifQ.E4O_u42HkR0q4AwTTViFTCnNa89Kwftks7Gh-GvQfuE"
+	ValidAuthToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0IjoiMTA0MjM5NzYtODQ1MS00NmZjLTg2NzctYmNiZDM3MTA3M2JhIiwiZW52aXJvbm1lbnQiOiI3ZWQxMDI1ZC1hOWIxLTQxMjktYTg4Zi1lMjdlZjM2MDk4MmQiLCJwcm9qZWN0SWRlbnRpZmllciI6IiIsImVudmlyb25tZW50SWRlbnRpZmllciI6IlByZVByb2R1Y3Rpb24iLCJhY2NvdW50SUQiOiIiLCJvcmdhbml6YXRpb24iOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDAiLCJjbHVzdGVySWRlbnRpZmllciI6IjEifQ.E4O_u42HkR0q4AwTTViFTCnNa89Kwftks7Gh-GvQfuE"
+	EmptyAuthToken = ""
 )
+
+// responderQueue is a type that manages a queue of responders
+type responderQueue struct {
+	responders []httpmock.Responder
+	index      int
+}
+
+// makeResponderQueue creates a new instance of responderQueue with the provided responders
+func makeResponderQueue(responders []httpmock.Responder) *responderQueue {
+	return &responderQueue{
+		responders: responders,
+		index:      0,
+	}
+}
+
+// getNextResponder is a method that returns the next responder in the queue
+func (q *responderQueue) getNextResponder(req *http.Request) (*http.Response, error) {
+	if q.index >= len(q.responders) {
+		return nil, fmt.Errorf("no more responders in the queue")
+	}
+	responder := q.responders[q.index]
+	q.index++
+	return responder(req)
+}
 
 // TestMain runs before the other tests
 func TestMain(m *testing.M) {
@@ -27,17 +58,146 @@ func TestMain(m *testing.M) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	// Register Default Responders
-	httpmock.RegisterResponder("POST", "http://localhost/api/1.0/client/auth", ValidAuthResponse)
-	httpmock.RegisterResponder("GET", "http://localhost/api/1.0/client/env/7ed1025d-a9b1-4129-a88f-e27ef360982d/target-segments", TargetSegmentsResponse)
-	httpmock.RegisterResponder("GET", "http://localhost/api/1.0/client/env/7ed1025d-a9b1-4129-a88f-e27ef360982d/feature-configs", FeatureConfigsResponse)
-
 	os.Exit(m.Run())
 }
 
-func TestCfClient_BoolVariation(t *testing.T) {
+func registerResponders(authResponder httpmock.Responder, targetSegmentsResponder httpmock.Responder, featureConfigsResponder httpmock.Responder) {
+	httpmock.RegisterResponder("POST", "http://localhost/api/1.0/client/auth", authResponder)
+	httpmock.RegisterResponder("GET", "http://localhost/api/1.0/client/env/7ed1025d-a9b1-4129-a88f-e27ef360982d/target-segments", targetSegmentsResponder)
+	httpmock.RegisterResponder("GET", "http://localhost/api/1.0/client/env/7ed1025d-a9b1-4129-a88f-e27ef360982d/feature-configs", featureConfigsResponder)
+}
 
-	client, target, err := MakeNewClientAndTarget()
+// Same as registerResponders except the auth response can be different per call
+func registerStatefulResponders(authResponder []httpmock.Responder, targetSegmentsResponder httpmock.Responder, featureConfigsResponder httpmock.Responder) {
+	authQueue := makeResponderQueue(authResponder)
+	httpmock.RegisterResponder("POST", "http://localhost/api/1.0/client/auth", authQueue.getNextResponder)
+
+	// These responders don't need different responses per call
+	httpmock.RegisterResponder("GET", "http://localhost/api/1.0/client/env/7ed1025d-a9b1-4129-a88f-e27ef360982d/target-segments", targetSegmentsResponder)
+	httpmock.RegisterResponder("GET", "http://localhost/api/1.0/client/env/7ed1025d-a9b1-4129-a88f-e27ef360982d/feature-configs", featureConfigsResponder)
+}
+
+func TestCfClient_NewClient(t *testing.T) {
+
+	tests := []struct {
+		name          string
+		newClientFunc func() (*client.CfClient, error)
+		mockResponder func()
+		wantErr       error
+	}{
+		{
+			name: "Successful client creation",
+			newClientFunc: func() (*client.CfClient, error) {
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey)
+			},
+			mockResponder: func() {
+				authSuccessResponse := AuthResponse(200, ValidAuthToken)
+				registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			wantErr: nil,
+		},
+		{
+			name: "Empty SDK key",
+			newClientFunc: func() (*client.CfClient, error) {
+				return newSynchronousClient(http.DefaultClient, EmptySDKKey)
+			},
+			mockResponder: nil,
+			wantErr:       types.ErrSdkCantBeEmpty,
+		},
+		{
+			name: "Authentication failed with 401 and no retry",
+			newClientFunc: func() (*client.CfClient, error) {
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "invalid key or target provided",
+				"code": "401"
+				}`
+				authErrorResponse := AuthResponseDetailed(403, "403", bodyString)
+				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+			},
+			wantErr: client.NonRetryableAuthError{
+				StatusCode: "401",
+				Message:    "invalid key or target provided",
+			},
+		},
+		{
+			name: "Authentication failed with 403 and no retry",
+			newClientFunc: func() (*client.CfClient, error) {
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "forbidden",
+				"code": "403"
+				}`
+				authErrorResponse := AuthResponseDetailed(403, "403", bodyString)
+				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+			},
+			wantErr: client.NonRetryableAuthError{
+				StatusCode: "403",
+				Message:    "forbidden",
+			},
+		},
+		{
+			name: "Authentication failed with 404 and no retry",
+			newClientFunc: func() (*client.CfClient, error) {
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "not found",
+				"code": "404"
+				}`
+				authErrorResponse := AuthResponseDetailed(404, "404", bodyString)
+				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			wantErr: client.NonRetryableAuthError{
+				StatusCode: "404",
+				Message:    "not found",
+			},
+		},
+		{
+			name: "Authentication failed with 500 and retries once",
+			newClientFunc: func() (*client.CfClient, error) {
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey)
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "internal server error",
+				"code": "500"
+				}`
+				firstAuthResponse := AuthResponseDetailed(500, "success", bodyString)
+				secondAuthResponse := AuthResponse(200, ValidAuthToken)
+
+				registerStatefulResponders([]httpmock.Responder{firstAuthResponse, secondAuthResponse}, TargetSegmentsResponse, FeatureConfigsResponse)
+				//registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			wantErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			if tt.mockResponder != nil {
+				tt.mockResponder()
+			}
+			_, err := tt.newClientFunc()
+
+			assert.Equal(t, tt.wantErr, err)
+		})
+	}
+}
+
+func TestCfClient_BoolVariation(t *testing.T) {
+	authSuccessResponse := AuthResponse(200, ValidAuthToken)
+	registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+	client, target, err := MakeNewSynchronousClientAndTarget(ValidSDKKey)
 	if err != nil {
 		t.Error(err)
 	}
@@ -75,8 +235,10 @@ func TestCfClient_BoolVariation(t *testing.T) {
 }
 
 func TestCfClient_StringVariation(t *testing.T) {
+	authSuccessResponse := AuthResponse(200, ValidAuthToken)
+	registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 
-	client, target, err := MakeNewClientAndTarget()
+	client, target, err := MakeNewSynchronousClientAndTarget(ValidSDKKey)
 	if err != nil {
 		t.Error(err)
 	}
@@ -111,30 +273,34 @@ func TestCfClient_StringVariation(t *testing.T) {
 	}
 }
 
-// MakeNewClientAndTarget creates a new client and target.  If it returns
+// MakeNewSynchronousClientAndTarget creates a new synchronous client and target.  If it returns
 // error then something went wrong.
-func MakeNewClientAndTarget() (*client.CfClient, *evaluation.Target, error) {
+func MakeNewSynchronousClientAndTarget(sdkKey string) (*client.CfClient, *evaluation.Target, error) {
 	target := target()
-	client, err := newClient(http.DefaultClient)
+	client, err := newSynchronousClient(http.DefaultClient, sdkKey)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// Wait to be authenticated - we can timeout if the channel doesn't return
-	if ok, err := client.IsInitialized(); !ok {
-		return nil, nil, err
-	}
-
 	return client, target, nil
 }
 
-// newClient creates a new client with some default options
-func newClient(httpClient *http.Client) (*client.CfClient, error) {
+// newAsyncClient creates a new client with some default options
+func newAsyncClient(httpClient *http.Client) (*client.CfClient, error) {
+	return client.NewCfClient(ValidSDKKey,
+		client.WithURL(URL),
+		client.WithStreamEnabled(false),
+		client.WithHTTPClient(httpClient),
+		client.WithStoreEnabled(false),
+	)
+}
+
+func newSynchronousClient(httpClient *http.Client, sdkKey string) (*client.CfClient, error) {
 	return client.NewCfClient(sdkKey,
 		client.WithURL(URL),
 		client.WithStreamEnabled(false),
 		client.WithHTTPClient(httpClient),
 		client.WithStoreEnabled(false),
+		client.WithWaitForInitialized(true),
 	)
 }
 
@@ -148,9 +314,33 @@ func target() *evaluation.Target {
 	return &target
 }
 
-var ValidAuthResponse = func(req *http.Request) (*http.Response, error) {
-	return httpmock.NewJsonResponse(200, rest.AuthenticationResponse{
-		AuthToken: AuthToken})
+var AuthResponse = func(statusCode int, authToken string) func(req *http.Request) (*http.Response, error) {
+
+	return func(req *http.Request) (*http.Response, error) {
+		// Return the appropriate error based on the provided status code
+		return httpmock.NewJsonResponse(statusCode, rest.AuthenticationResponse{
+			AuthToken: authToken})
+	}
+}
+
+var AuthResponseDetailed = func(statusCode int, status string, bodyString string) func(req *http.Request) (*http.Response, error) {
+
+	return func(req *http.Request) (*http.Response, error) {
+		// Return the appropriate error based on the provided status code
+		response := &http.Response{
+			StatusCode: statusCode,
+			Status:     status,
+			Body:       io.NopCloser(bytes.NewReader([]byte(bodyString))), // this is your JSON body as io.ReadCloser
+			Header:     make(http.Header),
+		}
+
+		// Add headers to the response
+		response.Header.Add("Content-Type", "application/json")
+		// You can add other headers as needed:
+		// response.Header.Add("Another-Header", "Header-Value")
+
+		return response, nil
+	}
 }
 
 var TargetSegmentsResponse = func(req *http.Request) (*http.Response, error) {
@@ -201,7 +391,7 @@ var FeatureConfigsResponse = func(req *http.Request) (*http.Response, error) {
 }
 
 func TestCfClient_Close(t *testing.T) {
-	client, err := newClient(&http.Client{})
+	client, err := newSynchronousClient(&http.Client{}, ValidSDKKey)
 	if err != nil {
 		t.Error(err)
 	}
