@@ -240,9 +240,9 @@ func (c *CfClient) initAuthentication(ctx context.Context) {
 		if err == nil {
 		}
 
-		var specificErr NonRetryableAuthError
-		if errors.As(err, &specificErr) {
-			fmt.Printf("Authentication failed with a non-retryable error: '%s %s' Default variations will now be served", specificErr.StatusCode, specificErr.Message)
+		var nonRetryableAuthError NonRetryableAuthError
+		if errors.As(err, &nonRetryableAuthError) {
+			fmt.Printf("Authentication failed with a non-retryable error: '%s %s' Default variations will now be served", nonRetryableAuthError.StatusCode, nonRetryableAuthError.Message)
 			return
 		}
 
