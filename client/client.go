@@ -241,6 +241,18 @@ func (c *CfClient) initAuthentication(ctx context.Context) {
 			return
 		}
 
+		//var nonRetryErr NonRetryableAuthError
+		//var retryErr RetryableAuthError
+
+		//if errors.As(err, &nonRetryErr) {
+		//	c.config.Logger.Errorf("Authentication failed with a non-retryable error: '%s'", err)
+		//}
+
+		var specificErr NonRetryableAuthError
+		if errors.As(err, &specificErr) {
+			fmt.Printf("Authentication failed with a non-retryable error: %s %s", specificErr.StatusCode, specificErr.Message)
+			return err
+		}
 		c.config.Logger.Errorf("Authentication failed with error: '%s'. Retrying in 1 minute.", err)
 		time.Sleep(1 * time.Minute)
 	}
