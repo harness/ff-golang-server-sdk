@@ -246,9 +246,8 @@ func (c *CfClient) initAuthentication(ctx context.Context) {
 			return
 		}
 
-		// TODO handle case for retryable error
+		// TODO add delay and backoff, don't wait a minute. Also, set configurable max retries.
 		c.config.Logger.Errorf("Authentication failed with error: '%s'. Retrying in 1 minute.", err)
-		// TODO add backoff, and don't wait a minute. Also, set configurable max waitTime.
 		time.Sleep(1 * time.Minute)
 	}
 }
@@ -289,7 +288,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 		}
 	}
 
-	// Defensive check to handle the case if all responses are nil
+	// Defensive check to handle the case that all responses are nil
 	if response.JSON200 == nil {
 		return RetryableAuthError{
 			StatusCode: "No errpr status code returned from server",
