@@ -266,7 +266,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 
 	responseError := findErrorInResponse(response)
 
-	// We want to retry on 500 errors only
+	// Indicate that we should retry
 	if responseError != nil && responseError.Code == "500" {
 		return RetryableAuthError{
 			StatusCode: responseError.Code,
@@ -274,7 +274,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 		}
 	}
 
-	// Don't retry on 4xx errors
+	// Indicate that we shouldn't retry on non-500 errors
 	if responseError != nil {
 		return NonRetryableAuthError{
 			StatusCode: responseError.Code,
