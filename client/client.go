@@ -264,27 +264,29 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 		return err
 	}
 
-	// should be login to harness and get account data (JWT token)
-	if response.JSON401 != nil {
-		//return NonRetryableAuthError{StatusCode: response.JSON403.Code, Message: response.JSON403.Message}
-		return *response.JSON401
-	}
+	responseError := findErrorInResponse(response)
 
-	// should be login to harness and get account data (JWT token)
-	if response.JSON403 != nil {
-		return NonRetryableAuthError{StatusCode: response.JSON403.Code, Message: response.JSON403.Message}
-	}
-
-	// should be login to harness and get account data (JWT token)
-	if response.JSON404 != nil {
-		return NonRetryableAuthError{StatusCode: response.JSON404.Code, Message: response.JSON404.Message}
-	}
-
-	// should be login to harness and get account data (JWT token)
-	if response.JSON200 != nil {
+	// We want to retry on 500 errors only
+	if responseError != nil && responseError.Code == "500" {
 		return RetryableAuthError{
-			StatusCode: "",
-			Message:    "",
+			StatusCode: responseError.Code,
+			Message:    responseError.Message,
+		}
+	}
+
+	// Don't retry on 4xx errors
+	if responseError != nil {
+		return NonRetryableAuthError{
+			StatusCode: responseError.Code,
+			Message:    responseError.Message,
+		}
+	}
+
+	// Defensive check to handle the case if all responses are nil
+	if response.JSON200 == nil {
+		return RetryableAuthError{
+			StatusCode: "No errpr status code returned from server",
+			Message:    "No error message returned from server ",
 		}
 	}
 
@@ -546,4 +548,14 @@ func getLogger(options ...ConfigOption) logger.Logger {
 		dummyConfig.Logger = defaultLogger
 	}
 	return dummyConfig.Logger
+}
+
+func findErrorInResponse(resp *rest.AuthenticateResponse) *rest.Error {
+	responseErrors := []*rest.Error{resp.JSON401, resp.JSON403, resp.JSON404, resp.JSON500}
+	for _, responseError := range responseErrors {
+		if responseError != nil {
+			return responseError
+		}
+	}
+	return nil
 }
