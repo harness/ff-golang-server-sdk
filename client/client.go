@@ -105,11 +105,14 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		return nil, err
 	}
 
-	client.start()
+	err = client.start()
+	if err != nil {
+		return nil, err
+	}
 	return client, nil
 }
 
-func (c *CfClient) start() {
+func (c *CfClient) start() error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -117,9 +120,16 @@ func (c *CfClient) start() {
 		cancel()
 	}()
 
-	go c.initAuthentication(ctx)
+	var err error = nil
+	go func() {
+		err2 := c.initAuthentication(ctx)
+		if err2 != nil {
+			err = err2
+		}
+	}()
 	go c.setAnalyticsServiceClient(ctx)
 	go c.pullCronJob(ctx)
+	return err
 }
 
 // PostEvaluateProcessor push the data to the analytics service
@@ -233,20 +243,13 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	c.streamConnected = true
 }
 
-func (c *CfClient) initAuthentication(ctx context.Context) {
-	// attempt to authenticate every minute until we succeed
+func (c *CfClient) initAuthentication(ctx context.Context) error {
+	// TODO update this comment: attempt to authenticate every minute until we succeed
 	for {
 		err := c.authenticate(ctx)
 		if err == nil {
-			return
+			return nil
 		}
-
-		//var nonRetryErr NonRetryableAuthError
-		//var retryErr RetryableAuthError
-
-		//if errors.As(err, &nonRetryErr) {
-		//	c.config.Logger.Errorf("Authentication failed with a non-retryable error: '%s'", err)
-		//}
 
 		var specificErr NonRetryableAuthError
 		if errors.As(err, &specificErr) {
@@ -254,6 +257,7 @@ func (c *CfClient) initAuthentication(ctx context.Context) {
 			return err
 		}
 		c.config.Logger.Errorf("Authentication failed with error: '%s'. Retrying in 1 minute.", err)
+		// TODO add backoff, and don't wait a minute. Also, set configurable max waitTime.
 		time.Sleep(1 * time.Minute)
 	}
 }
