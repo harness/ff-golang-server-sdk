@@ -208,6 +208,11 @@ func (c *CfClient) retrieve(ctx context.Context) bool {
 	}
 
 	if ok {
+		// This flag is used by `IsInitialized` so set to true.
+		c.initializedBoolLock.Lock()
+		c.initializedBool = true
+		c.initializedBoolLock.Unlock()
+		
 		close(c.initialized)
 	}
 	return ok
