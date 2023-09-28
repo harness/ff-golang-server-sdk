@@ -124,7 +124,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 			// We return the client but leave it in un-initialized state by not setting the relevant initialized flag.
 			// This ensures any subsequent calls to the client don't potentially result in a panic. For example, if a user
 			// calls BoolVariation we can log that the client is not initialized and return the user the default variation.
-			return client, fmt.Errorf("error during initialization: %v", initErr)
+			return client, initErr
 		}
 	}
 
