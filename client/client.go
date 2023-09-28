@@ -89,7 +89,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	}
 
 	if sdkKey == "" {
-		return client, types.ErrSdkCantBeEmpty
+		return nil, types.ErrSdkCantBeEmpty
 	}
 
 	var err error
@@ -121,7 +121,10 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		}
 
 		if initErr != nil {
-			return nil, fmt.Errorf("error during initialization: %v", initErr)
+			// We return the client but leave it in un-initialized state by not setting the relevant initialized flag.
+			// This ensures any subsequent calls to the client don't potentially result in a panic. For example, if a user
+			// calls BoolVariation we can log that the client is not initialized and return the user the default variation.
+			return client, fmt.Errorf("error during initialization: %v", initErr)
 		}
 	}
 
@@ -483,7 +486,7 @@ func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultValue bool) (bool, error) {
-	if c == nil {
+	if !c.initializedBool {
 		c.config.Logger.Error("Error when calling BoolVariation and returning default variation: 'Client is not initialized'")
 		return defaultValue, nil
 	}
@@ -495,7 +498,7 @@ func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultV
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaultValue string) (string, error) {
-	if c == nil {
+	if !c.initializedBool {
 		c.config.Logger.Error("Error when calling StringVariation and returning default variation: 'Client is not initialized'")
 		return defaultValue, nil
 	}
@@ -507,7 +510,7 @@ func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaul
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultValue int64) (int64, error) {
-	if c == nil {
+	if !c.initializedBool {
 		c.config.Logger.Error("Error when calling IntVariation and returning default variation: 'Client is not initialized'")
 		return defaultValue, nil
 	}
@@ -519,7 +522,7 @@ func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultVa
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaultValue float64) (float64, error) {
-	if c == nil {
+	if !c.initializedBool {
 		c.config.Logger.Error("Error when calling NumberVariation and returning default variation: 'Client is not initialized'")
 		return defaultValue, nil
 	}
@@ -532,7 +535,7 @@ func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaul
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultValue types.JSON) (types.JSON, error) {
-	if c == nil {
+	if !c.initializedBool {
 		c.config.Logger.Error("Error when calling JSONVariation and returning default variation: 'Client is not initialized'")
 		return defaultValue, nil
 	}
@@ -543,7 +546,7 @@ func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultV
 // Close shuts down the Feature Flag client. After calling this, the client
 // should no longer be used
 func (c *CfClient) Close() error {
-	if c == nil {
+	if !c.initializedBool {
 		return errors.New("attempted to close client that is not initialized")
 	}
 	if c.stopped.get() {
