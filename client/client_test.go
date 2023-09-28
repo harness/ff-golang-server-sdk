@@ -47,7 +47,6 @@ func TestNewCfClient(t *testing.T) {
 		name          string
 		sdkKey        string
 		mockResponder func()
-		wantClient    bool
 		wantErr       error
 	}{
 		{
@@ -56,14 +55,12 @@ func TestNewCfClient(t *testing.T) {
 			mockResponder: func() {
 				// setup happy path mock responder
 			},
-			wantClient: true,
-			wantErr:    nil,
+			wantErr: nil,
 		},
 		{
 			name:          "Empty SDK key",
 			sdkKey:        "",
 			mockResponder: nil,
-			wantClient:    false,
 			wantErr:       types.ErrSdkCantBeEmpty,
 		},
 		{
@@ -74,13 +71,11 @@ func TestNewCfClient(t *testing.T) {
 				registerResponders(authErrorResponder, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
-			wantClient: false,
 			wantErr: client.NonRetryableAuthError{
 				StatusCode: "401",
 				Message:    "aa",
 			},
 		},
-		// Add more scenarios as needed
 	}
 
 	for _, tt := range tests {
