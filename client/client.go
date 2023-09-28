@@ -484,6 +484,7 @@ func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultValue bool) (bool, error) {
 	if c == nil {
+		c.config.Logger.Error("Error when calling BoolVariation and returning default variation: 'Client is not initialized'")
 		return defaultValue, nil
 	}
 	value := c.evaluator.BoolVariation(key, target, defaultValue)
@@ -495,6 +496,7 @@ func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultV
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaultValue string) (string, error) {
 	if c == nil {
+		c.config.Logger.Error("Error when calling StringVariation and returning default variation: 'Client is not initialized'")
 		return defaultValue, nil
 	}
 	value := c.evaluator.StringVariation(key, target, defaultValue)
@@ -506,6 +508,7 @@ func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaul
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultValue int64) (int64, error) {
 	if c == nil {
+		c.config.Logger.Error("Error when calling IntVariation and returning default variation: 'Client is not initialized'")
 		return defaultValue, nil
 	}
 	value := c.evaluator.IntVariation(key, target, int(defaultValue))
@@ -517,6 +520,7 @@ func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultVa
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaultValue float64) (float64, error) {
 	if c == nil {
+		c.config.Logger.Error("Error when calling NumberVariation and returning default variation: 'Client is not initialized'")
 		return defaultValue, nil
 	}
 	value := c.evaluator.NumberVariation(key, target, defaultValue)
@@ -528,6 +532,10 @@ func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaul
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultValue types.JSON) (types.JSON, error) {
+	if c == nil {
+		c.config.Logger.Error("Error when calling JSONVariation and returning default variation: 'Client is not initialized'")
+		return defaultValue, nil
+	}
 	value := c.evaluator.JSONVariation(key, target, defaultValue)
 	return value, nil
 }
