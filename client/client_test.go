@@ -42,6 +42,7 @@ func registerResponders(authResponder httpmock.Responder, targetSegmentsResponde
 }
 
 func TestNewCfClient(t *testing.T) {
+
 	tests := []struct {
 		name          string
 		sdkKey        string
@@ -69,8 +70,9 @@ func TestNewCfClient(t *testing.T) {
 			name:   "Authentication failed with non-retryable error",
 			sdkKey: sdkKey,
 			mockResponder: func() {
-				//authErrorResponder := ErrorResponse(401, "Unauthorized request")
-				registerResponders(ValidAuthResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+				authErrorResponder := ErrorResponse(401, "Unauthorized request")
+				registerResponders(authErrorResponder, TargetSegmentsResponse, FeatureConfigsResponse)
+
 			},
 			wantClient: false,
 			wantErr: client.NonRetryableAuthError{
@@ -83,17 +85,12 @@ func TestNewCfClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
 			if tt.mockResponder != nil {
 				tt.mockResponder()
 			}
 
-			client, err := newClient(http.DefaultClient)
-
-			if tt.wantClient {
-				assert.NotNil(t, client)
-			} else {
-				assert.Nil(t, client)
-			}
+			_, err := newClientWaitForInit(http.DefaultClient)
 
 			assert.Equal(t, tt.wantErr, err)
 		})
@@ -204,6 +201,16 @@ func newClient(httpClient *http.Client) (*client.CfClient, error) {
 	)
 }
 
+func newClientWaitForInit(httpClient *http.Client) (*client.CfClient, error) {
+	return client.NewCfClient(sdkKey,
+		client.WithURL(URL),
+		client.WithStreamEnabled(false),
+		client.WithHTTPClient(httpClient),
+		client.WithStoreEnabled(false),
+		client.WithWaitForInitialized(true),
+	)
+}
+
 // target creates a new Target with some default values
 func target() *evaluation.Target {
 	target := dto.NewTargetBuilder("john").
@@ -215,7 +222,8 @@ func target() *evaluation.Target {
 }
 
 var ValidAuthResponse = func(req *http.Request) (*http.Response, error) {
-	return httpmock.NewJsonResponse(403, http.Response{Status: "403"})
+	return httpmock.NewJsonResponse(200, rest.AuthenticationResponse{
+		AuthToken: AuthToken})
 }
 
 var RetryableErrorAuthResponse = func(req *http.Request) (*http.Response, error) {
