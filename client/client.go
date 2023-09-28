@@ -165,7 +165,7 @@ func (c *CfClient) GetClusterIdentifier() string {
 func (c *CfClient) IsInitialized() (bool, error) {
 	for i := 0; i < 30; i++ {
 		c.initializedBoolLock.RLock()
-		if c.initialized {
+		if c.initializedBool {
 			c.initializedBoolLock.RUnlock()
 			return true, nil
 		}
