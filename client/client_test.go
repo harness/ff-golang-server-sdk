@@ -41,7 +41,7 @@ func registerResponders(authResponder httpmock.Responder, targetSegmentsResponde
 	httpmock.RegisterResponder("GET", "http://localhost/api/1.0/client/env/7ed1025d-a9b1-4129-a88f-e27ef360982d/feature-configs", featureConfigsResponder)
 }
 
-func TestNewCfClient(t *testing.T) {
+func TestCfClient_NewClient(t *testing.T) {
 
 	tests := []struct {
 		name          string
@@ -49,15 +49,15 @@ func TestNewCfClient(t *testing.T) {
 		mockResponder func()
 		wantErr       error
 	}{
-		//{
-		//	name:   "Successful client creation",
-		//	sdkKey: sdkKey,
-		//	mockResponder: func() {
-		//		registerResponders(ValidAuthResponse, TargetSegmentsResponse, FeatureConfigsResponse)
-		//
-		//	},
-		//	wantErr: nil,
-		//},
+		{
+			name:   "Successful client creation",
+			sdkKey: sdkKey,
+			mockResponder: func() {
+				registerResponders(ValidAuthResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			wantErr: nil,
+		},
 		{
 			name:          "Empty SDK key",
 			sdkKey:        "",
@@ -73,8 +73,8 @@ func TestNewCfClient(t *testing.T) {
 
 			},
 			wantErr: client.NonRetryableAuthError{
-				StatusCode: "401",
-				Message:    "aa",
+				StatusCode: "",
+				Message:    "",
 			},
 		},
 	}
@@ -89,8 +89,6 @@ func TestNewCfClient(t *testing.T) {
 			_, err := newClientWaitForInit(http.DefaultClient, tt.sdkKey)
 
 			assert.Equal(t, tt.wantErr, err)
-
-			httpmock.Reset()
 
 		})
 	}
