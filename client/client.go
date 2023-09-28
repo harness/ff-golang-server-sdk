@@ -160,30 +160,19 @@ func (c *CfClient) GetClusterIdentifier() string {
 	return c.clusterIdentifier
 }
 
-//
-//// IsInitialized determines if the client is ready to be used.  This is true if it has both authenticated
-//// and successfully retrieved flags.  If it takes longer than 1 minute the call will timeout and return an error.
-//func (c *CfClient) IsInitialized() (bool, error) {
-//	for i := 0; i < 30; i++ {
-//		c.initializedBoolLock.RLock()
-//		if c.initialized {
-//			c.initializedBoolLock.RUnlock()
-//			return true, nil
-//		}
-//		c.initializedBoolLock.RUnlock()
-//		time.Sleep(time.Second * 2)
-//	}
-//	return false, fmt.Errorf("timeout waiting to initialize")
-//}
-
-func (c *CfClient) IsInitialized(onError func(err error)) {
-	select {
-	case <-c.initialized:
-		return
-	case err := <-c.initializedErr:
-		onError(err)
-		close(c.initializedErr)
+// IsInitialized determines if the client is ready to be used.  This is true if it has both authenticated
+// and successfully retrieved flags.  If it takes longer than 1 minute the call will timeout and return an error.
+func (c *CfClient) IsInitialized() (bool, error) {
+	for i := 0; i < 30; i++ {
+		c.initializedBoolLock.RLock()
+		if c.initialized {
+			c.initializedBoolLock.RUnlock()
+			return true, nil
+		}
+		c.initializedBoolLock.RUnlock()
+		time.Sleep(time.Second * 2)
 	}
+	return false, fmt.Errorf("timeout waiting to initialize")
 }
 
 func (c *CfClient) retrieve(ctx context.Context) bool {
