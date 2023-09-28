@@ -212,7 +212,7 @@ func (c *CfClient) retrieve(ctx context.Context) bool {
 		c.initializedBoolLock.Lock()
 		c.initializedBool = true
 		c.initializedBoolLock.Unlock()
-		
+
 		close(c.initialized)
 	}
 	return ok
@@ -483,6 +483,9 @@ func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultValue bool) (bool, error) {
+	if c == nil {
+		return defaultValue, nil
+	}
 	value := c.evaluator.BoolVariation(key, target, defaultValue)
 	return value, nil
 }
@@ -491,6 +494,9 @@ func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultV
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaultValue string) (string, error) {
+	if c == nil {
+		return defaultValue, nil
+	}
 	value := c.evaluator.StringVariation(key, target, defaultValue)
 	return value, nil
 }
@@ -499,6 +505,9 @@ func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaul
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultValue int64) (int64, error) {
+	if c == nil {
+		return defaultValue, nil
+	}
 	value := c.evaluator.IntVariation(key, target, int(defaultValue))
 	return int64(value), nil
 }
@@ -507,6 +516,9 @@ func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultVa
 //
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaultValue float64) (float64, error) {
+	if c == nil {
+		return defaultValue, nil
+	}
 	value := c.evaluator.NumberVariation(key, target, defaultValue)
 	return value, nil
 }
@@ -524,7 +536,7 @@ func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultV
 // should no longer be used
 func (c *CfClient) Close() error {
 	if c == nil {
-		return errors.New("client is not initialized")
+		return errors.New("attempted to close client that is not initialized")
 	}
 	if c.stopped.get() {
 		return errors.New("client already closed")
