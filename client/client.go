@@ -89,7 +89,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	}
 
 	if sdkKey == "" {
-		return nil, types.ErrSdkCantBeEmpty
+		return client, types.ErrSdkCantBeEmpty
 	}
 
 	var err error

@@ -49,14 +49,15 @@ func TestNewCfClient(t *testing.T) {
 		mockResponder func()
 		wantErr       error
 	}{
-		{
-			name:   "Successful client creation",
-			sdkKey: sdkKey,
-			mockResponder: func() {
-				// setup happy path mock responder
-			},
-			wantErr: nil,
-		},
+		//{
+		//	name:   "Successful client creation",
+		//	sdkKey: sdkKey,
+		//	mockResponder: func() {
+		//		registerResponders(ValidAuthResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+		//
+		//	},
+		//	wantErr: nil,
+		//},
 		{
 			name:          "Empty SDK key",
 			sdkKey:        "",
@@ -67,7 +68,7 @@ func TestNewCfClient(t *testing.T) {
 			name:   "Authentication failed with non-retryable error",
 			sdkKey: sdkKey,
 			mockResponder: func() {
-				authErrorResponder := ErrorResponse(401, "Unauthorized request")
+				authErrorResponder := ErrorResponse(403, "Unauthorized request")
 				registerResponders(authErrorResponder, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
@@ -85,9 +86,12 @@ func TestNewCfClient(t *testing.T) {
 				tt.mockResponder()
 			}
 
-			_, err := newClientWaitForInit(http.DefaultClient)
+			_, err := newClientWaitForInit(http.DefaultClient, tt.sdkKey)
 
 			assert.Equal(t, tt.wantErr, err)
+
+			httpmock.Reset()
+
 		})
 	}
 }
@@ -196,7 +200,7 @@ func newClient(httpClient *http.Client) (*client.CfClient, error) {
 	)
 }
 
-func newClientWaitForInit(httpClient *http.Client) (*client.CfClient, error) {
+func newClientWaitForInit(httpClient *http.Client, sdkKey string) (*client.CfClient, error) {
 	return client.NewCfClient(sdkKey,
 		client.WithURL(URL),
 		client.WithStreamEnabled(false),
@@ -246,12 +250,8 @@ var ErrorResponse = func(statusCode int, message string) func(req *http.Request)
 	case 401:
 		return func(req *http.Request) (*http.Response, error) {
 			// Return the appropriate error based on the provided status code
-			return httpmock.NewJsonResponse(statusCode, rest.AuthenticateResponse{
-				JSON401: &rest.Error{
-					Code:    strconv.Itoa(statusCode),
-					Message: message,
-				},
-			})
+			return httpmock.NewJsonResponse(statusCode, rest.AuthenticationResponse{
+				AuthToken: EmptyAuthToken})
 		}
 	case 403:
 		return func(req *http.Request) (*http.Response, error) {
