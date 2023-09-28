@@ -27,6 +27,7 @@ type config struct {
 	eventStreamListener stream.EventStreamListener
 	enableAnalytics     bool
 	proxyMode           bool
+	waitForInitialized  bool
 }
 
 func newDefaultConfig(log logger.Logger) *config {

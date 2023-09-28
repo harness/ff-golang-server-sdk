@@ -53,8 +53,10 @@ type CfClient struct {
 	streamConnectedLock sync.RWMutex
 	authenticated       chan struct{}
 	postEvalChan        chan evaluation.PostEvalData
-	initialized         bool
-	initializedLock     sync.RWMutex
+	initializedBool     bool
+	initializedBoolLock sync.RWMutex
+	initialized         chan struct{}
+	initializedErr      chan error
 	analyticsService    *analyticsservice.AnalyticsService
 	clusterIdentifier   string
 	stop                chan struct{}
@@ -82,6 +84,8 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		postEvalChan:      make(chan evaluation.PostEvalData),
 		stop:              make(chan struct{}),
 		stopped:           newAtomicBool(false),
+		initialized:       make(chan struct{}),
+		initializedErr:    make(chan error),
 	}
 
 	if sdkKey == "" {
@@ -106,6 +110,21 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	}
 
 	client.start()
+	if config.waitForInitialized {
+		var initErr error
+
+		select {
+		case <-client.initialized:
+			return client, nil
+		case err := <-client.initializedErr:
+			initErr = err
+		}
+
+		if initErr != nil {
+			return nil, fmt.Errorf("error during initialization: %v", initErr)
+		}
+	}
+
 	return client, nil
 }
 
@@ -117,7 +136,11 @@ func (c *CfClient) start() {
 		cancel()
 	}()
 
-	go c.initAuthentication(ctx)
+	go func() {
+		if err := c.initAuthentication(context.Background()); err != nil {
+			c.initializedErr <- err
+		}
+	}()
 	go c.setAnalyticsServiceClient(ctx)
 	go c.pullCronJob(ctx)
 }
@@ -137,19 +160,30 @@ func (c *CfClient) GetClusterIdentifier() string {
 	return c.clusterIdentifier
 }
 
-// IsInitialized determines if the client is ready to be used.  This is true if it has both authenticated
-// and successfully retrieved flags.  If it takes longer than 1 minute the call will timeout and return an error.
-func (c *CfClient) IsInitialized() (bool, error) {
-	for i := 0; i < 30; i++ {
-		c.initializedLock.RLock()
-		if c.initialized {
-			c.initializedLock.RUnlock()
-			return true, nil
-		}
-		c.initializedLock.RUnlock()
-		time.Sleep(time.Second * 2)
+//
+//// IsInitialized determines if the client is ready to be used.  This is true if it has both authenticated
+//// and successfully retrieved flags.  If it takes longer than 1 minute the call will timeout and return an error.
+//func (c *CfClient) IsInitialized() (bool, error) {
+//	for i := 0; i < 30; i++ {
+//		c.initializedBoolLock.RLock()
+//		if c.initialized {
+//			c.initializedBoolLock.RUnlock()
+//			return true, nil
+//		}
+//		c.initializedBoolLock.RUnlock()
+//		time.Sleep(time.Second * 2)
+//	}
+//	return false, fmt.Errorf("timeout waiting to initialize")
+//}
+
+func (c *CfClient) IsInitialized(onError func(err error)) {
+	select {
+	case <-c.initialized:
+		return
+	case err := <-c.initializedErr:
+		onError(err)
+		close(c.initializedErr)
 	}
-	return false, fmt.Errorf("timeout waiting to initialize")
 }
 
 func (c *CfClient) retrieve(ctx context.Context) bool {
@@ -185,9 +219,7 @@ func (c *CfClient) retrieve(ctx context.Context) bool {
 	}
 
 	if ok {
-		c.initializedLock.Lock()
-		c.initialized = true
-		c.initializedLock.Unlock()
+		close(c.initialized)
 	}
 	return ok
 }
@@ -233,17 +265,18 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	c.streamConnected = true
 }
 
-func (c *CfClient) initAuthentication(ctx context.Context) {
+func (c *CfClient) initAuthentication(ctx context.Context) error {
 	// TODO update this comment: attempt to authenticate every minute until we succeed
 	for {
 		err := c.authenticate(ctx)
 		if err == nil {
+			return nil
 		}
 
 		var nonRetryableAuthError NonRetryableAuthError
 		if errors.As(err, &nonRetryableAuthError) {
 			fmt.Printf("Authentication failed with a non-retryable error: '%s %s' Default variations will now be served", nonRetryableAuthError.StatusCode, nonRetryableAuthError.Message)
-			return
+			return err
 		}
 
 		// TODO add delay and backoff, don't wait a minute. Also, set configurable max retries.
@@ -496,6 +529,9 @@ func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultV
 // Close shuts down the Feature Flag client. After calling this, the client
 // should no longer be used
 func (c *CfClient) Close() error {
+	if c == nil {
+		return errors.New("client is not initialized")
+	}
 	if c.stopped.get() {
 		return errors.New("client already closed")
 	}
