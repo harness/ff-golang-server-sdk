@@ -267,19 +267,25 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 	baseDelay := 1 * time.Second
 	maxDelay := 1 * time.Minute
 	factor := 2.0
+	currentDelay := baseDelay
 
 	retries := 0
 
-	currentDelay := baseDelay
-	for retries < c.config.maxAuthRetries {
+	for {
 		err := c.authenticate(ctx)
 		if err == nil {
 			return nil
 		}
+		retries++
 
 		var nonRetryableAuthError NonRetryableAuthError
 		if errors.As(err, &nonRetryableAuthError) {
 			c.config.Logger.Error("Authentication failed with a non-retryable error: '%s %s' Default variations will now be served", nonRetryableAuthError.StatusCode, nonRetryableAuthError.Message)
+			return err
+		}
+
+		if retries >= c.config.maxAuthRetries {
+			c.config.Logger.Errorf("Authentication failed with error: '%s'. Exceeded max retries '%s'.", err, c.config.maxAuthRetries)
 			return err
 		}
 
@@ -293,8 +299,6 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 		if currentDelay > maxDelay {
 			currentDelay = maxDelay
 		}
-
-		retries++
 
 	}
 }
