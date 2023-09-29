@@ -178,6 +178,29 @@ func TestCfClient_NewClient(t *testing.T) {
 			},
 			wantErr: nil,
 		},
+		{
+			name: "Authentication failed and retries just before exceeding max retries",
+			newClientFunc: func() (*client.CfClient, error) {
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey, client.WithMaxAuthRetries(10))
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "internal server error",
+				"code": "500"
+				}`
+				var errorResponses []httpmock.Responder
+				for i := 0; i < 10; i++ {
+					errorResponses = append(errorResponses, AuthResponseDetailed(500, "success", bodyString))
+				}
+
+				successResponse := AuthResponse(200, ValidAuthToken)
+				errorResponses = append(errorResponses, successResponse)
+
+				registerStatefulResponders(errorResponses, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			wantErr: nil,
+		},
 	}
 
 	for _, tt := range tests {
