@@ -284,7 +284,8 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 			return err
 		}
 
-		if retries >= c.config.maxAuthRetries {
+		// -1 is the default maxAuthRetries option and indicates there should be no max retries
+		if c.config.maxAuthRetries != -1 && retries >= c.config.maxAuthRetries {
 			c.config.Logger.Errorf("Authentication failed with error: '%s'. Exceeded max retries '%s'.", err, c.config.maxAuthRetries)
 			return err
 		}
