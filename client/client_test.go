@@ -17,6 +17,7 @@ import (
 
 const (
 	ValidSDKKey = "27bed8d2-2610-462b-90eb-d80fd594b623"
+	EmptySDKKey = ""
 	URL         = "http://localhost/api/1.0"
 
 	//nolint
@@ -43,13 +44,15 @@ func TestCfClient_NewClient(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		sdkKey        string
+		newClientFunc func() (*client.CfClient, error)
 		mockResponder func()
 		wantErr       error
 	}{
 		{
-			name:   "Successful client creation",
-			sdkKey: ValidSDKKey,
+			name: "Successful client creation",
+			newClientFunc: func() (*client.CfClient, error) {
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
+			},
 			mockResponder: func() {
 				authSuccessResponse := AuthResponse(200, ValidAuthToken)
 				registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
@@ -58,14 +61,18 @@ func TestCfClient_NewClient(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name:          "Empty SDK key",
-			sdkKey:        "",
+			name: "Empty SDK key",
+			newClientFunc: func() (*client.CfClient, error) {
+				return newSynchronousClient(http.DefaultClient, EmptySDKKey) // A function that returns a CfClient instance
+			},
 			mockResponder: nil,
 			wantErr:       types.ErrSdkCantBeEmpty,
 		},
 		{
-			name:   "Authentication failed with 401 and no retry",
-			sdkKey: ValidSDKKey,
+			name: "Authentication failed with 401 and no retry",
+			newClientFunc: func() (*client.CfClient, error) {
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
+			},
 			mockResponder: func() {
 				authErrorResponse := AuthResponse(401, "Unauthorized request")
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
@@ -77,8 +84,10 @@ func TestCfClient_NewClient(t *testing.T) {
 			},
 		},
 		{
-			name:   "Authentication failed with 403 and no retry",
-			sdkKey: ValidSDKKey,
+			name: "Authentication failed with 403 and no retry",
+			newClientFunc: func() (*client.CfClient, error) {
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
+			},
 			mockResponder: func() {
 				authErrorResponse := AuthResponse(403, "Unauthorized request")
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
@@ -90,8 +99,10 @@ func TestCfClient_NewClient(t *testing.T) {
 			},
 		},
 		{
-			name:   "Authentication failed with 404 and no retry",
-			sdkKey: ValidSDKKey,
+			name: "Authentication failed with 404 and no retry",
+			newClientFunc: func() (*client.CfClient, error) {
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
+			},
 			mockResponder: func() {
 				authErrorResponse := AuthResponse(404, "Unauthorized request")
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
@@ -110,8 +121,7 @@ func TestCfClient_NewClient(t *testing.T) {
 			if tt.mockResponder != nil {
 				tt.mockResponder()
 			}
-
-			_, err := newSynchronousClient(http.DefaultClient, tt.sdkKey)
+			_, err := tt.newClientFunc()
 
 			assert.Equal(t, tt.wantErr, err)
 		})
