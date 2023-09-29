@@ -283,7 +283,7 @@ func MakeNewSynchronousClientAndTarget(sdkKey string) (*client.CfClient, *evalua
 	return client, target, nil
 }
 
-// newAsyncClient creates a new client with some default options
+// newAsyncClient creates a new client which does not wait for initailzation to complete, and includes default options
 func newAsyncClient(httpClient *http.Client) (*client.CfClient, error) {
 	return client.NewCfClient(ValidSDKKey,
 		client.WithURL(URL),
@@ -293,8 +293,8 @@ func newAsyncClient(httpClient *http.Client) (*client.CfClient, error) {
 	)
 }
 
+// newSynchronousClient creates a new client which waits for initialization to complete, and includes default options/extra options if required.
 func newSynchronousClient(httpClient *http.Client, sdkKey string, extraOptions ...client.ConfigOption) (*client.CfClient, error) {
-	// Base options
 	baseOptions := []client.ConfigOption{
 		client.WithURL(URL),
 		client.WithStreamEnabled(false),
@@ -302,7 +302,7 @@ func newSynchronousClient(httpClient *http.Client, sdkKey string, extraOptions .
 		client.WithStoreEnabled(false),
 		client.WithWaitForInitialized(true),
 	}
-	// Combine base options with extra options
+
 	allOptions := append(baseOptions, extraOptions...)
 	return client.NewCfClient(sdkKey, allOptions...)
 }
