@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/harness/ff-golang-server-sdk/types"
 	"net/http"
 	"os"
@@ -41,6 +42,7 @@ func registerResponders(authResponder httpmock.Responder, targetSegmentsResponde
 }
 
 func TestCfClient_NewClient(t *testing.T) {
+	nonRetryableErrorCodes := []int{401, 403, 404}
 
 	tests := []struct {
 		name          string
@@ -68,51 +70,29 @@ func TestCfClient_NewClient(t *testing.T) {
 			mockResponder: nil,
 			wantErr:       types.ErrSdkCantBeEmpty,
 		},
-		{
-			name: "Authentication failed with 401 and no retry",
+	}
+
+	// Append all the non-retryable status codes to the tests
+	for _, code := range nonRetryableErrorCodes {
+		tests = append(tests, struct {
+			name          string
+			newClientFunc func() (*client.CfClient, error)
+			mockResponder func()
+			wantErr       error
+		}{
+			name: fmt.Sprintf("Authentication failed with %d and no retry", code),
 			newClientFunc: func() (*client.CfClient, error) {
-				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey)
 			},
 			mockResponder: func() {
-				authErrorResponse := AuthResponse(401, "Unauthorized request")
+				authErrorResponse := AuthResponse(code, "Unauthorized request")
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
-
 			},
 			wantErr: client.NonRetryableAuthError{
 				StatusCode: "",
 				Message:    "",
 			},
-		},
-		{
-			name: "Authentication failed with 403 and no retry",
-			newClientFunc: func() (*client.CfClient, error) {
-				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
-			},
-			mockResponder: func() {
-				authErrorResponse := AuthResponse(403, "Unauthorized request")
-				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
-
-			},
-			wantErr: client.NonRetryableAuthError{
-				StatusCode: "",
-				Message:    "",
-			},
-		},
-		{
-			name: "Authentication failed with 404 and no retry",
-			newClientFunc: func() (*client.CfClient, error) {
-				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
-			},
-			mockResponder: func() {
-				authErrorResponse := AuthResponse(404, "Unauthorized request")
-				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
-
-			},
-			wantErr: client.NonRetryableAuthError{
-				StatusCode: "",
-				Message:    "",
-			},
-		},
+		})
 	}
 
 	for _, tt := range tests {
