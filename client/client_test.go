@@ -3,29 +3,29 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/harness/ff-golang-server-sdk/dto"
+	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/log"
+	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/harness/ff-golang-server-sdk/test_helpers"
 	"github.com/harness/ff-golang-server-sdk/types"
+	"github.com/jarcoal/httpmock"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"os"
 	"testing"
-
-	"github.com/harness/ff-golang-server-sdk/dto"
-	"github.com/harness/ff-golang-server-sdk/evaluation"
-	"github.com/harness/ff-golang-server-sdk/rest"
-	"github.com/jarcoal/httpmock"
-	"github.com/stretchr/testify/assert"
+	"time"
 )
 
 const (
-	ValidSDKKey = "27bed8d2-2610-462b-90eb-d80fd594b623"
-	EmptySDKKey = ""
-	URL         = "http://localhost/api/1.0"
+	ValidSDKKey   = "27bed8d2-2610-462b-90eb-d80fd594b623"
+	EmptySDKKey   = ""
+	InvaliDSDKKey = "an invalid key"
+	URL           = "http://localhost/api/1.0"
 
 	//nolint
 	ValidAuthToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwcm9qZWN0IjoiMTA0MjM5NzYtODQ1MS00NmZjLTg2NzctYmNiZDM3MTA3M2JhIiwiZW52aXJvbm1lbnQiOiI3ZWQxMDI1ZC1hOWIxLTQxMjktYTg4Zi1lMjdlZjM2MDk4MmQiLCJwcm9qZWN0SWRlbnRpZmllciI6IiIsImVudmlyb25tZW50SWRlbnRpZmllciI6IlByZVByb2R1Y3Rpb24iLCJhY2NvdW50SUQiOiIiLCJvcmdhbml6YXRpb24iOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDAiLCJjbHVzdGVySWRlbnRpZmllciI6IjEifQ.E4O_u42HkR0q4AwTTViFTCnNa89Kwftks7Gh-GvQfuE"
-	EmptyAuthToken = ""
 )
 
 // responderQueue is a type that manages a queue of responders
@@ -45,6 +45,7 @@ func makeResponderQueue(responders []httpmock.Responder) *responderQueue {
 // getNextResponder is a method that returns the next responder in the queue
 func (q *responderQueue) getNextResponder(req *http.Request) (*http.Response, error) {
 	if q.index >= len(q.responders) {
+		// Stop running tests as the input is invalid at this stage.
 		log.Fatal("Not enough responders provided to the test function being executed")
 	}
 	responder := q.responders[q.index]
@@ -68,7 +69,7 @@ func registerResponders(authResponder httpmock.Responder, targetSegmentsResponde
 }
 
 // Same as registerResponders except the auth response can be different per call
-func registerStatefulResponders(authResponder []httpmock.Responder, targetSegmentsResponder httpmock.Responder, featureConfigsResponder httpmock.Responder) {
+func registerMultipleResponseResponders(authResponder []httpmock.Responder, targetSegmentsResponder httpmock.Responder, featureConfigsResponder httpmock.Responder) {
 	authQueue := makeResponderQueue(authResponder)
 	httpmock.RegisterResponder("POST", "http://localhost/api/1.0/client/auth", authQueue.getNextResponder)
 
@@ -83,50 +84,86 @@ func TestCfClient_NewClient(t *testing.T) {
 		name          string
 		newClientFunc func() (*CfClient, error)
 		mockResponder func()
-		wantErr       error
+		err           error
 	}{
 		{
-			name: "Successful client creation",
+			name: "Synchronous Client: successfully initializes",
 			newClientFunc: func() (*CfClient, error) {
-				return newSynchronousClient(http.DefaultClient, ValidSDKKey)
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true))
 			},
 			mockResponder: func() {
 				authSuccessResponse := AuthResponse(200, ValidAuthToken)
 				registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
-			wantErr: nil,
+			err: nil,
 		},
 		{
-			name: "Empty SDK key",
+			name: "Synchronous Client: `IsInitialized` and `WaithWaitForInitialzed` called successfully initializes",
 			newClientFunc: func() (*CfClient, error) {
-				return newSynchronousClient(http.DefaultClient, EmptySDKKey)
+				client, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true))
+				if ok, err := client.IsInitialized(); !ok {
+					return client, err
+				}
+				return client, err
+			},
+			mockResponder: func() {
+				authSuccessResponse := AuthResponse(200, ValidAuthToken)
+				registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			err: nil,
+		},
+		{
+			name: "Synchronous client: Empty SDK key fails to initialize",
+			newClientFunc: func() (*CfClient, error) {
+				return newClient(http.DefaultClient, EmptySDKKey, WithWaitForInitialized(true))
 			},
 			mockResponder: nil,
-			wantErr:       types.ErrSdkCantBeEmpty,
+			err:           types.ErrSdkCantBeEmpty,
 		},
 		{
-			name: "Authentication failed with 401 and no retry",
+			name: "Synchronous client: Authentication failed with 401 and no retry",
 			newClientFunc: func() (*CfClient, error) {
-				return newSynchronousClient(http.DefaultClient, ValidSDKKey)
+				return newClient(http.DefaultClient, InvaliDSDKKey, WithWaitForInitialized(true))
 			},
 			mockResponder: func() {
 				bodyString := `{
 				"message": "invalid key or target provided",
 				"code": "401"
 				}`
-				authErrorResponse := AuthResponseDetailed(403, "403", bodyString)
+				authErrorResponse := AuthResponseDetailed(401, "401", bodyString)
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 			},
-			wantErr: NonRetryableAuthError{
+			err: NonRetryableAuthError{
 				StatusCode: "401",
 				Message:    "invalid key or target provided",
 			},
 		},
 		{
-			name: "Authentication failed with 403 and no retry",
+			name: "Asynchronous client: Authentication failed with 401 and no retry, times out waiting",
 			newClientFunc: func() (*CfClient, error) {
-				return newSynchronousClient(http.DefaultClient, ValidSDKKey)
+				client, err := newClient(http.DefaultClient, InvaliDSDKKey, WithSleeper(test_helpers.MockSleeper{}))
+				if ok, err := client.IsInitialized(); !ok {
+					return client, err
+				}
+				return client, err
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "invalid key or target provided",
+				"code": "401"
+				}`
+				authErrorResponse := AuthResponseDetailed(401, "401", bodyString)
+				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+			},
+			// An async client cannot return an error for auth failures due
+			err: InitializeTimeoutError{},
+		},
+		{
+			name: "Synchronous client: Authentication failed with 403 and no retry",
+			newClientFunc: func() (*CfClient, error) {
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true))
 			},
 			mockResponder: func() {
 				bodyString := `{
@@ -136,15 +173,15 @@ func TestCfClient_NewClient(t *testing.T) {
 				authErrorResponse := AuthResponseDetailed(403, "403", bodyString)
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 			},
-			wantErr: NonRetryableAuthError{
+			err: NonRetryableAuthError{
 				StatusCode: "403",
 				Message:    "forbidden",
 			},
 		},
 		{
-			name: "Authentication failed with 404 and no retry",
+			name: "Synchronous client: Authentication failed with 404 and no retry",
 			newClientFunc: func() (*CfClient, error) {
-				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true))
 			},
 			mockResponder: func() {
 				bodyString := `{
@@ -155,34 +192,33 @@ func TestCfClient_NewClient(t *testing.T) {
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
-			wantErr: NonRetryableAuthError{
+			err: NonRetryableAuthError{
 				StatusCode: "404",
 				Message:    "not found",
 			},
 		},
 		{
-			name: "Authentication failed with 500 and succeeds after one retry",
+			name: "Synchronous client: Authentication failed with 500 and succeeds after one retry",
 			newClientFunc: func() (*CfClient, error) {
-				newClient, err := newSynchronousClient(http.DefaultClient, ValidSDKKey, WithSleeper(test_helpers.MockSleeper{}))
-				return newClient, err
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithSleeper(test_helpers.MockSleeper{}))
 			},
 			mockResponder: func() {
 				bodyString := `{
 				"message": "internal server error",
 				"code": "500"
 				}`
-				firstAuthResponse := AuthResponseDetailed(500, "success", bodyString)
+				firstAuthResponse := AuthResponseDetailed(500, "internal server error", bodyString)
 				secondAuthResponse := AuthResponse(200, ValidAuthToken)
 
-				registerStatefulResponders([]httpmock.Responder{firstAuthResponse, secondAuthResponse}, TargetSegmentsResponse, FeatureConfigsResponse)
+				registerMultipleResponseResponders([]httpmock.Responder{firstAuthResponse, secondAuthResponse}, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
-			wantErr: nil,
+			err: nil,
 		},
 		{
-			name: "Authentication failed and succeeds just before exceeding max retries",
+			name: "Synchronous client: Authentication failed and succeeds just before exceeding max retries",
 			newClientFunc: func() (*CfClient, error) {
-				newClient, err := newSynchronousClient(http.DefaultClient, ValidSDKKey, WithMaxAuthRetries(10), WithSleeper(test_helpers.MockSleeper{}))
+				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithSleeper(test_helpers.MockSleeper{}))
 				return newClient, err
 			},
 			mockResponder: func() {
@@ -193,22 +229,22 @@ func TestCfClient_NewClient(t *testing.T) {
 				var responses []httpmock.Responder
 				// Add a bunch of error responses
 				for i := 0; i < 10; i++ {
-					responses = append(responses, AuthResponseDetailed(500, "success", bodyString))
+					responses = append(responses, AuthResponseDetailed(500, "internal server error", bodyString))
 				}
 
 				// Add the success response
 				successResponse := AuthResponse(200, ValidAuthToken)
 				responses = append(responses, successResponse)
 
-				registerStatefulResponders(responses, TargetSegmentsResponse, FeatureConfigsResponse)
+				registerMultipleResponseResponders(responses, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
-			wantErr: nil,
+			err: nil,
 		},
 		{
-			name: "Authentication failed and exceeds max retries",
+			name: "Synchronous client: Authentication failed and exceeds max retries",
 			newClientFunc: func() (*CfClient, error) {
-				newClient, err := newSynchronousClient(http.DefaultClient, ValidSDKKey, WithMaxAuthRetries(10), WithSleeper(test_helpers.MockSleeper{}))
+				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithSleeper(test_helpers.MockSleeper{}))
 				return newClient, err
 			},
 			mockResponder: func() {
@@ -219,16 +255,171 @@ func TestCfClient_NewClient(t *testing.T) {
 				var responses []httpmock.Responder
 				// Add a bunch of error responses
 				for i := 0; i < 11; i++ {
-					responses = append(responses, AuthResponseDetailed(500, "success", bodyString))
+					responses = append(responses, AuthResponseDetailed(500, "internal server error", bodyString))
 				}
 
-				registerStatefulResponders(responses, TargetSegmentsResponse, FeatureConfigsResponse)
+				registerMultipleResponseResponders(responses, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
-			wantErr: RetryableAuthError{
+			err: RetryableAuthError{
 				StatusCode: "500",
 				Message:    "internal server error",
 			},
+		},
+		{
+			name: "Asynchronous client: `IsInitialized` called and successfully initializes",
+			newClientFunc: func() (*CfClient, error) {
+				client, err := newClient(http.DefaultClient, ValidSDKKey)
+				if ok, err := client.IsInitialized(); !ok {
+					return client, err
+				}
+				return client, err
+			},
+			mockResponder: func() {
+				authSuccessResponse := AuthResponse(200, ValidAuthToken)
+				registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			err: nil,
+		},
+		{
+			name: "Asynchronous client: `IsInitialized` not called returns a client and no error",
+			newClientFunc: func() (*CfClient, error) {
+				client, err := newClient(http.DefaultClient, ValidSDKKey)
+				return client, err
+			},
+			mockResponder: func() {
+				authSuccessResponse := AuthResponse(200, ValidAuthToken)
+				registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+			},
+			err: nil,
+		},
+		{
+			name: "Asynchronous client: Empty SDK key, times out waiting",
+			newClientFunc: func() (*CfClient, error) {
+				client, err := newClient(http.DefaultClient, EmptySDKKey, WithSleeper(test_helpers.MockSleeper{}))
+				if ok, err := client.IsInitialized(); !ok {
+					return client, err
+				}
+				return client, err
+			},
+			mockResponder: nil,
+			err:           InitializeTimeoutError{},
+		},
+		{
+			name: "Asynchronous client: Authentication failed with 403 and no retry, times out waiting",
+			newClientFunc: func() (*CfClient, error) {
+				client, err := newClient(http.DefaultClient, ValidSDKKey, WithSleeper(test_helpers.MockSleeper{}))
+				if ok, err := client.IsInitialized(); !ok {
+					return client, err
+				}
+				return client, err
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "forbidden",
+				"code": "403"
+				}`
+				authErrorResponse := AuthResponseDetailed(403, "403", bodyString)
+				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+			},
+			err: InitializeTimeoutError{},
+		},
+		{
+			name: "Asynchronous client: Authentication failed with 404 and times out waiting",
+			newClientFunc: func() (*CfClient, error) {
+				client, err := newClient(http.DefaultClient, ValidSDKKey, WithSleeper(test_helpers.MockSleeper{}))
+				if ok, err := client.IsInitialized(); !ok {
+					return client, err
+				}
+				return client, err
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "not found",
+				"code": "404"
+				}`
+				authErrorResponse := AuthResponseDetailed(404, "404", bodyString)
+				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			err: InitializeTimeoutError{},
+		},
+		{
+			name: "Asynchronous client: Authentication failed with 500 and succeeds after one retry",
+			newClientFunc: func() (*CfClient, error) {
+				client, err := newClient(http.DefaultClient, ValidSDKKey, WithSleeper(test_helpers.MockSleeper{SleepTime: time.Millisecond}))
+				if ok, err := client.IsInitialized(); !ok {
+					return client, err
+				}
+				return client, err
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "internal server error",
+				"code": "500"
+				}`
+				firstAuthResponse := AuthResponseDetailed(500, "internal server error", bodyString)
+				secondAuthResponse := AuthResponse(200, ValidAuthToken)
+
+				registerMultipleResponseResponders([]httpmock.Responder{firstAuthResponse, secondAuthResponse}, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			err: nil,
+		},
+		{
+			name: "Asynchronous client: Authentication failed and succeeds just before exceeding max retries",
+			newClientFunc: func() (*CfClient, error) {
+				client, err := newClient(http.DefaultClient, ValidSDKKey, WithSleeper(test_helpers.MockSleeper{SleepTime: time.Millisecond}))
+				if ok, err := client.IsInitialized(); !ok {
+					return client, err
+				}
+				return client, err
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "internal server error",
+				"code": "500"
+				}`
+				var responses []httpmock.Responder
+				// Add a bunch of error responses
+				for i := 0; i < 10; i++ {
+					responses = append(responses, AuthResponseDetailed(500, "internal server error", bodyString))
+				}
+
+				// Add the success response
+				successResponse := AuthResponse(200, ValidAuthToken)
+				responses = append(responses, successResponse)
+
+				registerMultipleResponseResponders(responses, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			err: nil,
+		},
+		{
+			name: "Asynchronous client: Authentication failed and exceeds max retries",
+			newClientFunc: func() (*CfClient, error) {
+				client, err := newClient(http.DefaultClient, ValidSDKKey, WithSleeper(test_helpers.MockSleeper{SleepTime: time.Nanosecond}))
+				if ok, err := client.IsInitialized(); !ok {
+					return client, err
+				}
+				return client, err
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "internal server error",
+				"code": "500"
+				}`
+				var responses []httpmock.Responder
+				// Add a bunch of error responses
+				for i := 0; i < 11; i++ {
+					responses = append(responses, AuthResponseDetailed(500, "internal server error", bodyString))
+				}
+
+				registerMultipleResponseResponders(responses, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			err: InitializeTimeoutError{},
 		},
 	}
 
@@ -238,9 +429,14 @@ func TestCfClient_NewClient(t *testing.T) {
 			if tt.mockResponder != nil {
 				tt.mockResponder()
 			}
-			_, err := tt.newClientFunc()
+			client, err := tt.newClientFunc()
 
-			assert.Equal(t, tt.wantErr, err)
+			// Even if we encounter an error during initialization, we still return the client but in an
+			// un-unitialized state, meaning variation/close calls are handled in a special way, so we always
+			// exect a non-nil client
+			assert.NotNil(t, client)
+
+			assert.Equal(t, tt.err, err)
 		})
 	}
 }
@@ -277,7 +473,7 @@ func TestCfClient_BoolVariation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			flag, err := client.BoolVariation(test.args.key, test.args.target, test.args.defaultValue)
 			if (err != nil) != test.wantErr {
-				t.Errorf("BoolVariation() error = %v, wantErr %v", err, test.wantErr)
+				t.Errorf("BoolVariation() error = %v, err %v", err, test.wantErr)
 				return
 			}
 			assert.Equal(t, test.want, flag, "%s didn't get expected value", test.name)
@@ -316,7 +512,7 @@ func TestCfClient_StringVariation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			flag, err := client.StringVariation(test.args.key, test.args.target, test.args.defaultValue)
 			if (err != nil) != test.wantErr {
-				t.Errorf("BoolVariation() error = %v, wantErr %v", err, test.wantErr)
+				t.Errorf("BoolVariation() error = %v, err %v", err, test.wantErr)
 				return
 			}
 			assert.Equal(t, test.want, flag, "%s didn't get expected value", test.name)
@@ -325,75 +521,176 @@ func TestCfClient_StringVariation(t *testing.T) {
 }
 
 func TestCfClient_DefaultVariationReturned(t *testing.T) {
-	bodyString := `{
+	tests := []struct {
+		name           string
+		clientFunc     func() (*CfClient, error)
+		mockResponder  func()
+		expectedBool   bool
+		expectedString string
+		expectedInt    int64
+		expectedNumber float64
+		expectedJSON   types.JSON
+	}{
+		{
+			name: "Evaluations with Synchronous client with empty SDK key",
+			clientFunc: func() (*CfClient, error) {
+				return newClient(http.DefaultClient, EmptySDKKey, WithWaitForInitialized(true))
+			},
+			expectedBool:   false,
+			expectedString: "a default value",
+			expectedInt:    45555,
+			expectedNumber: 45.222,
+			expectedJSON:   types.JSON{"a default key": "a default value"},
+		},
+		{
+			name: "Evaluations with Synchronous client with invalid SDK key",
+			clientFunc: func() (*CfClient, error) {
+				return newClient(http.DefaultClient, InvaliDSDKKey, WithWaitForInitialized(true))
+			},
+			mockResponder: func() {
+				bodyString := `{
 				"message": "invalid key or target provided",
 				"code": "401"
 				}`
-	authErrorResponse := AuthResponseDetailed(403, "403", bodyString)
-	registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
-
-	client, _ := newSynchronousClient(http.DefaultClient, ValidSDKKey)
-
+				authErrorResponse := AuthResponseDetailed(401, "401", bodyString)
+				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+			},
+			expectedBool:   false,
+			expectedString: "a default value",
+			expectedInt:    45555,
+			expectedNumber: 45.222,
+			expectedJSON:   types.JSON{"a default key": "a default value"},
+		},
+		{
+			name: "Evaluations with Synchronous client with a server error",
+			clientFunc: func() (*CfClient, error) {
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(2), WithSleeper(test_helpers.MockSleeper{}))
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "internal server error",
+				"code": "500"
+				}`
+				authErrorResponse := AuthResponseDetailed(500, "internal server error", bodyString)
+				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+			},
+			expectedBool:   false,
+			expectedString: "a default value",
+			expectedInt:    45555,
+			expectedNumber: 45.222,
+			expectedJSON:   types.JSON{"a default key": "a default value"},
+		},
+		{
+			name: "Evaluations with Synchronous client with empty SDK key",
+			clientFunc: func() (*CfClient, error) {
+				return newClient(http.DefaultClient, EmptySDKKey)
+			},
+			expectedBool:   false,
+			expectedString: "a default value",
+			expectedInt:    45555,
+			expectedNumber: 45.222,
+			expectedJSON:   types.JSON{"a default key": "a default value"},
+		},
+		{
+			name: "Evaluations with Async client with invalid SDK key",
+			clientFunc: func() (*CfClient, error) {
+				return newClient(http.DefaultClient, InvaliDSDKKey)
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "invalid key or target provided",
+				"code": "401"
+				}`
+				authErrorResponse := AuthResponseDetailed(401, "401", bodyString)
+				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+			},
+			expectedBool:   false,
+			expectedString: "a default value",
+			expectedInt:    45555,
+			expectedNumber: 45.222,
+			expectedJSON:   types.JSON{"a default key": "a default value"},
+		},
+		{
+			name: "Evaluations with Async client with a server error",
+			clientFunc: func() (*CfClient, error) {
+				return newClient(http.DefaultClient, ValidSDKKey, WithMaxAuthRetries(2), WithSleeper(test_helpers.MockSleeper{}))
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "internal server error",
+				"code": "500"
+				}`
+				authErrorResponse := AuthResponseDetailed(500, "internal server error", bodyString)
+				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+			},
+			expectedBool:   false,
+			expectedString: "a default value",
+			expectedInt:    45555,
+			expectedNumber: 45.222,
+			expectedJSON:   types.JSON{"a default key": "a default value"},
+		},
+		{
+			name: "Evaluations with Async client with empty SDK key",
+			clientFunc: func() (*CfClient, error) {
+				return newClient(http.DefaultClient, EmptySDKKey)
+			},
+			expectedBool:   false,
+			expectedString: "a default value",
+			expectedInt:    45555,
+			expectedNumber: 45.222,
+			expectedJSON:   types.JSON{"a default key": "a default value"},
+		},
+	}
 	target := target()
 
-	t.Log("When I call bool variation on an unitialized client I should get the default variation with no error")
-	boolResult, err := client.BoolVariation("TestTrueOn", target, false)
-	assert.Equal(t, boolResult, false)
-	assert.Nil(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.mockResponder != nil {
+				tt.mockResponder()
+			}
+			client, _ := tt.clientFunc()
 
-	t.Log("When I call string variation on an unitialized client I should get the default variation with no error")
-	stringResult, err := client.StringVariation("TestTrueOn", target, "a default value")
-	assert.Equal(t, stringResult, "a default value")
-	assert.Nil(t, err)
+			boolResult, err := client.BoolVariation("TestTrueOn", target, false)
+			assert.Equal(t, tt.expectedBool, boolResult)
+			assert.Nil(t, err)
 
-	t.Log("When I call int variation on an unitialized client I should get the default variation with no error")
-	var inteDefaultValue int64 = 45555
-	intResult, err := client.IntVariation("TestTrueOn", target, inteDefaultValue)
-	assert.Equal(t, intResult, inteDefaultValue)
-	assert.Nil(t, err)
+			stringResult, err := client.StringVariation("TestTrueOn", target, "a default value")
+			assert.Equal(t, tt.expectedString, stringResult)
+			assert.Nil(t, err)
 
-	t.Log("When I call number variation on an unitialized client I should get the default variation with no error")
-	numerResult, err := client.NumberVariation("TestTrueOn", target, 45.222)
-	assert.Equal(t, numerResult, 45.222)
-	assert.Nil(t, err)
+			intResult, err := client.IntVariation("TestTrueOn", target, tt.expectedInt)
+			assert.Equal(t, tt.expectedInt, intResult)
+			assert.Nil(t, err)
 
-	t.Log("When I call json variation on an unitialized client I should get the default variation with no error")
-	jsonDefaultValue := map[string]interface{}{"a default key": "a default value"}
-	jsonResult, _ := client.JSONVariation("TestTrueOn", target, jsonDefaultValue)
-	assert.Equal(t, jsonResult, types.JSON{"a default key": "a default value"})
-	assert.Nil(t, err)
+			numerResult, err := client.NumberVariation("TestTrueOn", target, tt.expectedNumber)
+			assert.Equal(t, tt.expectedNumber, numerResult)
+			assert.Nil(t, err)
 
+			jsonResult, _ := client.JSONVariation("TestTrueOn", target, tt.expectedJSON)
+			assert.Equal(t, tt.expectedJSON, jsonResult)
+			assert.Nil(t, err)
+		})
+	}
 }
 
 // MakeNewSynchronousClientAndTarget creates a new synchronous client and target.  If it returns
 // error then something went wrong.
 func MakeNewSynchronousClientAndTarget(sdkKey string) (*CfClient, *evaluation.Target, error) {
 	target := target()
-	client, err := newSynchronousClient(http.DefaultClient, sdkKey)
+	client, err := newClient(http.DefaultClient, sdkKey, WithWaitForInitialized(true))
 	if err != nil {
 		return nil, nil, err
 	}
 	return client, target, nil
 }
 
-// newAsyncClient creates a new client which does not wait for initailzation to complete, and includes default options
-func newAsyncClient(httpClient *http.Client) (*CfClient, error) {
-	return NewCfClient(ValidSDKKey,
-		WithURL(URL),
-		WithStreamEnabled(false),
-		WithHTTPClient(httpClient),
-		WithStoreEnabled(false),
-	)
-}
-
-// newSynchronousClient creates a new client which waits for initialization to complete, and includes default options/extra options if required.
-func newSynchronousClient(httpClient *http.Client, sdkKey string, extraOptions ...ConfigOption) (*CfClient, error) {
+// newClient creates a new client with some default options, and allows extra options if required.
+func newClient(httpClient *http.Client, sdkKey string, extraOptions ...ConfigOption) (*CfClient, error) {
 	baseOptions := []ConfigOption{
 		WithURL(URL),
 		WithStreamEnabled(false),
 		WithHTTPClient(httpClient),
 		WithStoreEnabled(false),
-		WithWaitForInitialized(true),
 	}
 
 	allOptions := append(baseOptions, extraOptions...)
@@ -484,7 +781,7 @@ var FeatureConfigsResponse = func(req *http.Request) (*http.Response, error) {
 
 func TestCfClient_Close(t *testing.T) {
 	registerResponders(AuthResponse(200, ValidAuthToken), TargetSegmentsResponse, TargetSegmentsResponse)
-	client, err := newSynchronousClient(&http.Client{}, ValidSDKKey)
+	client, err := newClient(&http.Client{}, ValidSDKKey, WithWaitForInitialized(true))
 	if err != nil {
 		t.Error(err)
 	}
@@ -497,7 +794,7 @@ func TestCfClient_Close(t *testing.T) {
 
 	t.Log("When I close the client before it's been initialized I should get an error")
 
-	client2, err := newAsyncClient(&http.Client{})
+	client2, err := newClient(&http.Client{}, ValidSDKKey)
 	if err != nil {
 		t.Error(err)
 	}

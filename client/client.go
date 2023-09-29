@@ -90,6 +90,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	}
 
 	if sdkKey == "" {
+		config.Logger.Errorf("Initialization failed: SDK Key cannot be empty. Please provide a valid SDK Key to initialize the client.")
 		return client, types.ErrSdkCantBeEmpty
 	}
 
@@ -122,6 +123,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		}
 
 		if initErr != nil {
+			config.Logger.Errorf("Initialization failed: '%v'", initErr)
 			// We return the client but leave it in un-initialized state by not setting the relevant initialized flag.
 			// This ensures any subsequent calls to the client don't potentially result in a panic. For example, if a user
 			// calls BoolVariation we can log that the client is not initialized and return the user the default variation.
@@ -174,9 +176,19 @@ func (c *CfClient) IsInitialized() (bool, error) {
 			return true, nil
 		}
 		c.initializedBoolLock.RUnlock()
-		time.Sleep(time.Second * 2)
+		c.config.sleeper.Sleep(time.Second * 2)
 	}
-	return false, fmt.Errorf("timeout waiting to initialize")
+	return false, InitializeTimeoutError{}
+}
+
+// checkInitializedStatus returns a boolean indicating whether the CfClient
+// is initialized at the time the method is called. If the client is being
+// created in asynchronous mode, this method may return false even if the
+// initialization is in progress. In other words, a false value does not
+// necessarily indicate a failure but may indicate that initialization is
+// still underway.
+func (c *CfClient) checkInitializedStatus() bool {
+	return c.initializedBool
 }
 
 func (c *CfClient) retrieve(ctx context.Context) bool {
@@ -285,7 +297,7 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 
 		// -1 is the default maxAuthRetries option and indicates there should be no max attempts
 		if c.config.maxAuthRetries != -1 && attempts >= c.config.maxAuthRetries {
-			c.config.Logger.Errorf("Authentication failed with error: '%s'. Exceeded max attempts '%s'.", err, c.config.maxAuthRetries)
+			c.config.Logger.Errorf("Authentication failed with error: '%s'. Exceeded max attempts: '%v'.", err, c.config.maxAuthRetries)
 			return err
 		}
 
@@ -632,6 +644,7 @@ func getLogger(options ...ConfigOption) logger.Logger {
 	return dummyConfig.Logger
 }
 
+// findErrorInResponse parses an auth response and returns the response error if it exists
 func findErrorInResponse(resp *rest.AuthenticateResponse) *rest.Error {
 	responseErrors := []*rest.Error{resp.JSON401, resp.JSON403, resp.JSON404, resp.JSON500}
 	for _, responseError := range responseErrors {

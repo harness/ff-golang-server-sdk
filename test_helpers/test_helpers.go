@@ -128,8 +128,9 @@ func strPtr(value string) *string {
 }
 
 type MockSleeper struct {
+	SleepTime time.Duration
 }
 
 func (ms MockSleeper) Sleep(d time.Duration) {
-	time.Sleep(0)
+	time.Sleep(ms.SleepTime)
 }
