@@ -174,7 +174,6 @@ func TestCfClient_NewClient(t *testing.T) {
 				secondAuthResponse := AuthResponse(200, ValidAuthToken)
 
 				registerStatefulResponders([]httpmock.Responder{firstAuthResponse, secondAuthResponse}, TargetSegmentsResponse, FeatureConfigsResponse)
-				//registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
 			wantErr: nil,
@@ -294,14 +293,18 @@ func newAsyncClient(httpClient *http.Client) (*client.CfClient, error) {
 	)
 }
 
-func newSynchronousClient(httpClient *http.Client, sdkKey string) (*client.CfClient, error) {
-	return client.NewCfClient(sdkKey,
+func newSynchronousClient(httpClient *http.Client, sdkKey string, extraOptions ...client.ConfigOption) (*client.CfClient, error) {
+	// Base options
+	baseOptions := []client.ConfigOption{
 		client.WithURL(URL),
 		client.WithStreamEnabled(false),
 		client.WithHTTPClient(httpClient),
 		client.WithStoreEnabled(false),
 		client.WithWaitForInitialized(true),
-	)
+	}
+	// Combine base options with extra options
+	allOptions := append(baseOptions, extraOptions...)
+	return client.NewCfClient(sdkKey, allOptions...)
 }
 
 // target creates a new Target with some default values
