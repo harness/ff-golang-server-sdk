@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"strings"
 	"sync"
@@ -263,7 +264,11 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 }
 
 func (c *CfClient) initAuthentication(ctx context.Context) error {
-	// TODO update this comment: attempt to authenticate every minute until we succeed
+	baseDelay := 1 * time.Second
+	maxDelay := 1 * time.Minute
+	factor := 2.0
+
+	currentDelay := baseDelay
 	for {
 		err := c.authenticate(ctx)
 		if err == nil {
@@ -274,6 +279,21 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 		if errors.As(err, &nonRetryableAuthError) {
 			c.config.Logger.Error("Authentication failed with a non-retryable error: '%s %s' Default variations will now be served", nonRetryableAuthError.StatusCode, nonRetryableAuthError.Message)
 			return err
+		}
+
+		jitter := time.Duration(rand.Float64() * float64(currentDelay))
+		delayWithJitter := currentDelay + jitter
+
+		select {
+		case <-time.After(delayWithJitter):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+
+		// Update the delay for the next iteration.
+		currentDelay *= time.Duration(factor)
+		if currentDelay > maxDelay {
+			currentDelay = maxDelay
 		}
 
 		// TODO add delay and backoff, don't wait a minute. Also, set configurable max retries.
