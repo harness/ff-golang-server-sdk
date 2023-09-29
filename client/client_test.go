@@ -3,7 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"github.com/harness/ff-golang-server-sdk/log"
 	"github.com/harness/ff-golang-server-sdk/test_helpers"
 	"github.com/harness/ff-golang-server-sdk/types"
 	"io"
@@ -45,7 +45,7 @@ func makeResponderQueue(responders []httpmock.Responder) *responderQueue {
 // getNextResponder is a method that returns the next responder in the queue
 func (q *responderQueue) getNextResponder(req *http.Request) (*http.Response, error) {
 	if q.index >= len(q.responders) {
-		return nil, fmt.Errorf("no more responders in the queue")
+		log.Fatal("Not enough responders provided to the test function being executed")
 	}
 	responder := q.responders[q.index]
 	q.index++
@@ -108,7 +108,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Authentication failed with 401 and no retry",
 			newClientFunc: func() (*CfClient, error) {
-				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey)
 			},
 			mockResponder: func() {
 				bodyString := `{
@@ -126,7 +126,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Authentication failed with 403 and no retry",
 			newClientFunc: func() (*CfClient, error) {
-				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
+				return newSynchronousClient(http.DefaultClient, ValidSDKKey)
 			},
 			mockResponder: func() {
 				bodyString := `{
@@ -324,6 +324,47 @@ func TestCfClient_StringVariation(t *testing.T) {
 	}
 }
 
+func TestCfClient_DefaultVariationReturned(t *testing.T) {
+	bodyString := `{
+				"message": "invalid key or target provided",
+				"code": "401"
+				}`
+	authErrorResponse := AuthResponseDetailed(403, "403", bodyString)
+	registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+
+	client, _ := newSynchronousClient(http.DefaultClient, ValidSDKKey)
+
+	target := target()
+
+	t.Log("When I call bool variation on an unitialized client I should get the default variation with no error")
+	boolResult, err := client.BoolVariation("TestTrueOn", target, false)
+	assert.Equal(t, boolResult, false)
+	assert.Nil(t, err)
+
+	t.Log("When I call string variation on an unitialized client I should get the default variation with no error")
+	stringResult, err := client.StringVariation("TestTrueOn", target, "a default value")
+	assert.Equal(t, stringResult, "a default value")
+	assert.Nil(t, err)
+
+	t.Log("When I call int variation on an unitialized client I should get the default variation with no error")
+	var inteDefaultValue int64 = 45555
+	intResult, err := client.IntVariation("TestTrueOn", target, inteDefaultValue)
+	assert.Equal(t, intResult, inteDefaultValue)
+	assert.Nil(t, err)
+
+	t.Log("When I call number variation on an unitialized client I should get the default variation with no error")
+	numerResult, err := client.NumberVariation("TestTrueOn", target, 45.222)
+	assert.Equal(t, numerResult, 45.222)
+	assert.Nil(t, err)
+
+	t.Log("When I call json variation on an unitialized client I should get the default variation with no error")
+	jsonDefaultValue := map[string]interface{}{"a default key": "a default value"}
+	jsonResult, _ := client.JSONVariation("TestTrueOn", target, jsonDefaultValue)
+	assert.Equal(t, jsonResult, types.JSON{"a default key": "a default value"})
+	assert.Nil(t, err)
+
+}
+
 // MakeNewSynchronousClientAndTarget creates a new synchronous client and target.  If it returns
 // error then something went wrong.
 func MakeNewSynchronousClientAndTarget(sdkKey string) (*CfClient, *evaluation.Target, error) {
@@ -442,6 +483,7 @@ var FeatureConfigsResponse = func(req *http.Request) (*http.Response, error) {
 }
 
 func TestCfClient_Close(t *testing.T) {
+	registerResponders(AuthResponse(200, ValidAuthToken), TargetSegmentsResponse, TargetSegmentsResponse)
 	client, err := newSynchronousClient(&http.Client{}, ValidSDKKey)
 	if err != nil {
 		t.Error(err)
@@ -452,4 +494,12 @@ func TestCfClient_Close(t *testing.T) {
 
 	t.Log("When I close the client for the second time I should an error")
 	assert.NotNil(t, client.Close())
+
+	t.Log("When I close the client before it's been initialized I should get an error")
+
+	client2, err := newAsyncClient(&http.Client{})
+	if err != nil {
+		t.Error(err)
+	}
+	assert.NotNil(t, client2.Close())
 }
