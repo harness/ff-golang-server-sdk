@@ -268,8 +268,10 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 	maxDelay := 1 * time.Minute
 	factor := 2.0
 
+	retries := 0
+
 	currentDelay := baseDelay
-	for {
+	for retries < c.config.maxAuthRetries {
 		err := c.authenticate(ctx)
 		if err == nil {
 			return nil
@@ -284,21 +286,16 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 		jitter := time.Duration(rand.Float64() * float64(currentDelay))
 		delayWithJitter := currentDelay + jitter
 
-		select {
-		case <-time.After(delayWithJitter):
-		case <-ctx.Done():
-			return ctx.Err()
-		}
+		c.config.Logger.Errorf("Authentication failed with error: '%s'. Retrying in %v.", err, delayWithJitter)
+		time.Sleep(delayWithJitter)
 
-		// Update the delay for the next iteration.
 		currentDelay *= time.Duration(factor)
 		if currentDelay > maxDelay {
 			currentDelay = maxDelay
 		}
 
-		// TODO add delay and backoff, don't wait a minute. Also, set configurable max retries.
-		c.config.Logger.Errorf("Authentication failed with error: '%s'. Retrying in 1 minute.", err)
-		time.Sleep(1 * time.Minute)
+		retries++
+
 	}
 }
 

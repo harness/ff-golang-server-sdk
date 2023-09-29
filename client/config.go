@@ -28,6 +28,7 @@ type config struct {
 	enableAnalytics     bool
 	proxyMode           bool
 	waitForInitialized  bool
+	maxAuthRetries      int
 }
 
 func newDefaultConfig(log logger.Logger) *config {
@@ -53,5 +54,7 @@ func newDefaultConfig(log logger.Logger) *config {
 		enableStore:     true,
 		enableAnalytics: true,
 		proxyMode:       false,
+		// Indicate that we should retry forever by default
+		maxAuthRetries: -1,
 	}
 }

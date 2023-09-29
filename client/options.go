@@ -117,3 +117,9 @@ func WithWaitForInitialized(b bool) ConfigOption {
 		config.waitForInitialized = b
 	}
 }
+
+func WithMaxAuthRetries(i int) ConfigOption {
+	return func(config *config) {
+		config.maxAuthRetries = i
+	}
+}

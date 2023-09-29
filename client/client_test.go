@@ -161,7 +161,7 @@ func TestCfClient_NewClient(t *testing.T) {
 			},
 		},
 		{
-			name: "Authentication failed with 500 and retries twice",
+			name: "Authentication failed with 500 and retries once",
 			newClientFunc: func() (*client.CfClient, error) {
 				return newSynchronousClient(http.DefaultClient, ValidSDKKey)
 			},
@@ -170,8 +170,11 @@ func TestCfClient_NewClient(t *testing.T) {
 				"message": "internal server error",
 				"code": "500"
 				}`
-				authSuccessResponse := AuthResponseDetailed(500, "500 server error", bodyString)
-				registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+				firstAuthResponse := AuthResponseDetailed(500, "success", bodyString)
+				secondAuthResponse := AuthResponse(200, ValidAuthToken)
+
+				registerStatefulResponders([]httpmock.Responder{firstAuthResponse, secondAuthResponse}, TargetSegmentsResponse, FeatureConfigsResponse)
+				//registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
 			wantErr: nil,
