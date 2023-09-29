@@ -1,12 +1,16 @@
-package client_test
+package test_helpers
 
 import (
 	"fmt"
-	"net/http"
-
 	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/jarcoal/httpmock"
+	"net/http"
+	"time"
 )
+
+func Cool() {
+
+}
 
 func MakeBoolFeatureConfigs(name, defaultVariation, offVariation, state string, preReqs ...rest.Prerequisite) []rest.FeatureConfig {
 	var featureConfig []rest.FeatureConfig
@@ -111,6 +115,10 @@ func MakeStringFeatureConfig(name, defaultVariation, offVariation, state string,
 	}
 }
 
+func JsonError(err error) (*http.Response, error) {
+	return httpmock.NewJsonResponse(500, fmt.Errorf(`{"error" : "%s"}`, err))
+}
+
 func intPtr(value int64) *int64 {
 	return &value
 }
@@ -119,6 +127,9 @@ func strPtr(value string) *string {
 	return &value
 }
 
-func jsonError(err error) (*http.Response, error) {
-	return httpmock.NewJsonResponse(500, fmt.Errorf(`{"error" : "%s"}`, err))
+type MockSleeper struct {
+}
+
+func (ms MockSleeper) Sleep(d time.Duration) {
+	time.Sleep(0)
 }

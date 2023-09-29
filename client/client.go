@@ -269,14 +269,13 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 	factor := 2.0
 	currentDelay := baseDelay
 
-	retries := 0
+	attempts := 0
 
 	for {
 		err := c.authenticate(ctx)
 		if err == nil {
 			return nil
 		}
-		retries++
 
 		var nonRetryableAuthError NonRetryableAuthError
 		if errors.As(err, &nonRetryableAuthError) {
@@ -284,9 +283,9 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 			return err
 		}
 
-		// -1 is the default maxAuthRetries option and indicates there should be no max retries
-		if c.config.maxAuthRetries != -1 && retries >= c.config.maxAuthRetries {
-			c.config.Logger.Errorf("Authentication failed with error: '%s'. Exceeded max retries '%s'.", err, c.config.maxAuthRetries)
+		// -1 is the default maxAuthRetries option and indicates there should be no max attempts
+		if c.config.maxAuthRetries != -1 && attempts >= c.config.maxAuthRetries {
+			c.config.Logger.Errorf("Authentication failed with error: '%s'. Exceeded max attempts '%s'.", err, c.config.maxAuthRetries)
 			return err
 		}
 
@@ -294,12 +293,14 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 		delayWithJitter := currentDelay + jitter
 
 		c.config.Logger.Errorf("Authentication failed with error: '%s'. Retrying in %v.", err, delayWithJitter)
-		time.Sleep(delayWithJitter)
+		c.config.sleeper.Sleep(delayWithJitter)
 
 		currentDelay *= time.Duration(factor)
 		if currentDelay > maxDelay {
 			currentDelay = maxDelay
 		}
+
+		attempts++
 
 	}
 }

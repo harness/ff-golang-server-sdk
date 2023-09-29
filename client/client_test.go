@@ -1,16 +1,16 @@
-package client_test
+package client
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/harness/ff-golang-server-sdk/test_helpers"
 	"github.com/harness/ff-golang-server-sdk/types"
 	"io"
 	"net/http"
 	"os"
 	"testing"
 
-	"github.com/harness/ff-golang-server-sdk/client"
 	"github.com/harness/ff-golang-server-sdk/dto"
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/rest"
@@ -81,13 +81,13 @@ func TestCfClient_NewClient(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		newClientFunc func() (*client.CfClient, error)
+		newClientFunc func() (*CfClient, error)
 		mockResponder func()
 		wantErr       error
 	}{
 		{
 			name: "Successful client creation",
-			newClientFunc: func() (*client.CfClient, error) {
+			newClientFunc: func() (*CfClient, error) {
 				return newSynchronousClient(http.DefaultClient, ValidSDKKey)
 			},
 			mockResponder: func() {
@@ -99,7 +99,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		},
 		{
 			name: "Empty SDK key",
-			newClientFunc: func() (*client.CfClient, error) {
+			newClientFunc: func() (*CfClient, error) {
 				return newSynchronousClient(http.DefaultClient, EmptySDKKey)
 			},
 			mockResponder: nil,
@@ -107,7 +107,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		},
 		{
 			name: "Authentication failed with 401 and no retry",
-			newClientFunc: func() (*client.CfClient, error) {
+			newClientFunc: func() (*CfClient, error) {
 				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
 			},
 			mockResponder: func() {
@@ -118,14 +118,14 @@ func TestCfClient_NewClient(t *testing.T) {
 				authErrorResponse := AuthResponseDetailed(403, "403", bodyString)
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 			},
-			wantErr: client.NonRetryableAuthError{
+			wantErr: NonRetryableAuthError{
 				StatusCode: "401",
 				Message:    "invalid key or target provided",
 			},
 		},
 		{
 			name: "Authentication failed with 403 and no retry",
-			newClientFunc: func() (*client.CfClient, error) {
+			newClientFunc: func() (*CfClient, error) {
 				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
 			},
 			mockResponder: func() {
@@ -136,14 +136,14 @@ func TestCfClient_NewClient(t *testing.T) {
 				authErrorResponse := AuthResponseDetailed(403, "403", bodyString)
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 			},
-			wantErr: client.NonRetryableAuthError{
+			wantErr: NonRetryableAuthError{
 				StatusCode: "403",
 				Message:    "forbidden",
 			},
 		},
 		{
 			name: "Authentication failed with 404 and no retry",
-			newClientFunc: func() (*client.CfClient, error) {
+			newClientFunc: func() (*CfClient, error) {
 				return newSynchronousClient(http.DefaultClient, ValidSDKKey) // A function that returns a CfClient instance
 			},
 			mockResponder: func() {
@@ -155,15 +155,16 @@ func TestCfClient_NewClient(t *testing.T) {
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
-			wantErr: client.NonRetryableAuthError{
+			wantErr: NonRetryableAuthError{
 				StatusCode: "404",
 				Message:    "not found",
 			},
 		},
 		{
-			name: "Authentication failed with 500 and retries once",
-			newClientFunc: func() (*client.CfClient, error) {
-				return newSynchronousClient(http.DefaultClient, ValidSDKKey)
+			name: "Authentication failed with 500 and succeeds after one retry",
+			newClientFunc: func() (*CfClient, error) {
+				newClient, err := newSynchronousClient(http.DefaultClient, ValidSDKKey, WithSleeper(test_helpers.MockSleeper{}))
+				return newClient, err
 			},
 			mockResponder: func() {
 				bodyString := `{
@@ -174,10 +175,60 @@ func TestCfClient_NewClient(t *testing.T) {
 				secondAuthResponse := AuthResponse(200, ValidAuthToken)
 
 				registerStatefulResponders([]httpmock.Responder{firstAuthResponse, secondAuthResponse}, TargetSegmentsResponse, FeatureConfigsResponse)
-				//registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
 			wantErr: nil,
+		},
+		{
+			name: "Authentication failed and succeeds just before exceeding max retries",
+			newClientFunc: func() (*CfClient, error) {
+				newClient, err := newSynchronousClient(http.DefaultClient, ValidSDKKey, WithMaxAuthRetries(10), WithSleeper(test_helpers.MockSleeper{}))
+				return newClient, err
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "internal server error",
+				"code": "500"
+				}`
+				var responses []httpmock.Responder
+				// Add a bunch of error responses
+				for i := 0; i < 10; i++ {
+					responses = append(responses, AuthResponseDetailed(500, "success", bodyString))
+				}
+
+				// Add the success response
+				successResponse := AuthResponse(200, ValidAuthToken)
+				responses = append(responses, successResponse)
+
+				registerStatefulResponders(responses, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			wantErr: nil,
+		},
+		{
+			name: "Authentication failed and exceeds max retries",
+			newClientFunc: func() (*CfClient, error) {
+				newClient, err := newSynchronousClient(http.DefaultClient, ValidSDKKey, WithMaxAuthRetries(10), WithSleeper(test_helpers.MockSleeper{}))
+				return newClient, err
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "internal server error",
+				"code": "500"
+				}`
+				var responses []httpmock.Responder
+				// Add a bunch of error responses
+				for i := 0; i < 11; i++ {
+					responses = append(responses, AuthResponseDetailed(500, "success", bodyString))
+				}
+
+				registerStatefulResponders(responses, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			wantErr: RetryableAuthError{
+				StatusCode: "500",
+				Message:    "internal server error",
+			},
 		},
 	}
 
@@ -275,7 +326,7 @@ func TestCfClient_StringVariation(t *testing.T) {
 
 // MakeNewSynchronousClientAndTarget creates a new synchronous client and target.  If it returns
 // error then something went wrong.
-func MakeNewSynchronousClientAndTarget(sdkKey string) (*client.CfClient, *evaluation.Target, error) {
+func MakeNewSynchronousClientAndTarget(sdkKey string) (*CfClient, *evaluation.Target, error) {
 	target := target()
 	client, err := newSynchronousClient(http.DefaultClient, sdkKey)
 	if err != nil {
@@ -284,24 +335,28 @@ func MakeNewSynchronousClientAndTarget(sdkKey string) (*client.CfClient, *evalua
 	return client, target, nil
 }
 
-// newAsyncClient creates a new client with some default options
-func newAsyncClient(httpClient *http.Client) (*client.CfClient, error) {
-	return client.NewCfClient(ValidSDKKey,
-		client.WithURL(URL),
-		client.WithStreamEnabled(false),
-		client.WithHTTPClient(httpClient),
-		client.WithStoreEnabled(false),
+// newAsyncClient creates a new client which does not wait for initailzation to complete, and includes default options
+func newAsyncClient(httpClient *http.Client) (*CfClient, error) {
+	return NewCfClient(ValidSDKKey,
+		WithURL(URL),
+		WithStreamEnabled(false),
+		WithHTTPClient(httpClient),
+		WithStoreEnabled(false),
 	)
 }
 
-func newSynchronousClient(httpClient *http.Client, sdkKey string) (*client.CfClient, error) {
-	return client.NewCfClient(sdkKey,
-		client.WithURL(URL),
-		client.WithStreamEnabled(false),
-		client.WithHTTPClient(httpClient),
-		client.WithStoreEnabled(false),
-		client.WithWaitForInitialized(true),
-	)
+// newSynchronousClient creates a new client which waits for initialization to complete, and includes default options/extra options if required.
+func newSynchronousClient(httpClient *http.Client, sdkKey string, extraOptions ...ConfigOption) (*CfClient, error) {
+	baseOptions := []ConfigOption{
+		WithURL(URL),
+		WithStreamEnabled(false),
+		WithHTTPClient(httpClient),
+		WithStoreEnabled(false),
+		WithWaitForInitialized(true),
+	}
+
+	allOptions := append(baseOptions, extraOptions...)
+	return NewCfClient(sdkKey, allOptions...)
 }
 
 // target creates a new Target with some default values
@@ -326,7 +381,6 @@ var AuthResponse = func(statusCode int, authToken string) func(req *http.Request
 var AuthResponseDetailed = func(statusCode int, status string, bodyString string) func(req *http.Request) (*http.Response, error) {
 
 	return func(req *http.Request) (*http.Response, error) {
-		// Return the appropriate error based on the provided status code
 		response := &http.Response{
 			StatusCode: statusCode,
 			Status:     status,
@@ -334,10 +388,7 @@ var AuthResponseDetailed = func(statusCode int, status string, bodyString string
 			Header:     make(http.Header),
 		}
 
-		// Add headers to the response
 		response.Header.Add("Content-Type", "application/json")
-		// You can add other headers as needed:
-		// response.Header.Add("Another-Header", "Header-Value")
 
 		return response, nil
 	}
@@ -365,27 +416,27 @@ var TargetSegmentsResponse = func(req *http.Request) (*http.Response, error) {
 		}
 	]`), &AllSegmentsResponse)
 	if err != nil {
-		return jsonError(err)
+		return test_helpers.JsonError(err)
 	}
 	return httpmock.NewJsonResponse(200, AllSegmentsResponse)
 }
 
 var FeatureConfigsResponse = func(req *http.Request) (*http.Response, error) {
 	var FeatureConfigResponse []rest.FeatureConfig
-	FeatureConfigResponse = append(FeatureConfigResponse, MakeBoolFeatureConfigs("TestTrueOn", "true", "false", "on")...)
-	FeatureConfigResponse = append(FeatureConfigResponse, MakeBoolFeatureConfigs("TestTrueOff", "true", "false", "off")...)
+	FeatureConfigResponse = append(FeatureConfigResponse, test_helpers.MakeBoolFeatureConfigs("TestTrueOn", "true", "false", "on")...)
+	FeatureConfigResponse = append(FeatureConfigResponse, test_helpers.MakeBoolFeatureConfigs("TestTrueOff", "true", "false", "off")...)
 
-	FeatureConfigResponse = append(FeatureConfigResponse, MakeBoolFeatureConfigs("TestFalseOn", "false", "true", "on")...)
-	FeatureConfigResponse = append(FeatureConfigResponse, MakeBoolFeatureConfigs("TestFalseOff", "false", "true", "off")...)
+	FeatureConfigResponse = append(FeatureConfigResponse, test_helpers.MakeBoolFeatureConfigs("TestFalseOn", "false", "true", "on")...)
+	FeatureConfigResponse = append(FeatureConfigResponse, test_helpers.MakeBoolFeatureConfigs("TestFalseOff", "false", "true", "off")...)
 
-	FeatureConfigResponse = append(FeatureConfigResponse, MakeBoolFeatureConfigs("TestTrueOnWithPreReqFalse", "true", "false", "on", MakeBoolPreRequisite("PreReq1", "false"))...)
-	FeatureConfigResponse = append(FeatureConfigResponse, MakeBoolFeatureConfigs("TestTrueOnWithPreReqTrue", "true", "false", "on", MakeBoolPreRequisite("PreReq1", "true"))...)
+	FeatureConfigResponse = append(FeatureConfigResponse, test_helpers.MakeBoolFeatureConfigs("TestTrueOnWithPreReqFalse", "true", "false", "on", test_helpers.MakeBoolPreRequisite("PreReq1", "false"))...)
+	FeatureConfigResponse = append(FeatureConfigResponse, test_helpers.MakeBoolFeatureConfigs("TestTrueOnWithPreReqTrue", "true", "false", "on", test_helpers.MakeBoolPreRequisite("PreReq1", "true"))...)
 
-	FeatureConfigResponse = append(FeatureConfigResponse, MakeStringFeatureConfigs("TestStringAOn", "Alpha", "Bravo", "on")...)
-	FeatureConfigResponse = append(FeatureConfigResponse, MakeStringFeatureConfigs("TestStringAOff", "Alpha", "Bravo", "off")...)
+	FeatureConfigResponse = append(FeatureConfigResponse, test_helpers.MakeStringFeatureConfigs("TestStringAOn", "Alpha", "Bravo", "on")...)
+	FeatureConfigResponse = append(FeatureConfigResponse, test_helpers.MakeStringFeatureConfigs("TestStringAOff", "Alpha", "Bravo", "off")...)
 
-	FeatureConfigResponse = append(FeatureConfigResponse, MakeStringFeatureConfigs("TestStringAOnWithPreReqFalse", "Alpha", "Bravo", "on", MakeBoolPreRequisite("PreReq1", "false"))...)
-	FeatureConfigResponse = append(FeatureConfigResponse, MakeStringFeatureConfigs("TestStringAOnWithPreReqTrue", "Alpha", "Bravo", "on", MakeBoolPreRequisite("PreReq1", "true"))...)
+	FeatureConfigResponse = append(FeatureConfigResponse, test_helpers.MakeStringFeatureConfigs("TestStringAOnWithPreReqFalse", "Alpha", "Bravo", "on", test_helpers.MakeBoolPreRequisite("PreReq1", "false"))...)
+	FeatureConfigResponse = append(FeatureConfigResponse, test_helpers.MakeStringFeatureConfigs("TestStringAOnWithPreReqTrue", "Alpha", "Bravo", "on", test_helpers.MakeBoolPreRequisite("PreReq1", "true"))...)
 
 	return httpmock.NewJsonResponse(200, FeatureConfigResponse)
 }
