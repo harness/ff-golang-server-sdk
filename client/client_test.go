@@ -3,6 +3,7 @@ package client_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/harness/ff-golang-server-sdk/types"
 	"io"
 	"net/http"
@@ -27,6 +28,30 @@ const (
 	EmptyAuthToken = ""
 )
 
+// responderQueue is a type that manages a queue of responders
+type responderQueue struct {
+	responders []httpmock.Responder
+	index      int
+}
+
+// makeResponderQueue creates a new instance of responderQueue with the provided responders
+func makeResponderQueue(responders []httpmock.Responder) *responderQueue {
+	return &responderQueue{
+		responders: responders,
+		index:      0,
+	}
+}
+
+// getNextResponder is a method that returns the next responder in the queue
+func (q *responderQueue) getNextResponder(req *http.Request) (*http.Response, error) {
+	if q.index >= len(q.responders) {
+		return nil, fmt.Errorf("no more responders in the queue")
+	}
+	responder := q.responders[q.index]
+	q.index++
+	return responder(req)
+}
+
 // TestMain runs before the other tests
 func TestMain(m *testing.M) {
 	// httpMock overwrites the http.DefaultClient
@@ -38,6 +63,16 @@ func TestMain(m *testing.M) {
 
 func registerResponders(authResponder httpmock.Responder, targetSegmentsResponder httpmock.Responder, featureConfigsResponder httpmock.Responder) {
 	httpmock.RegisterResponder("POST", "http://localhost/api/1.0/client/auth", authResponder)
+	httpmock.RegisterResponder("GET", "http://localhost/api/1.0/client/env/7ed1025d-a9b1-4129-a88f-e27ef360982d/target-segments", targetSegmentsResponder)
+	httpmock.RegisterResponder("GET", "http://localhost/api/1.0/client/env/7ed1025d-a9b1-4129-a88f-e27ef360982d/feature-configs", featureConfigsResponder)
+}
+
+// Same as registerResponders except the auth response can be different per call
+func registerStatefulResponders(authResponder []httpmock.Responder, targetSegmentsResponder httpmock.Responder, featureConfigsResponder httpmock.Responder) {
+	authQueue := makeResponderQueue(authResponder)
+	httpmock.RegisterResponder("POST", "http://localhost/api/1.0/client/auth", authQueue.getNextResponder)
+
+	// These responders don't need different responses per call
 	httpmock.RegisterResponder("GET", "http://localhost/api/1.0/client/env/7ed1025d-a9b1-4129-a88f-e27ef360982d/target-segments", targetSegmentsResponder)
 	httpmock.RegisterResponder("GET", "http://localhost/api/1.0/client/env/7ed1025d-a9b1-4129-a88f-e27ef360982d/feature-configs", featureConfigsResponder)
 }
