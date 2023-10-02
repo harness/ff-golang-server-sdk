@@ -8,10 +8,6 @@ import (
 	"time"
 )
 
-func Cool() {
-
-}
-
 func MakeBoolFeatureConfigs(name, defaultVariation, offVariation, state string, preReqs ...rest.Prerequisite) []rest.FeatureConfig {
 	var featureConfig []rest.FeatureConfig
 	featureConfig = append(featureConfig, MakeBoolFeatureConfig(name, defaultVariation, offVariation, state, preReqs))
@@ -66,35 +62,6 @@ func MakeStringFeatureConfigs(name, defaultVariation, offVariation, state string
 
 	return featureConfig
 }
-
-/*
-{
-		"defaultServe": {
-			"variation": "Alpha"
-		},
-		"environment": "PreProduction",
-		"feature": "TestStringFlag",
-		"kind": "string",
-		"offVariation": "Bravo",
-		"prerequisites": [],
-		"project": "Customer_Self_Service_Portal",
-		"rules": [],
-		"state": "off",
-		"variations": [
-			{
-				"identifier": "Alpha",
-				"name": "Bravo",
-				"value": "A"
-			},
-			{
-				"identifier": "Bravo",
-				"name": "Bravo",
-				"value": "B"
-			}
-		],
-		"version": 1
-	}
-*/
 
 func MakeStringFeatureConfig(name, defaultVariation, offVariation, state string, preReqs []rest.Prerequisite) rest.FeatureConfig {
 	return rest.FeatureConfig{
