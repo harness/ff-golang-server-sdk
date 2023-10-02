@@ -141,26 +141,6 @@ func TestCfClient_NewClient(t *testing.T) {
 			},
 		},
 		{
-			name: "Asynchronous client: Authentication failed with 401 and no retry, times out waiting",
-			newClientFunc: func() (*CfClient, error) {
-				client, err := newClient(http.DefaultClient, InvaliDSDKKey, WithSleeper(test_helpers.MockSleeper{}))
-				if ok, err := client.IsInitialized(); !ok {
-					return client, err
-				}
-				return client, err
-			},
-			mockResponder: func() {
-				bodyString := `{
-				"message": "invalid key or target provided",
-				"code": "401"
-				}`
-				authErrorResponse := AuthResponseDetailed(401, "401", bodyString)
-				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
-			},
-			// An async client cannot return an error for auth failures due
-			err: InitializeTimeoutError{},
-		},
-		{
 			name: "Synchronous client: Authentication failed with 403 and no retry",
 			newClientFunc: func() (*CfClient, error) {
 				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true))
@@ -305,6 +285,26 @@ func TestCfClient_NewClient(t *testing.T) {
 			},
 			mockResponder: nil,
 			err:           InitializeTimeoutError{},
+		},
+		{
+			name: "Asynchronous client: Authentication failed with 401 and no retry, times out waiting",
+			newClientFunc: func() (*CfClient, error) {
+				client, err := newClient(http.DefaultClient, InvaliDSDKKey, WithSleeper(test_helpers.MockSleeper{}))
+				if ok, err := client.IsInitialized(); !ok {
+					return client, err
+				}
+				return client, err
+			},
+			mockResponder: func() {
+				bodyString := `{
+				"message": "invalid key or target provided",
+				"code": "401"
+				}`
+				authErrorResponse := AuthResponseDetailed(401, "401", bodyString)
+				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+			},
+			// An async client cannot return an error for auth failures due
+			err: InitializeTimeoutError{},
 		},
 		{
 			name: "Asynchronous client: Authentication failed with 403 and no retry, times out waiting",
@@ -473,7 +473,7 @@ func TestCfClient_BoolVariation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			flag, err := client.BoolVariation(test.args.key, test.args.target, test.args.defaultValue)
 			if (err != nil) != test.wantErr {
-				t.Errorf("BoolVariation() error = %v, err %v", err, test.wantErr)
+				t.Errorf("BoolVariation() error = %v, wanrErr %v", err, test.wantErr)
 				return
 			}
 			assert.Equal(t, test.want, flag, "%s didn't get expected value", test.name)
@@ -512,7 +512,7 @@ func TestCfClient_StringVariation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			flag, err := client.StringVariation(test.args.key, test.args.target, test.args.defaultValue)
 			if (err != nil) != test.wantErr {
-				t.Errorf("BoolVariation() error = %v, err %v", err, test.wantErr)
+				t.Errorf("BoolVariation() error = %v, wanrErr %v", err, test.wantErr)
 				return
 			}
 			assert.Equal(t, test.want, flag, "%s didn't get expected value", test.name)
@@ -722,7 +722,7 @@ var AuthResponseDetailed = func(statusCode int, status string, bodyString string
 		response := &http.Response{
 			StatusCode: statusCode,
 			Status:     status,
-			Body:       io.NopCloser(bytes.NewReader([]byte(bodyString))), // this is your JSON body as io.ReadCloser
+			Body:       io.NopCloser(bytes.NewReader([]byte(bodyString))),
 			Header:     make(http.Header),
 		}
 
