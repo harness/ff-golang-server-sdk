@@ -181,16 +181,6 @@ func (c *CfClient) IsInitialized() (bool, error) {
 	return false, InitializeTimeoutError{}
 }
 
-// checkInitializedStatus returns a boolean indicating whether the CfClient
-// is initialized at the time the method is called. If the client is being
-// created in asynchronous mode, this method may return false even if the
-// initialization is in progress. In other words, a false value does not
-// necessarily indicate a failure but may indicate that initialization is
-// still underway.
-func (c *CfClient) checkInitializedStatus() bool {
-	return c.initializedBool
-}
-
 func (c *CfClient) retrieve(ctx context.Context) bool {
 	ok := true
 	var wg sync.WaitGroup
