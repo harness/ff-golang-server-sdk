@@ -34,8 +34,8 @@ type responderQueue struct {
 	index      int
 }
 
-// makeResponderQueue creates a new instance of responderQueue with the provided responders
-func makeResponderQueue(responders []httpmock.Responder) *responderQueue {
+// newResponderQueue creates a new instance of responderQueue with the provided responders
+func newResponderQueue(responders []httpmock.Responder) *responderQueue {
 	return &responderQueue{
 		responders: responders,
 		index:      0,
@@ -70,7 +70,7 @@ func registerResponders(authResponder httpmock.Responder, targetSegmentsResponde
 
 // Same as registerResponders except the auth response can be different per call
 func registerMultipleResponseResponders(authResponder []httpmock.Responder, targetSegmentsResponder httpmock.Responder, featureConfigsResponder httpmock.Responder) {
-	authQueue := makeResponderQueue(authResponder)
+	authQueue := newResponderQueue(authResponder)
 	httpmock.RegisterResponder("POST", "http://localhost/api/1.0/client/auth", authQueue.getNextResponder)
 
 	// These responders don't need different responses per call
