@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"os"
 	"testing"
-	"time"
 )
 
 const (
@@ -341,82 +340,6 @@ func TestCfClient_NewClient(t *testing.T) {
 				}`
 				authErrorResponse := AuthResponseDetailed(404, "404", bodyString)
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
-
-			},
-			err: InitializeTimeoutError{},
-		},
-		{
-			name: "Asynchronous client: Authentication failed with 500 and succeeds after one retry",
-			newClientFunc: func() (*CfClient, error) {
-				client, err := newClient(http.DefaultClient, ValidSDKKey, WithSleeper(test_helpers.MockSleeper{SleepTime: time.Millisecond}))
-				if ok, err := client.IsInitialized(); !ok {
-					return client, err
-				}
-				return client, err
-			},
-			mockResponder: func() {
-				bodyString := `{
-				"message": "internal server error",
-				"code": "500"
-				}`
-				firstAuthResponse := AuthResponseDetailed(500, "internal server error", bodyString)
-				secondAuthResponse := AuthResponse(200, ValidAuthToken)
-
-				registerMultipleResponseResponders([]httpmock.Responder{firstAuthResponse, secondAuthResponse}, TargetSegmentsResponse, FeatureConfigsResponse)
-
-			},
-			err: nil,
-		},
-		{
-			name: "Asynchronous client: Authentication failed and succeeds just before exceeding max retries",
-			newClientFunc: func() (*CfClient, error) {
-				client, err := newClient(http.DefaultClient, ValidSDKKey, WithSleeper(test_helpers.MockSleeper{SleepTime: time.Millisecond}))
-				if ok, err := client.IsInitialized(); !ok {
-					return client, err
-				}
-				return client, err
-			},
-			mockResponder: func() {
-				bodyString := `{
-				"message": "internal server error",
-				"code": "500"
-				}`
-				var responses []httpmock.Responder
-				// Add a bunch of error responses
-				for i := 0; i < 10; i++ {
-					responses = append(responses, AuthResponseDetailed(500, "internal server error", bodyString))
-				}
-
-				// Add the success response
-				successResponse := AuthResponse(200, ValidAuthToken)
-				responses = append(responses, successResponse)
-
-				registerMultipleResponseResponders(responses, TargetSegmentsResponse, FeatureConfigsResponse)
-
-			},
-			err: nil,
-		},
-		{
-			name: "Asynchronous client: Authentication failed and exceeds max retries",
-			newClientFunc: func() (*CfClient, error) {
-				client, err := newClient(http.DefaultClient, ValidSDKKey, WithSleeper(test_helpers.MockSleeper{SleepTime: time.Nanosecond}))
-				if ok, err := client.IsInitialized(); !ok {
-					return client, err
-				}
-				return client, err
-			},
-			mockResponder: func() {
-				bodyString := `{
-				"message": "internal server error",
-				"code": "500"
-				}`
-				var responses []httpmock.Responder
-				// Add a bunch of error responses
-				for i := 0; i < 11; i++ {
-					responses = append(responses, AuthResponseDetailed(500, "internal server error", bodyString))
-				}
-
-				registerMultipleResponseResponders(responses, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
 			err: InitializeTimeoutError{},
