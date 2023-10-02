@@ -16,13 +16,15 @@ client, err := harness.NewCfClient(myApiKey,
 
 ```
 
-| Name            | Config Option                                                  | Description                                                                                                                                      | default                              |
-|-----------------|----------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------|
-| baseUrl         | harness.WithURL("https://config.ff.harness.io/api/1.0")        | the URL used to fetch feature flag evaluations. You should change this when using the Feature Flag proxy to http://localhost:7000                | https://config.ff.harness.io/api/1.0 |
-| eventsUrl       | harness.WithEventsURL("https://events.ff.harness.io/api/1.0"), | the URL used to post metrics data to the feature flag service. You should change this when using the Feature Flag proxy to http://localhost:7000 | https://events.ff.harness.io/api/1.0 |
-| pollInterval    | harness.WithPullInterval(60))                                  | when running in stream mode, the interval in seconds that we poll for changes.                                                                   | 1                                   |
-| enableStream    | harness.WithStreamEnabled(false),                              | Enable streaming mode.                                                                                                                           | true                                 |
-| enableAnalytics | *Not Supported*                                                | Enable analytics.  Metrics data is posted every 60s                                                                                              | *Not Supported*                      |
+| Name               | Config Option                                                  | Description                                                                                                                                      | default                              |
+|--------------------|----------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------|
+| baseUrl            | harness.WithURL("https://config.ff.harness.io/api/1.0")        | the URL used to fetch feature flag evaluations. You should change this when using the Feature Flag proxy to http://localhost:7000                | https://config.ff.harness.io/api/1.0 |
+| eventsUrl          | harness.WithEventsURL("https://events.ff.harness.io/api/1.0"), | the URL used to post metrics data to the feature flag service. You should change this when using the Feature Flag proxy to http://localhost:7000 | https://events.ff.harness.io/api/1.0 |
+| pollInterval       | harness.WithPullInterval(60))                                  | when running in stream mode, the interval in seconds that we poll for changes.                                                                   | 1                                    |
+| enableStream       | harness.WithStreamEnabled(false),                              | Enable streaming mode.                                                                                                                           | true                                 |
+| waitForInitialized | harness.WithWaitForInitialized(true)                           | When calling `NewCfClient` , will not return `client, err` until initialization succeeds of fails                                                | false                                |
+| maxAuthRetries     | harness.WithMaxAuthRetries(5)                                  | The maximum number of attempts that the client will try to authenticate on errors that it deems are retryable.                                   | unlimited                            |
+| enableAnalytics    | *Not Supported*                                                | Enable analytics.  Metrics data is posted every 60s                                                                                              | *Not Supported*                      |
 
 ## Logging Configuration
 You can provide your own logger to the SDK, passing it in as a config option.
