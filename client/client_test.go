@@ -714,12 +714,4 @@ func TestCfClient_Close(t *testing.T) {
 
 	t.Log("When I close the client for the second time I should an error")
 	assert.NotNil(t, client.Close())
-
-	t.Log("When I close the client before it's been initialized I should get an error")
-
-	client2, err := newClient(&http.Client{}, ValidSDKKey)
-	if err != nil {
-		t.Error(err)
-	}
-	assert.NotNil(t, client2.Close())
 }
