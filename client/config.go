@@ -1,11 +1,11 @@
 package client
 
 import (
-	"net/http"
-	"os"
-
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/stream"
+	"github.com/harness/ff-golang-server-sdk/types"
+	"net/http"
+	"os"
 
 	"github.com/harness/ff-golang-server-sdk/cache"
 	"github.com/harness/ff-golang-server-sdk/logger"
@@ -27,6 +27,9 @@ type config struct {
 	eventStreamListener stream.EventStreamListener
 	enableAnalytics     bool
 	proxyMode           bool
+	waitForInitialized  bool
+	maxAuthRetries      int
+	sleeper             types.Sleeper
 }
 
 func newDefaultConfig(log logger.Logger) *config {
@@ -52,5 +55,8 @@ func newDefaultConfig(log logger.Logger) *config {
 		enableStore:     true,
 		enableAnalytics: true,
 		proxyMode:       false,
+		// Indicate that we should retry forever by default
+		maxAuthRetries: -1,
+		sleeper:        &types.RealClock{},
 	}
 }

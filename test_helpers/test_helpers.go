@@ -1,11 +1,11 @@
-package client_test
+package test_helpers
 
 import (
 	"fmt"
-	"net/http"
-
 	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/jarcoal/httpmock"
+	"net/http"
+	"time"
 )
 
 func MakeBoolFeatureConfigs(name, defaultVariation, offVariation, state string, preReqs ...rest.Prerequisite) []rest.FeatureConfig {
@@ -63,35 +63,6 @@ func MakeStringFeatureConfigs(name, defaultVariation, offVariation, state string
 	return featureConfig
 }
 
-/*
-{
-		"defaultServe": {
-			"variation": "Alpha"
-		},
-		"environment": "PreProduction",
-		"feature": "TestStringFlag",
-		"kind": "string",
-		"offVariation": "Bravo",
-		"prerequisites": [],
-		"project": "Customer_Self_Service_Portal",
-		"rules": [],
-		"state": "off",
-		"variations": [
-			{
-				"identifier": "Alpha",
-				"name": "Bravo",
-				"value": "A"
-			},
-			{
-				"identifier": "Bravo",
-				"name": "Bravo",
-				"value": "B"
-			}
-		],
-		"version": 1
-	}
-*/
-
 func MakeStringFeatureConfig(name, defaultVariation, offVariation, state string, preReqs []rest.Prerequisite) rest.FeatureConfig {
 	return rest.FeatureConfig{
 		DefaultServe: rest.Serve{
@@ -111,6 +82,10 @@ func MakeStringFeatureConfig(name, defaultVariation, offVariation, state string,
 	}
 }
 
+func JsonError(err error) (*http.Response, error) {
+	return httpmock.NewJsonResponse(500, fmt.Errorf(`{"error" : "%s"}`, err))
+}
+
 func intPtr(value int64) *int64 {
 	return &value
 }
@@ -119,6 +94,10 @@ func strPtr(value string) *string {
 	return &value
 }
 
-func jsonError(err error) (*http.Response, error) {
-	return httpmock.NewJsonResponse(500, fmt.Errorf(`{"error" : "%s"}`, err))
+type MockSleeper struct {
+	SleepTime time.Duration
+}
+
+func (ms MockSleeper) Sleep(d time.Duration) {
+	time.Sleep(ms.SleepTime)
 }

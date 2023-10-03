@@ -1,13 +1,13 @@
 package client
 
 import (
-	"net/http"
-
 	"github.com/harness/ff-golang-server-sdk/cache"
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/logger"
 	"github.com/harness/ff-golang-server-sdk/storage"
 	"github.com/harness/ff-golang-server-sdk/stream"
+	"github.com/harness/ff-golang-server-sdk/types"
+	"net/http"
 )
 
 // ConfigOption is used as return value for advanced client configuration
@@ -109,5 +109,23 @@ func WithEventStreamListener(e stream.EventStreamListener) ConfigOption {
 func WithProxyMode(b bool) ConfigOption {
 	return func(config *config) {
 		config.proxyMode = b
+	}
+}
+
+func WithWaitForInitialized(b bool) ConfigOption {
+	return func(config *config) {
+		config.waitForInitialized = b
+	}
+}
+
+func WithMaxAuthRetries(i int) ConfigOption {
+	return func(config *config) {
+		config.maxAuthRetries = i
+	}
+}
+
+func WithSleeper(sleeper types.Sleeper) ConfigOption {
+	return func(config *config) {
+		config.sleeper = sleeper
 	}
 }
