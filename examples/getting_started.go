@@ -19,7 +19,7 @@ func main() {
 
 	// Create a feature flag client and wait for it to successfully initialize
 	startTime := time.Now()
-	client, err := harness.NewCfClient(sdkKey, harness.WithWaitForInitialized(false))
+	client, err := harness.NewCfClient(sdkKey, harness.WithWaitForInitialized(true))
 	elapsedTime := time.Since(startTime)
 	log.Printf("Took '%v' seconds to get a client initialization result ", elapsedTime.Seconds())
 
