@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"strconv"
 	"sync"
 	"time"
@@ -72,6 +73,7 @@ func NewAnalyticsService(timeout time.Duration, logger logger.Logger) *Analytics
 
 // Start starts the client and timer to send analytics
 func (as *AnalyticsService) Start(ctx context.Context, client *metricsclient.ClientWithResponsesInterface, environmentID string) {
+	as.logger.Infof("%s Metrics started", sdk_codes.MetricsStarted)
 	as.metricsClient = client
 	as.environmentID = environmentID
 	go as.startTimer(ctx)
@@ -83,6 +85,7 @@ func (as *AnalyticsService) startTimer(ctx context.Context) {
 		case <-time.After(as.timeout):
 			as.sendDataAndResetCache(ctx)
 		case <-ctx.Done():
+			as.logger.Infof("%s Metrics stopped", sdk_codes.MetricsStopped)
 			return
 		}
 	}
@@ -273,11 +276,11 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 			return
 		}
 		if resp.StatusCode() != 200 {
-			as.logger.Warn("Non 200 response from metrics server: %d", resp.StatusCode())
+			as.logger.Warnf("%s Non 200 response from metrics server: %d", sdk_codes.MetricsSendFail, resp.StatusCode())
 			return
 		}
 
-		as.logger.Debug("Metrics sent to server")
+		as.logger.Debugf("%s Metrics sent to server", sdk_codes.MetricsSendSuccess)
 	} else {
 		as.logger.Warn("metrics client is not set")
 	}

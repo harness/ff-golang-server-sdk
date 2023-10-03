@@ -3,6 +3,7 @@ package stream
 import (
 	"context"
 	"fmt"
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"time"
 
 	"github.com/harness/ff-golang-server-sdk/pkg/repository"
@@ -71,7 +72,7 @@ func (c *SSEClient) Connect(ctx context.Context, environment string, apiKey stri
 
 // Connect will subscribe to SSE stream
 func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey string) <-chan Event {
-	c.logger.Infof("Start subscribing to Stream")
+	c.logger.Infof("%s Start subscribing to Stream", sdk_codes.StreamStarted)
 	// don't use the default exponentialBackoff strategy - we have our own disconnect logic
 	// of polling the service then re-establishing a new stream once we can connect
 	c.client.ReconnectStrategy = &backoff.StopBackOff{}
@@ -82,7 +83,7 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		defer close(out)
 
 		err := c.client.SubscribeWithContext(ctx, "*", func(msg *sse.Event) {
-			c.logger.Infof("Event received: %s", msg.Data)
+			c.logger.Infof("%s Event received: %s", msg.Data, sdk_codes.StreamEvent)
 
 			if len(msg.Data) <= 0 {
 				return

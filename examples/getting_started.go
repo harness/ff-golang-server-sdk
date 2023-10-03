@@ -45,7 +45,7 @@ func main() {
 	for {
 		resultBool, err := client.BoolVariation(flagName, &target, false)
 		if err != nil {
-			log.Fatal("failed to get evaluation: ", err)
+			log.Printf("failed to get evaluation: %v ", err)
 		}
 		log.Printf("Flag variation %v\n", resultBool)
 
