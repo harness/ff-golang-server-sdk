@@ -11,18 +11,28 @@ import (
 
 var (
 	flagName string = getEnvOrDefault("FF_FLAG_NAME", "harnessappdemodarkmode")
-	sdkKey   string = getEnvOrDefault("FF_API_KEY", "changeme")
+	sdkKey   string = getEnvOrDefault("FF_API_KEY", "change me")
 )
 
 func main() {
 	log.Println("Harness SDK Getting Started")
 
-	// Create a feature flag client
-	client, err := harness.NewCfClient(sdkKey)
+	// Create a feature flag client and wait for it to successfully initialize
+	startTime := time.Now()
+	client, err := harness.NewCfClient(sdkKey, harness.WithWaitForInitialized(true))
+	elapsedTime := time.Since(startTime)
+	log.Printf("Took '%v' seconds to get a client initialization result ", elapsedTime.Seconds())
+
 	if err != nil {
-		log.Fatalf("could not connect to CF servers %s\n", err)
+		log.Printf("Client failed to initialize: `%s`\n", err)
 	}
-	defer func() { client.Close() }()
+
+	defer func() {
+		err := client.Close()
+		if err != nil {
+			return
+		}
+	}()
 
 	// Create a target (different targets can get different results based on rules)
 	target := evaluation.Target{
@@ -35,9 +45,10 @@ func main() {
 	for {
 		resultBool, err := client.BoolVariation(flagName, &target, false)
 		if err != nil {
-			log.Fatal("failed to get evaluation: ", err)
+			log.Printf("failed to get evaluation: %v ", err)
 		}
 		log.Printf("Flag variation %v\n", resultBool)
+
 		time.Sleep(10 * time.Second)
 	}
 
