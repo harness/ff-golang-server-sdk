@@ -45,7 +45,7 @@ client, err := harness.NewCfClient(apiKey)
 In this scenario, the client will initialize in the background, making it possible to use the client even if it hasn’t finished initializing. 
 Be mindful that if you attempt to evaluate a feature flag before the client has fully initialized, it will return the default value provided in the evaluation call.
 
-#### Blocking Initialization
+### Blocking Initialization
 In some cases, you may want your application to wait for the client to finish initializing before continuing the startup process. To achieve this, you can use the WaitForInitialized method, which will block until the client is fully initialized or until the provided timeout is reached. Example usage:
 
 ```go
@@ -57,7 +57,9 @@ log.ErrorF("could not connect to FF servers %s", err)
 ```
 
 
-In this example, WaitForInitialized will block for up to 5 authentication attempts. If the client is not initialized within 5 authentication attempts, it will return an error. If you evaluate a feature flag in this state
+In this example, WaitForInitialized will block for up to 5 authentication attempts. If the client is not initialized within 5 authentication attempts, it will return an error.
+
+This can be useful if you need to unblock after a certain timeIf you evaluate a feature flag in this state
 the default variation will be returned.
 
 ```go
