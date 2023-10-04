@@ -513,7 +513,7 @@ func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultValue bool) (bool, error) {
 	if !c.initializedBool {
 		c.config.Logger.Info("Error when calling BoolVariation and returning default variation: 'Client is not initialized'")
-		return defaultValue, fmt.Errorf("%w", DefaultVariationReturnedError)
+		return defaultValue, fmt.Errorf("%w: Client is not initialized", DefaultVariationReturnedError)
 	}
 	value := c.evaluator.BoolVariation(key, target, defaultValue)
 	return value, nil
