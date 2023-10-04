@@ -59,7 +59,7 @@ log.ErrorF("could not connect to FF servers %s", err)
 
 In this example, WaitForInitialized will block for up to 5 authentication attempts. If the client is not initialized within 5 authentication attempts, it will return an error.
 
-This can be useful if you need to unblock after a certain time. **NOTE**: you evaluate a feature flag in this state
+This can be useful if you need to unblock after a certain time. **NOTE**: if you evaluate a feature flag in this state
 the default variation will be returned.
 
 ```go
