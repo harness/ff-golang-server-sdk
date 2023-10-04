@@ -46,7 +46,7 @@ In this scenario, the client will initialize in the background, making it possib
 Be mindful that if you attempt to evaluate a feature flag before the client has fully initialized, it will return the default value provided in the evaluation call.
 
 ### Blocking Initialization
-In some cases, you may want your application to wait for the client to finish initializing before continuing the startup process. To achieve this, you can use the WaitForInitialized method, which will block until the client is fully initialized or until the provided timeout is reached. Example usage:
+In some cases, you may want your application to wait for the client to finish initializing before continuing. To achieve this, you can use the `WithWaitForInitialized` option, which will block until the client is fully initialized or until the provided timeout is reached. Example usage:
 
 ```go
 client, err := harness.NewCfClient(sdkKey, harness.WithWaitForInitialized(true))
