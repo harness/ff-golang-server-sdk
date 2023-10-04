@@ -1,6 +1,13 @@
 package client
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+var DefaultVariationReturnedError = errors.New("default variation was returned")
+
+var EmptySDKKeyError = errors.New("default variation was returned")
 
 type NonRetryableAuthError struct {
 	StatusCode string

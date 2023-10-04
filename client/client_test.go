@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"github.com/harness/ff-golang-server-sdk/dto"
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/log"
@@ -119,7 +120,7 @@ func TestCfClient_NewClient(t *testing.T) {
 				return newClient(http.DefaultClient, EmptySDKKey, WithWaitForInitialized(true))
 			},
 			mockResponder: nil,
-			err:           types.ErrSdkCantBeEmpty,
+			err:           EmptySDKKeyError,
 		},
 		{
 			name: "Synchronous client: Authentication failed with 401 and no retry",
@@ -453,6 +454,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 		expectedInt    int64
 		expectedNumber float64
 		expectedJSON   types.JSON
+		expectedError  error
 	}{
 		{
 			name: "Evaluations with Synchronous client with empty SDK key",
@@ -464,6 +466,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedError:  DefaultVariationReturnedError,
 		},
 		{
 			name: "Evaluations with Synchronous client with invalid SDK key",
@@ -483,6 +486,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedError:  DefaultVariationReturnedError,
 		},
 		{
 			name: "Evaluations with Synchronous client with a server error",
@@ -502,6 +506,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedError:  DefaultVariationReturnedError,
 		},
 		{
 			name: "Evaluations with Synchronous client with empty SDK key",
@@ -513,6 +518,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedError:  DefaultVariationReturnedError,
 		},
 		{
 			name: "Evaluations with Async client with invalid SDK key",
@@ -532,6 +538,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedError:  DefaultVariationReturnedError,
 		},
 		{
 			name: "Evaluations with Async client with a server error",
@@ -551,6 +558,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedError:  DefaultVariationReturnedError,
 		},
 		{
 			name: "Evaluations with Async client with empty SDK key",
@@ -562,6 +570,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedError:  DefaultVariationReturnedError,
 		},
 	}
 	target := target()
@@ -575,23 +584,23 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 
 			boolResult, err := client.BoolVariation("TestTrueOn", target, false)
 			assert.Equal(t, tt.expectedBool, boolResult)
-			assert.Nil(t, err)
+			assert.True(t, errors.Is(err, tt.expectedError))
 
 			stringResult, err := client.StringVariation("TestTrueOn", target, "a default value")
 			assert.Equal(t, tt.expectedString, stringResult)
-			assert.Nil(t, err)
+			assert.True(t, errors.Is(err, tt.expectedError))
 
 			intResult, err := client.IntVariation("TestTrueOn", target, tt.expectedInt)
 			assert.Equal(t, tt.expectedInt, intResult)
-			assert.Nil(t, err)
+			assert.True(t, errors.Is(err, tt.expectedError))
 
 			numerResult, err := client.NumberVariation("TestTrueOn", target, tt.expectedNumber)
 			assert.Equal(t, tt.expectedNumber, numerResult)
-			assert.Nil(t, err)
+			assert.True(t, errors.Is(err, tt.expectedError))
 
 			jsonResult, _ := client.JSONVariation("TestTrueOn", target, tt.expectedJSON)
 			assert.Equal(t, tt.expectedJSON, jsonResult)
-			assert.Nil(t, err)
+			assert.True(t, errors.Is(err, tt.expectedError))
 		})
 	}
 }
