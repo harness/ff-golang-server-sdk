@@ -29,10 +29,43 @@ To follow along with our test code sample, make sure you’ve:
 - [Created a server SDK key and made a copy of it](https://ngdocs.harness.io/article/1j7pdkqh7j-create-a-feature-flag#step_3_create_an_sdk_key)
 
 
-### Install the SDK
+## Install the SDK
 Install the golang SDK using go
 ```golang
 go get github.com/harness/ff-golang-server-sdk
+```
+
+## Initialize the SDK
+### Non-blocking Initialization (Default)
+By default, when initializing the Harness Feature Flags client, the initialization process is non-blocking. This means that the client creation call will return immediately, allowing your application to continue its startup process without waiting for the client to be fully initialized. Here’s an example of creating a non-blocking client:
+
+```go
+client, err := harness.NewCfClient(apiKey)
+```
+In this scenario, the client will initialize in the background, making it possible to use the client even if it hasn’t finished initializing. 
+Be mindful that if you attempt to evaluate a feature flag before the client has fully initialized, it will return the default value provided in the evaluation call.
+
+#### Blocking Initialization
+In some cases, you may want your application to wait for the client to finish initializing before continuing the startup process. To achieve this, you can use the WaitForInitialized method, which will block until the client is fully initialized or until the provided timeout is reached. Example usage:
+
+```go
+client, err := harness.NewCfClient(sdkKey, harness.WithWaitForInitialized(true))
+
+if err != nil {
+log.ErrorF("could not connect to FF servers %s", err)
+}
+```
+
+
+In this example, WaitForInitialized will block for up to 5 authentication attempts. If the client is not initialized within 5 authentication attempts, it will return an error. If you evaluate a feature flag in this state
+the default variation will be returned.
+
+```go
+// Try to authenticate only 5 times before returning a result
+client, err := harness.NewCfClient(sdkKey, harness.WithWaitForInitialized(true), harness.WithMaxAuthRetries(5))
+if err != nil {
+log.Fatalf("client did not initialize in time: %s", err)
+}
 ```
 
 ### Code Sample
@@ -113,6 +146,8 @@ use docker to quick get started
 export FF_API_KEY=<your key here>
 docker run -e FF_API_KEY=$FF_API_KEY -v $(pwd):/app -w /app golang:1.17 go run examples/getting_started.go
 ```
+
+
 
 ### Additional Reading
 
