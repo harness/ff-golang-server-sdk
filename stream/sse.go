@@ -83,7 +83,7 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		defer close(out)
 
 		err := c.client.SubscribeWithContext(ctx, "*", func(msg *sse.Event) {
-			c.logger.Infof("%s Event received: %s", msg.Data, sdk_codes.StreamEvent)
+			c.logger.Infof("%s Event received: %s", sdk_codes.StreamEvent, msg.Data)
 
 			if len(msg.Data) <= 0 {
 				return
