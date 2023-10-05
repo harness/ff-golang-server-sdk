@@ -121,13 +121,13 @@ func TestEvaluator(t *testing.T) {
 				}
 				switch flag.Kind {
 				case rest.FeatureConfigKindBoolean:
-					got = evaluator.BoolVariation(testCase.Flag, target, false)
+					got, _ = evaluator.BoolVariation(testCase.Flag, target, false)
 				case rest.FeatureConfigKindString:
-					got = evaluator.StringVariation(testCase.Flag, target, "blue")
+					got, _ = evaluator.StringVariation(testCase.Flag, target, "blue")
 				case rest.FeatureConfigKindInt, "number":
-					got = evaluator.NumberVariation(testCase.Flag, target, 50.00)
+					got, _ = evaluator.NumberVariation(testCase.Flag, target, 50.00)
 				case rest.FeatureConfigKindJson:
-					got = evaluator.JSONVariation(testCase.Flag, target, map[string]interface{}{})
+					got, _ = evaluator.JSONVariation(testCase.Flag, target, map[string]interface{}{})
 					str, _ := json.Marshal(&got)
 					got = string(str)
 

@@ -5,8 +5,6 @@ import (
 	"fmt"
 )
 
-var DefaultVariationReturnedError = errors.New("default variation was returned")
-
 var EmptySDKKeyError = errors.New("default variation was returned")
 
 type NonRetryableAuthError struct {

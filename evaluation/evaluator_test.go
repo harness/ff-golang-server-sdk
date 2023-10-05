@@ -1420,10 +1420,11 @@ func TestEvaluator_BoolVariation(t *testing.T) {
 		defaultValue bool
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   bool
+		name    string
+		fields  fields
+		args    args
+		want    bool
+		wantErr bool
 	}{
 		{
 			name: "bool flag not found return default value",
@@ -1435,7 +1436,8 @@ func TestEvaluator_BoolVariation(t *testing.T) {
 				target:       nil,
 				defaultValue: false,
 			},
-			want: false,
+			want:    false,
+			wantErr: true,
 		},
 		{
 			name: "bool evaluation of flag 'simple' should return true",
@@ -1470,9 +1472,17 @@ func TestEvaluator_BoolVariation(t *testing.T) {
 				query:  tt.fields.query,
 				logger: logger.NewNoOpLogger(),
 			}
-			if got := e.BoolVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
+			got, err := e.BoolVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("BoolVariation() error = %v, wanrErr %v", err, tt.wantErr)
+				return
+			}
+
+			if got != tt.want {
 				t.Errorf("Evaluator.BoolVariation() = %v, want %v", got, tt.want)
 			}
+
 		})
 	}
 }
@@ -1487,10 +1497,11 @@ func TestEvaluator_StringVariation(t *testing.T) {
 		defaultValue string
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
+		name    string
+		fields  fields
+		args    args
+		want    string
+		wantErr bool
 	}{
 		{
 			name: "string flag not found return default value",
@@ -1502,7 +1513,8 @@ func TestEvaluator_StringVariation(t *testing.T) {
 				target:       nil,
 				defaultValue: darktheme,
 			},
-			want: darktheme,
+			want:    darktheme,
+			wantErr: true,
 		},
 		{
 			name: "string evaluation of flag 'theme' should return lightheme",
@@ -1537,7 +1549,7 @@ func TestEvaluator_StringVariation(t *testing.T) {
 				query:  tt.fields.query,
 				logger: logger.NewNoOpLogger(),
 			}
-			if got := e.StringVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
+			if got, _ := e.StringVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
 				t.Errorf("Evaluator.StringVariation() = %v, want %v", got, tt.want)
 			}
 		})
@@ -1616,7 +1628,7 @@ func TestEvaluator_IntVariation(t *testing.T) {
 				query:  tt.fields.query,
 				logger: logger.NewNoOpLogger(),
 			}
-			if got := e.IntVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
+			if got, _ := e.IntVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
 				t.Errorf("Evaluator.IntVariation() = %v, want %v", got, tt.want)
 			}
 		})
@@ -1695,7 +1707,7 @@ func TestEvaluator_NumberVariation(t *testing.T) {
 				query:  tt.fields.query,
 				logger: logger.NewNoOpLogger(),
 			}
-			if got := e.NumberVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
+			if got, _ := e.NumberVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); got != tt.want {
 				t.Errorf("Evaluator.NumberVariation() = %v, want %v", got, tt.want)
 			}
 		})
@@ -1781,7 +1793,7 @@ func TestEvaluator_JSONVariation(t *testing.T) {
 				query:  tt.fields.query,
 				logger: logger.NewNoOpLogger(),
 			}
-			if got := e.JSONVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); !reflect.DeepEqual(got, tt.want) {
+			if got, _ := e.JSONVariation(tt.args.identifier, tt.args.target, tt.args.defaultValue); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Evaluator.JSONVariation() = %v, want %v", got, tt.want)
 			}
 		})

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/harness/ff-golang-server-sdk/client"
 	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"regexp"
 	"sort"
@@ -31,7 +30,8 @@ const (
 )
 
 var (
-	ErrNilFlag = errors.New("flag is nil")
+	ErrNilFlag                    = errors.New("flag is nil")
+	DefaultVariationReturnedError = errors.New("default variation was returned")
 )
 
 // Query provides methods for segment and flag retrieval
@@ -407,7 +407,7 @@ func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
 		e.logger.Errorf("%s Error while evaluating boolean flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
-		return defaultValue, client.DefaultVariationReturnedError
+		return defaultValue, DefaultVariationReturnedError
 	}
 	e.logger.Debugf("%s Evaluated boolean flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return strings.ToLower(flagVariation.Variation.Value) == "true", nil
@@ -418,7 +418,7 @@ func (e Evaluator) StringVariation(identifier string, target *Target, defaultVal
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
 		e.logger.Errorf("%s Error while evaluating string flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
-		return defaultValue, client.DefaultVariationReturnedError
+		return defaultValue, DefaultVariationReturnedError
 	}
 	e.logger.Debugf("%s Evaluated string flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return flagVariation.Variation.Value, nil
@@ -429,12 +429,12 @@ func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue 
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
 		e.logger.Errorf("%s Error while evaluating int flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
-		return defaultValue, client.DefaultVariationReturnedError
+		return defaultValue, DefaultVariationReturnedError
 	}
 	val, err := strconv.Atoi(flagVariation.Variation.Value)
 	if err != nil {
 		e.logger.Errorf("%s Error while evaluating int flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
-		return defaultValue, client.DefaultVariationReturnedError
+		return defaultValue, DefaultVariationReturnedError
 	}
 	e.logger.Debugf("%s Evaluated int flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return val, nil
@@ -446,12 +446,12 @@ func (e Evaluator) NumberVariation(identifier string, target *Target, defaultVal
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
 		e.logger.Errorf("%s Error while evaluating number flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
-		return defaultValue, client.DefaultVariationReturnedError
+		return defaultValue, DefaultVariationReturnedError
 	}
 	val, err := strconv.ParseFloat(flagVariation.Variation.Value, 64)
 	if err != nil {
 		e.logger.Errorf("%s Error while evaluating number flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
-		return defaultValue, client.DefaultVariationReturnedError
+		return defaultValue, DefaultVariationReturnedError
 	}
 	e.logger.Debugf("%s Evaluated number flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return val, nil
@@ -463,13 +463,13 @@ func (e Evaluator) JSONVariation(identifier string, target *Target,
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
 		e.logger.Errorf("%s Error while evaluating json flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
-		return defaultValue, client.DefaultVariationReturnedError
+		return defaultValue, DefaultVariationReturnedError
 	}
 	val := make(map[string]interface{})
 	err = json.Unmarshal([]byte(flagVariation.Variation.Value), &val)
 	if err != nil {
 		e.logger.Errorf("%s Error while evaluating json flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
-		return defaultValue, client.DefaultVariationReturnedError
+		return defaultValue, DefaultVariationReturnedError
 	}
 	e.logger.Debugf("%s Evaluated json flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return val, nil

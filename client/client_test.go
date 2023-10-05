@@ -384,7 +384,7 @@ func TestCfClient_BoolVariation(t *testing.T) {
 		want    bool
 		wantErr bool
 	}{
-		{"Test Invalid Flag Name returns default value", args{"MadeUpIDontExist", target, false}, false, false},
+		{"Test Invalid Flag Name returns default value", args{"MadeUpIDontExist", target, false}, false, true},
 		{"Test Default True Flag when On returns true", args{"TestTrueOn", target, false}, true, false},
 		{"Test Default True Flag when Off returns false", args{"TestTrueOff", target, true}, false, false},
 		{"Test Default False Flag when On returns false", args{"TestTrueOn", target, false}, true, false},
@@ -425,7 +425,7 @@ func TestCfClient_StringVariation(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{"Test Invalid Flag Name returns default value", args{"MadeUpIDontExist", target, "foo"}, "foo", false},
+		{"Test Invalid Flag Name returns default value", args{"MadeUpIDontExist", target, "foo"}, "foo", true},
 		{"Test Default String Flag with when On returns A", args{"TestStringAOn", target, "foo"}, "A", false},
 		{"Test Default String Flag when Off returns B", args{"TestStringAOff", target, "foo"}, "B", false},
 		{"Test Default String Flag when Pre-Req is False returns B", args{"TestStringAOnWithPreReqFalse", target, "foo"}, "B", false},
@@ -466,7 +466,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
-			expectedError:  DefaultVariationReturnedError,
+			expectedError:  evaluation.DefaultVariationReturnedError,
 		},
 		{
 			name: "Evaluations with Synchronous client with invalid SDK key",
@@ -486,7 +486,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
-			expectedError:  DefaultVariationReturnedError,
+			expectedError:  evaluation.DefaultVariationReturnedError,
 		},
 		{
 			name: "Evaluations with Synchronous client with a server error",
@@ -506,7 +506,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
-			expectedError:  DefaultVariationReturnedError,
+			expectedError:  evaluation.DefaultVariationReturnedError,
 		},
 		{
 			name: "Evaluations with Synchronous client with empty SDK key",
@@ -518,7 +518,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
-			expectedError:  DefaultVariationReturnedError,
+			expectedError:  evaluation.DefaultVariationReturnedError,
 		},
 		{
 			name: "Evaluations with Async client with invalid SDK key",
@@ -538,7 +538,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
-			expectedError:  DefaultVariationReturnedError,
+			expectedError:  evaluation.DefaultVariationReturnedError,
 		},
 		{
 			name: "Evaluations with Async client with a server error",
@@ -558,7 +558,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
-			expectedError:  DefaultVariationReturnedError,
+			expectedError:  evaluation.DefaultVariationReturnedError,
 		},
 		{
 			name: "Evaluations with Async client with empty SDK key",
@@ -570,7 +570,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			expectedInt:    45555,
 			expectedNumber: 45.222,
 			expectedJSON:   types.JSON{"a default key": "a default value"},
-			expectedError:  DefaultVariationReturnedError,
+			expectedError:  evaluation.DefaultVariationReturnedError,
 		},
 	}
 	target := target()
