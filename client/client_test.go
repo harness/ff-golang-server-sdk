@@ -379,18 +379,19 @@ func TestCfClient_BoolVariation(t *testing.T) {
 		defaultValue bool
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    bool
-		wantErr bool
+		name        string
+		args        args
+		want        bool
+		wantErr     bool
+		expectedErr error
 	}{
-		{"Test Invalid Flag Name returns default value", args{"MadeUpIDontExist", target, false}, false, true},
-		{"Test Default True Flag when On returns true", args{"TestTrueOn", target, false}, true, false},
-		{"Test Default True Flag when Off returns false", args{"TestTrueOff", target, true}, false, false},
-		{"Test Default False Flag when On returns false", args{"TestTrueOn", target, false}, true, false},
-		{"Test Default False Flag when Off returns true", args{"TestTrueOff", target, true}, false, false},
-		{"Test Default True Flag when Pre-Req is False returns false", args{"TestTrueOnWithPreReqFalse", target, true}, false, false},
-		{"Test Default True Flag when Pre-Req is True returns true", args{"TestTrueOnWithPreReqTrue", target, true}, true, false},
+		{"Test Invalid Flag Name returns default value", args{"MadeUpIDontExist", target, false}, false, true, evaluation.DefaultVariationReturnedError},
+		{"Test Default True Flag when On returns true", args{"TestTrueOn", target, false}, true, false, nil},
+		{"Test Default True Flag when Off returns false", args{"TestTrueOff", target, true}, false, false, nil},
+		{"Test Default False Flag when On returns false", args{"TestTrueOn", target, false}, true, false, nil},
+		{"Test Default False Flag when Off returns true", args{"TestTrueOff", target, true}, false, false, nil},
+		{"Test Default True Flag when Pre-Req is False returns false", args{"TestTrueOnWithPreReqFalse", target, true}, false, false, nil},
+		{"Test Default True Flag when Pre-Req is True returns true", args{"TestTrueOnWithPreReqTrue", target, true}, true, false, nil},
 	}
 	for _, tt := range tests {
 		test := tt
@@ -400,6 +401,9 @@ func TestCfClient_BoolVariation(t *testing.T) {
 				t.Errorf("BoolVariation() error = %v, wanrErr %v", err, test.wantErr)
 				return
 			}
+
+			assert.True(t, errors.Is(err, tt.expectedErr))
+
 			assert.Equal(t, test.want, flag, "%s didn't get expected value", test.name)
 		})
 	}
@@ -420,16 +424,17 @@ func TestCfClient_StringVariation(t *testing.T) {
 		defaultValue string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
+		name        string
+		args        args
+		want        string
+		wantErr     bool
+		expectedErr error
 	}{
-		{"Test Invalid Flag Name returns default value", args{"MadeUpIDontExist", target, "foo"}, "foo", true},
-		{"Test Default String Flag with when On returns A", args{"TestStringAOn", target, "foo"}, "A", false},
-		{"Test Default String Flag when Off returns B", args{"TestStringAOff", target, "foo"}, "B", false},
-		{"Test Default String Flag when Pre-Req is False returns B", args{"TestStringAOnWithPreReqFalse", target, "foo"}, "B", false},
-		{"Test Default String Flag when Pre-Req is True returns A", args{"TestStringAOnWithPreReqTrue", target, "foo"}, "A", false},
+		{"Test Invalid Flag Name returns default value", args{"MadeUpIDontExist", target, "foo"}, "foo", true, evaluation.DefaultVariationReturnedError},
+		{"Test Default String Flag with when On returns A", args{"TestStringAOn", target, "foo"}, "A", false, nil},
+		{"Test Default String Flag when Off returns B", args{"TestStringAOff", target, "foo"}, "B", false, nil},
+		{"Test Default String Flag when Pre-Req is False returns B", args{"TestStringAOnWithPreReqFalse", target, "foo"}, "B", false, nil},
+		{"Test Default String Flag when Pre-Req is True returns A", args{"TestStringAOnWithPreReqTrue", target, "foo"}, "A", false, nil},
 	}
 	for _, tt := range tests {
 		test := tt
@@ -439,6 +444,9 @@ func TestCfClient_StringVariation(t *testing.T) {
 				t.Errorf("BoolVariation() error = %v, wanrErr %v", err, test.wantErr)
 				return
 			}
+
+			assert.True(t, errors.Is(err, tt.expectedErr))
+
 			assert.Equal(t, test.want, flag, "%s didn't get expected value", test.name)
 		})
 	}

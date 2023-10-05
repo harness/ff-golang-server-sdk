@@ -406,8 +406,7 @@ func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue
 	//flagVariation, err := e.evaluate(identifier, target, "boolean")
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		e.logger.Errorf("%s Error while evaluating boolean flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
-		return defaultValue, DefaultVariationReturnedError
+		return defaultValue, err
 	}
 	e.logger.Debugf("%s Evaluated boolean flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return strings.ToLower(flagVariation.Variation.Value) == "true", nil

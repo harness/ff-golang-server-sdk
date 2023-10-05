@@ -526,7 +526,8 @@ func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultV
 	}
 	value, err := c.evaluator.BoolVariation(key, target, defaultValue)
 	if err != nil {
-		return value, err
+		c.config.Logger.Errorf("%s Error while evaluating boolean flag '%s', err: %v", sdk_codes.EvaluationFailed, key, err)
+		return value, fmt.Errorf("%w: `%v`", evaluation.DefaultVariationReturnedError, err)
 	}
 	return value, nil
 }
