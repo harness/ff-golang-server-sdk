@@ -30,8 +30,7 @@ const (
 )
 
 var (
-	ErrNilFlag                    = errors.New("flag is nil")
-	DefaultVariationReturnedError = errors.New("default variation was returned")
+	ErrNilFlag = errors.New("flag is nil")
 )
 
 // Query provides methods for segment and flag retrieval
@@ -415,7 +414,7 @@ func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue
 func (e Evaluator) StringVariation(identifier string, target *Target, defaultValue string) (string, error) {
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		return defaultValue, DefaultVariationReturnedError
+		return defaultValue, err
 	}
 	return flagVariation.Variation.Value, nil
 }
@@ -424,11 +423,11 @@ func (e Evaluator) StringVariation(identifier string, target *Target, defaultVal
 func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue int) (int, error) {
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		return defaultValue, DefaultVariationReturnedError
+		return defaultValue, err
 	}
 	val, err := strconv.Atoi(flagVariation.Variation.Value)
 	if err != nil {
-		return defaultValue, DefaultVariationReturnedError
+		return defaultValue, err
 	}
 	return val, nil
 }
@@ -438,11 +437,11 @@ func (e Evaluator) NumberVariation(identifier string, target *Target, defaultVal
 	//all numbers are stored as ints in the database
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		return defaultValue, DefaultVariationReturnedError
+		return defaultValue, err
 	}
 	val, err := strconv.ParseFloat(flagVariation.Variation.Value, 64)
 	if err != nil {
-		return defaultValue, DefaultVariationReturnedError
+		return defaultValue, err
 	}
 	return val, nil
 }
@@ -452,14 +451,12 @@ func (e Evaluator) JSONVariation(identifier string, target *Target,
 	defaultValue map[string]interface{}) (map[string]interface{}, error) {
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		e.logger.Errorf("%s Error while evaluating json flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
-		return defaultValue, DefaultVariationReturnedError
+		return defaultValue, err
 	}
 	val := make(map[string]interface{})
 	err = json.Unmarshal([]byte(flagVariation.Variation.Value), &val)
 	if err != nil {
-		e.logger.Errorf("%s Error while evaluating json flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
-		return defaultValue, DefaultVariationReturnedError
+		return defaultValue, err
 	}
 	e.logger.Debugf("%s Evaluated json flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return val, nil
