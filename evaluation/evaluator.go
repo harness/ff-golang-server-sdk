@@ -408,7 +408,6 @@ func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue
 	if err != nil {
 		return defaultValue, err
 	}
-	e.logger.Debugf("%s Evaluated boolean flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return strings.ToLower(flagVariation.Variation.Value) == "true", nil
 }
 
@@ -416,10 +415,8 @@ func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue
 func (e Evaluator) StringVariation(identifier string, target *Target, defaultValue string) (string, error) {
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		e.logger.Errorf("%s Error while evaluating string flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
 		return defaultValue, DefaultVariationReturnedError
 	}
-	e.logger.Debugf("%s Evaluated string flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return flagVariation.Variation.Value, nil
 }
 
@@ -427,15 +424,12 @@ func (e Evaluator) StringVariation(identifier string, target *Target, defaultVal
 func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue int) (int, error) {
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		e.logger.Errorf("%s Error while evaluating int flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
 		return defaultValue, DefaultVariationReturnedError
 	}
 	val, err := strconv.Atoi(flagVariation.Variation.Value)
 	if err != nil {
-		e.logger.Errorf("%s Error while evaluating int flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
 		return defaultValue, DefaultVariationReturnedError
 	}
-	e.logger.Debugf("%s Evaluated int flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return val, nil
 }
 
@@ -444,15 +438,12 @@ func (e Evaluator) NumberVariation(identifier string, target *Target, defaultVal
 	//all numbers are stored as ints in the database
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		e.logger.Errorf("%s Error while evaluating number flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
 		return defaultValue, DefaultVariationReturnedError
 	}
 	val, err := strconv.ParseFloat(flagVariation.Variation.Value, 64)
 	if err != nil {
-		e.logger.Errorf("%s Error while evaluating number flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
 		return defaultValue, DefaultVariationReturnedError
 	}
-	e.logger.Debugf("%s Evaluated number flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return val, nil
 }
 

@@ -526,9 +526,10 @@ func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultV
 	}
 	value, err := c.evaluator.BoolVariation(key, target, defaultValue)
 	if err != nil {
-		c.config.Logger.Errorf("%s Error while evaluating boolean flag '%s', err: %v", sdk_codes.EvaluationFailed, key, err)
+		c.config.Logger.Infof("%s Error while evaluating boolean flag '%s', err: %v", sdk_codes.EvaluationFailed, key, err)
 		return value, fmt.Errorf("%w: `%v`", evaluation.DefaultVariationReturnedError, err)
 	}
+	c.config.Logger.Debugf("%s Evaluated boolean flag successfully: '%s'", sdk_codes.EvaluationSuccess, key)
 	return value, nil
 }
 
@@ -542,8 +543,10 @@ func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaul
 	}
 	value, err := c.evaluator.StringVariation(key, target, defaultValue)
 	if err != nil {
-		return value, err
+		c.config.Logger.Infof("%s Error while evaluating string flag '%s', err: %v", sdk_codes.EvaluationFailed, key, err)
+		return value, fmt.Errorf("%w: `%v`", evaluation.DefaultVariationReturnedError, err)
 	}
+	c.config.Logger.Debugf("%s Evaluated string flag successfully: '%s'", sdk_codes.EvaluationSuccess, key)
 	return value, nil
 }
 
@@ -557,8 +560,10 @@ func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultVa
 	}
 	value, err := c.evaluator.IntVariation(key, target, int(defaultValue))
 	if err != nil {
-		return int64(value), err
+		c.config.Logger.Infof("%s Error while evaluating int flag '%s', err: %v", sdk_codes.EvaluationFailed, key, err)
+		return int64(value), fmt.Errorf("%w: `%v`", evaluation.DefaultVariationReturnedError, err)
 	}
+	c.config.Logger.Debugf("%s Evaluated int flag successfully: '%s'", sdk_codes.EvaluationSuccess, key)
 	return int64(value), nil
 }
 
@@ -572,8 +577,10 @@ func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaul
 	}
 	value, err := c.evaluator.NumberVariation(key, target, defaultValue)
 	if err != nil {
-		return value, err
+		c.config.Logger.Infof("%s Error while evaluating number flag '%s', err: %v", sdk_codes.EvaluationFailed, key, err)
+		return value, fmt.Errorf("%w: `%v`", evaluation.DefaultVariationReturnedError, err)
 	}
+	c.config.Logger.Debugf("%s Evaluated number flag successfully: '%s'", sdk_codes.EvaluationSuccess, key)
 	return value, nil
 }
 
@@ -588,8 +595,10 @@ func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultV
 	}
 	value, err := c.evaluator.JSONVariation(key, target, defaultValue)
 	if err != nil {
-		return value, err
+		c.config.Logger.Infof("%s Error while evaluating json flag '%s', err: %v", sdk_codes.EvaluationFailed, key, err)
+		return value, fmt.Errorf("%w: `%v`", evaluation.DefaultVariationReturnedError, err)
 	}
+	c.config.Logger.Debugf("%s Evaluated json flag successfully: '%s'", sdk_codes.EvaluationSuccess, key)
 	return value, nil
 }
 
