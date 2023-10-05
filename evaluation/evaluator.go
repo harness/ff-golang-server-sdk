@@ -408,7 +408,7 @@ func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue
 		e.logger.Errorf("%s Error while evaluating boolean flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
 		return defaultValue
 	}
-	e.logger.Infof("%s Evaluated boolean flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
+	e.logger.Debugf("%s Evaluated boolean flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return strings.ToLower(flagVariation.Variation.Value) == "true"
 }
 
@@ -419,7 +419,7 @@ func (e Evaluator) StringVariation(identifier string, target *Target, defaultVal
 		e.logger.Errorf("%s Error while evaluating string flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
 		return defaultValue
 	}
-	e.logger.Infof("%s Evaluated string flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
+	e.logger.Debugf("%s Evaluated string flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return flagVariation.Variation.Value
 }
 
@@ -435,7 +435,7 @@ func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue 
 		e.logger.Errorf("%s Error while evaluating int flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
 		return defaultValue
 	}
-	e.logger.Infof("%s Evaluated int flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
+	e.logger.Debugf("%s Evaluated int flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return val
 }
 
@@ -452,7 +452,7 @@ func (e Evaluator) NumberVariation(identifier string, target *Target, defaultVal
 		e.logger.Errorf("%s Error while evaluating number flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
 		return defaultValue
 	}
-	e.logger.Infof("%s Evaluated number flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
+	e.logger.Debugf("%s Evaluated number flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return val
 }
 
@@ -470,6 +470,6 @@ func (e Evaluator) JSONVariation(identifier string, target *Target,
 		e.logger.Errorf("%s Error while evaluating json flag '%s', err: %v", sdk_codes.EvaluationFailed, identifier, err)
 		return defaultValue
 	}
-	e.logger.Infof("%s Evaluated json flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
+	e.logger.Debugf("%s Evaluated json flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
 	return val
 }
