@@ -21,7 +21,7 @@ import (
 const (
 	ValidSDKKey   = "27bed8d2-2610-462b-90eb-d80fd594b623"
 	EmptySDKKey   = ""
-	InvaliDSDKKey = "an invalid key"
+	InvaliDSDKKey = "an invalid flagIdentifier"
 	URL           = "http://localhost/api/1.0"
 
 	//nolint
@@ -115,7 +115,7 @@ func TestCfClient_NewClient(t *testing.T) {
 			err: nil,
 		},
 		{
-			name: "Synchronous client: Empty SDK key fails to initialize",
+			name: "Synchronous client: Empty SDK flagIdentifier fails to initialize",
 			newClientFunc: func() (*CfClient, error) {
 				return newClient(http.DefaultClient, EmptySDKKey, WithWaitForInitialized(true))
 			},
@@ -129,7 +129,7 @@ func TestCfClient_NewClient(t *testing.T) {
 			},
 			mockResponder: func() {
 				bodyString := `{
-				"message": "invalid key or target provided",
+				"message": "invalid flagIdentifier or target provided",
 				"code": "401"
 				}`
 				authErrorResponse := AuthResponseDetailed(401, "401", bodyString)
@@ -137,7 +137,7 @@ func TestCfClient_NewClient(t *testing.T) {
 			},
 			err: NonRetryableAuthError{
 				StatusCode: "401",
-				Message:    "invalid key or target provided",
+				Message:    "invalid flagIdentifier or target provided",
 			},
 		},
 		{
@@ -275,7 +275,7 @@ func TestCfClient_NewClient(t *testing.T) {
 			err: nil,
 		},
 		{
-			name: "Asynchronous client: Empty SDK key, times out waiting",
+			name: "Asynchronous client: Empty SDK flagIdentifier, times out waiting",
 			newClientFunc: func() (*CfClient, error) {
 				client, err := newClient(http.DefaultClient, EmptySDKKey, WithSleeper(test_helpers.MockSleeper{}))
 				if ok, err := client.IsInitialized(); !ok {
@@ -297,7 +297,7 @@ func TestCfClient_NewClient(t *testing.T) {
 			},
 			mockResponder: func() {
 				bodyString := `{
-				"message": "invalid key or target provided",
+				"message": "invalid flagIdentifier or target provided",
 				"code": "401"
 				}`
 				authErrorResponse := AuthResponseDetailed(401, "401", bodyString)
@@ -379,18 +379,19 @@ func TestCfClient_BoolVariation(t *testing.T) {
 		defaultValue bool
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    bool
-		wantErr bool
+		name        string
+		args        args
+		want        bool
+		wantErr     bool
+		expectedErr error
 	}{
-		{"Test Invalid Flag Name returns default value", args{"MadeUpIDontExist", target, false}, false, false},
-		{"Test Default True Flag when On returns true", args{"TestTrueOn", target, false}, true, false},
-		{"Test Default True Flag when Off returns false", args{"TestTrueOff", target, true}, false, false},
-		{"Test Default False Flag when On returns false", args{"TestTrueOn", target, false}, true, false},
-		{"Test Default False Flag when Off returns true", args{"TestTrueOff", target, true}, false, false},
-		{"Test Default True Flag when Pre-Req is False returns false", args{"TestTrueOnWithPreReqFalse", target, true}, false, false},
-		{"Test Default True Flag when Pre-Req is True returns true", args{"TestTrueOnWithPreReqTrue", target, true}, true, false},
+		{"Test Invalid Flag Name returns default value", args{"MadeUpIDontExist", target, false}, false, true, DefaultVariationReturnedError},
+		{"Test Default True Flag when On returns true", args{"TestTrueOn", target, false}, true, false, nil},
+		{"Test Default True Flag when Off returns false", args{"TestTrueOff", target, true}, false, false, nil},
+		{"Test Default False Flag when On returns false", args{"TestTrueOn", target, false}, true, false, nil},
+		{"Test Default False Flag when Off returns true", args{"TestTrueOff", target, true}, false, false, nil},
+		{"Test Default True Flag when Pre-Req is False returns false", args{"TestTrueOnWithPreReqFalse", target, true}, false, false, nil},
+		{"Test Default True Flag when Pre-Req is True returns true", args{"TestTrueOnWithPreReqTrue", target, true}, true, false, nil},
 	}
 	for _, tt := range tests {
 		test := tt
@@ -400,6 +401,9 @@ func TestCfClient_BoolVariation(t *testing.T) {
 				t.Errorf("BoolVariation() error = %v, wanrErr %v", err, test.wantErr)
 				return
 			}
+
+			assert.True(t, errors.Is(err, tt.expectedErr))
+
 			assert.Equal(t, test.want, flag, "%s didn't get expected value", test.name)
 		})
 	}
@@ -420,16 +424,17 @@ func TestCfClient_StringVariation(t *testing.T) {
 		defaultValue string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
+		name        string
+		args        args
+		want        string
+		wantErr     bool
+		expectedErr error
 	}{
-		{"Test Invalid Flag Name returns default value", args{"MadeUpIDontExist", target, "foo"}, "foo", false},
-		{"Test Default String Flag with when On returns A", args{"TestStringAOn", target, "foo"}, "A", false},
-		{"Test Default String Flag when Off returns B", args{"TestStringAOff", target, "foo"}, "B", false},
-		{"Test Default String Flag when Pre-Req is False returns B", args{"TestStringAOnWithPreReqFalse", target, "foo"}, "B", false},
-		{"Test Default String Flag when Pre-Req is True returns A", args{"TestStringAOnWithPreReqTrue", target, "foo"}, "A", false},
+		{"Test Invalid Flag Name returns default value", args{"MadeUpIDontExist", target, "foo"}, "foo", true, DefaultVariationReturnedError},
+		{"Test Default String Flag with when On returns A", args{"TestStringAOn", target, "foo"}, "A", false, nil},
+		{"Test Default String Flag when Off returns B", args{"TestStringAOff", target, "foo"}, "B", false, nil},
+		{"Test Default String Flag when Pre-Req is False returns B", args{"TestStringAOnWithPreReqFalse", target, "foo"}, "B", false, nil},
+		{"Test Default String Flag when Pre-Req is True returns A", args{"TestStringAOnWithPreReqTrue", target, "foo"}, "A", false, nil},
 	}
 	for _, tt := range tests {
 		test := tt
@@ -439,15 +444,20 @@ func TestCfClient_StringVariation(t *testing.T) {
 				t.Errorf("BoolVariation() error = %v, wanrErr %v", err, test.wantErr)
 				return
 			}
+
+			assert.True(t, errors.Is(err, tt.expectedErr))
+
 			assert.Equal(t, test.want, flag, "%s didn't get expected value", test.name)
 		})
 	}
 }
 
 func TestCfClient_DefaultVariationReturned(t *testing.T) {
+
 	tests := []struct {
 		name           string
 		clientFunc     func() (*CfClient, error)
+		flagIdentifier string
 		mockResponder  func()
 		expectedBool   bool
 		expectedString string
@@ -457,35 +467,37 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 		expectedError  error
 	}{
 		{
-			name: "Evaluations with Synchronous client with empty SDK key",
+			name: "Evaluations with Synchronous client with empty SDK flagIdentifier",
 			clientFunc: func() (*CfClient, error) {
 				return newClient(http.DefaultClient, EmptySDKKey, WithWaitForInitialized(true))
 			},
+			flagIdentifier: "made up",
 			expectedBool:   false,
 			expectedString: "a default value",
 			expectedInt:    45555,
 			expectedNumber: 45.222,
-			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedJSON:   types.JSON{"a default flagIdentifier": "a default value"},
 			expectedError:  DefaultVariationReturnedError,
 		},
 		{
-			name: "Evaluations with Synchronous client with invalid SDK key",
+			name: "Evaluations with Synchronous client with invalid SDK flagIdentifier",
 			clientFunc: func() (*CfClient, error) {
 				return newClient(http.DefaultClient, InvaliDSDKKey, WithWaitForInitialized(true))
 			},
 			mockResponder: func() {
 				bodyString := `{
-				"message": "invalid key or target provided",
+				"message": "invalid flagIdentifier or target provided",
 				"code": "401"
 				}`
 				authErrorResponse := AuthResponseDetailed(401, "401", bodyString)
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 			},
+			flagIdentifier: "made up",
 			expectedBool:   false,
 			expectedString: "a default value",
 			expectedInt:    45555,
 			expectedNumber: 45.222,
-			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedJSON:   types.JSON{"a default flagIdentifier": "a default value"},
 			expectedError:  DefaultVariationReturnedError,
 		},
 		{
@@ -501,43 +513,46 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 				authErrorResponse := AuthResponseDetailed(500, "internal server error", bodyString)
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 			},
+			flagIdentifier: "made up",
 			expectedBool:   false,
 			expectedString: "a default value",
 			expectedInt:    45555,
 			expectedNumber: 45.222,
-			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedJSON:   types.JSON{"a default flagIdentifier": "a default value"},
 			expectedError:  DefaultVariationReturnedError,
 		},
 		{
-			name: "Evaluations with Synchronous client with empty SDK key",
+			name: "Evaluations with Synchronous client with empty SDK flagIdentifier",
 			clientFunc: func() (*CfClient, error) {
 				return newClient(http.DefaultClient, EmptySDKKey)
 			},
+			flagIdentifier: "made up",
 			expectedBool:   false,
 			expectedString: "a default value",
 			expectedInt:    45555,
 			expectedNumber: 45.222,
-			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedJSON:   types.JSON{"a default flagIdentifier": "a default value"},
 			expectedError:  DefaultVariationReturnedError,
 		},
 		{
-			name: "Evaluations with Async client with invalid SDK key",
+			name: "Evaluations with Async client with invalid SDK flagIdentifier",
 			clientFunc: func() (*CfClient, error) {
 				return newClient(http.DefaultClient, InvaliDSDKKey)
 			},
 			mockResponder: func() {
 				bodyString := `{
-				"message": "invalid key or target provided",
+				"message": "invalid flagIdentifier or target provided",
 				"code": "401"
 				}`
 				authErrorResponse := AuthResponseDetailed(401, "401", bodyString)
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 			},
+			flagIdentifier: "made up",
 			expectedBool:   false,
 			expectedString: "a default value",
 			expectedInt:    45555,
 			expectedNumber: 45.222,
-			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedJSON:   types.JSON{"a default flagIdentifier": "a default value"},
 			expectedError:  DefaultVariationReturnedError,
 		},
 		{
@@ -553,23 +568,43 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 				authErrorResponse := AuthResponseDetailed(500, "internal server error", bodyString)
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 			},
+			flagIdentifier: "made up",
 			expectedBool:   false,
 			expectedString: "a default value",
 			expectedInt:    45555,
 			expectedNumber: 45.222,
-			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedJSON:   types.JSON{"a default flagIdentifier": "a default value"},
 			expectedError:  DefaultVariationReturnedError,
 		},
 		{
-			name: "Evaluations with Async client with empty SDK key",
+			name: "Evaluations with Async client with empty SDK flagIdentifier",
 			clientFunc: func() (*CfClient, error) {
 				return newClient(http.DefaultClient, EmptySDKKey)
 			},
+			flagIdentifier: "made up",
 			expectedBool:   false,
 			expectedString: "a default value",
 			expectedInt:    45555,
 			expectedNumber: 45.222,
-			expectedJSON:   types.JSON{"a default key": "a default value"},
+			expectedJSON:   types.JSON{"a default flagIdentifier": "a default value"},
+			expectedError:  DefaultVariationReturnedError,
+		},
+		{
+			name: "Evaluations with Sync client with valid sdk key and flag not found",
+			clientFunc: func() (*CfClient, error) {
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true))
+			},
+			mockResponder: func() {
+				authSuccessResponse := AuthResponse(200, ValidAuthToken)
+				registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
+
+			},
+			flagIdentifier: "made up",
+			expectedBool:   false,
+			expectedString: "a default value",
+			expectedInt:    45555,
+			expectedNumber: 45.222,
+			expectedJSON:   types.JSON{"a default flagIdentifier": "a default value"},
 			expectedError:  DefaultVariationReturnedError,
 		},
 	}
@@ -582,23 +617,23 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			}
 			client, _ := tt.clientFunc()
 
-			boolResult, err := client.BoolVariation("TestTrueOn", target, false)
+			boolResult, err := client.BoolVariation(tt.flagIdentifier, target, false)
 			assert.Equal(t, tt.expectedBool, boolResult)
 			assert.True(t, errors.Is(err, tt.expectedError))
 
-			stringResult, err := client.StringVariation("TestTrueOn", target, "a default value")
+			stringResult, err := client.StringVariation(tt.flagIdentifier, target, "a default value")
 			assert.Equal(t, tt.expectedString, stringResult)
 			assert.True(t, errors.Is(err, tt.expectedError))
 
-			intResult, err := client.IntVariation("TestTrueOn", target, tt.expectedInt)
+			intResult, err := client.IntVariation(tt.flagIdentifier, target, tt.expectedInt)
 			assert.Equal(t, tt.expectedInt, intResult)
 			assert.True(t, errors.Is(err, tt.expectedError))
 
-			numerResult, err := client.NumberVariation("TestTrueOn", target, tt.expectedNumber)
+			numerResult, err := client.NumberVariation(tt.flagIdentifier, target, tt.expectedNumber)
 			assert.Equal(t, tt.expectedNumber, numerResult)
 			assert.True(t, errors.Is(err, tt.expectedError))
 
-			jsonResult, _ := client.JSONVariation("TestTrueOn", target, tt.expectedJSON)
+			jsonResult, err := client.JSONVariation(tt.flagIdentifier, target, tt.expectedJSON)
 			assert.Equal(t, tt.expectedJSON, jsonResult)
 			assert.True(t, errors.Is(err, tt.expectedError))
 		})

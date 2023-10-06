@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"log"
 	"math/rand"
 	"net/http"
@@ -90,7 +91,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	}
 
 	if sdkKey == "" {
-		config.Logger.Errorf("Initialization failed: SDK Key cannot be empty. Please provide a valid SDK Key to initialize the client.")
+		config.Logger.Errorf("%s Initialization failed: SDK Key cannot be empty. Please provide a valid SDK Key to initialize the client.", sdk_codes.InitMissingKey)
 		return client, EmptySDKKeyError
 	}
 
@@ -113,10 +114,13 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 
 	client.start()
 	if config.waitForInitialized {
+		config.Logger.Infof("%s The SDK is waiting for initialization to complete'", sdk_codes.InitWaiting)
+
 		var initErr error
 
 		select {
 		case <-client.initialized:
+			config.Logger.Infof("%s The SDK has successfully initialized'", sdk_codes.InitSuccess)
 			return client, nil
 		case err := <-client.initializedErr:
 			initErr = err
@@ -144,6 +148,7 @@ func (c *CfClient) start() {
 
 	go func() {
 		if err := c.initAuthentication(context.Background()); err != nil {
+			c.config.Logger.Error("%s The SDK has failed to initialize due to an authentication error:  %v' ", sdk_codes.InitAuthError, err)
 			c.initializedErr <- err
 		}
 	}()
@@ -240,7 +245,7 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	sseClient := sse.NewClient(fmt.Sprintf("%s/stream?cluster=%s", c.config.url, c.clusterIdentifier))
 
 	streamErr := func() {
-		c.config.Logger.Warn("Stream disconnected. Swapping to polling mode")
+		c.config.Logger.Warnf("%s Stream disconnected. Swapping to polling mode", sdk_codes.StreamDisconnected)
 		c.mux.RLock()
 		defer c.mux.RUnlock()
 		c.streamConnected = false
@@ -276,25 +281,26 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 	for {
 		err := c.authenticate(ctx)
 		if err == nil {
+			c.config.Logger.Infof("%s Authenticated successfully'", sdk_codes.AuthSuccess)
 			return nil
 		}
 
 		var nonRetryableAuthError NonRetryableAuthError
 		if errors.As(err, &nonRetryableAuthError) {
-			c.config.Logger.Error("Authentication failed with a non-retryable error: '%s %s' Default variations will now be served", nonRetryableAuthError.StatusCode, nonRetryableAuthError.Message)
+			c.config.Logger.Error("%s Authentication failed with a non-retryable error: '%s %s' Default variations will now be served", sdk_codes.AuthFailed, nonRetryableAuthError.StatusCode, nonRetryableAuthError.Message)
 			return err
 		}
 
 		// -1 is the default maxAuthRetries option and indicates there should be no max attempts
 		if c.config.maxAuthRetries != -1 && attempts >= c.config.maxAuthRetries {
-			c.config.Logger.Errorf("Authentication failed with error: '%s'. Exceeded max attempts: '%v'.", err, c.config.maxAuthRetries)
+			c.config.Logger.Errorf("%s Authentication failed with error: '%s'. Exceeded max attempts: '%v'.", sdk_codes.AuthExceededRetries, err, c.config.maxAuthRetries)
 			return err
 		}
 
 		jitter := time.Duration(rand.Float64() * float64(currentDelay))
 		delayWithJitter := currentDelay + jitter
 
-		c.config.Logger.Errorf("Authentication failed with error: '%s'. Retrying in %v.", err, delayWithJitter)
+		c.config.Logger.Errorf("%s Authentication failed with error: '%s'. Retrying in %v.", sdk_codes.AuthAttempt, err, delayWithJitter)
 		c.config.sleeper.Sleep(delayWithJitter)
 
 		currentDelay *= time.Duration(factor)
@@ -414,10 +420,12 @@ func (c *CfClient) makeTicker(interval uint) *time.Ticker {
 func (c *CfClient) pullCronJob(ctx context.Context) {
 	poll := func() {
 		c.mux.RLock()
+		c.config.Logger.Infof("%s Polling started, interval: %v", sdk_codes.PollStart, c.config.pullInterval)
 		if !c.streamConnected {
 			ok := c.retrieve(ctx)
 			// we should only try and start the stream after the poll succeeded to make sure we get the latest changes
 			if ok && c.config.enableStream {
+				c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
 				// here stream is enabled but not connected, so we attempt to reconnect
 				c.config.Logger.Info("Attempting to start stream")
 				c.streamConnect(ctx)
@@ -437,6 +445,8 @@ func (c *CfClient) pullCronJob(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			pullingTicker.Stop()
+			c.config.Logger.Infof("%s Polling stopped", sdk_codes.PollStop)
+			c.config.Logger.Infof("%s Stream stopped", sdk_codes.StreamStop)
 			return
 		case <-pullingTicker.C:
 			poll()
@@ -508,14 +518,18 @@ func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 }
 
 // BoolVariation returns the value of a boolean feature flag for a given target.
-//
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultValue bool) (bool, error) {
 	if !c.initializedBool {
-		c.config.Logger.Info("Error when calling BoolVariation and returning default variation: 'Client is not initialized'")
+		c.config.Logger.Infof("%s Error while evaluating boolean flag and returning default variation: 'Client is not initialized'", sdk_codes.EvaluationFailed)
 		return defaultValue, fmt.Errorf("%w: Client is not initialized", DefaultVariationReturnedError)
 	}
-	value := c.evaluator.BoolVariation(key, target, defaultValue)
+	value, err := c.evaluator.BoolVariation(key, target, defaultValue)
+	if err != nil {
+		c.config.Logger.Infof("%s Error while evaluating boolean flag and returning default variation '%s', err: %v", sdk_codes.EvaluationFailed, key, err)
+		return value, fmt.Errorf("%w: `%v`", DefaultVariationReturnedError, err)
+	}
+	c.config.Logger.Debugf("%s Evaluated boolean flag successfully: '%s'", sdk_codes.EvaluationSuccess, key)
 	return value, nil
 }
 
@@ -524,10 +538,15 @@ func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultV
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaultValue string) (string, error) {
 	if !c.initializedBool {
-		c.config.Logger.Info("Error when calling StringVariation and returning default variation: 'Client is not initialized'")
+		c.config.Logger.Infof("%s Error while evaluating string flag and returning default variation: 'Client is not initialized'", sdk_codes.EvaluationFailed)
 		return defaultValue, fmt.Errorf("%w: Client is not initialized", DefaultVariationReturnedError)
 	}
-	value := c.evaluator.StringVariation(key, target, defaultValue)
+	value, err := c.evaluator.StringVariation(key, target, defaultValue)
+	if err != nil {
+		c.config.Logger.Infof("%s Error while evaluating string flag '%s', err: %v", sdk_codes.EvaluationFailed, key, err)
+		return value, fmt.Errorf("%w: `%v`", DefaultVariationReturnedError, err)
+	}
+	c.config.Logger.Debugf("%s Evaluated string flag successfully: '%s'", sdk_codes.EvaluationSuccess, key)
 	return value, nil
 }
 
@@ -536,10 +555,15 @@ func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaul
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultValue int64) (int64, error) {
 	if !c.initializedBool {
-		c.config.Logger.Info("Error when calling IntVariation and returning default variation: 'Client is not initialized'")
+		c.config.Logger.Infof("%s Error while evaluating int flag and returning default variation: 'Client is not initialized'", sdk_codes.EvaluationFailed)
 		return defaultValue, fmt.Errorf("%w: Client is not initialized", DefaultVariationReturnedError)
 	}
-	value := c.evaluator.IntVariation(key, target, int(defaultValue))
+	value, err := c.evaluator.IntVariation(key, target, int(defaultValue))
+	if err != nil {
+		c.config.Logger.Infof("%s Error while evaluating int flag '%s', err: %v", sdk_codes.EvaluationFailed, key, err)
+		return int64(value), fmt.Errorf("%w: `%v`", DefaultVariationReturnedError, err)
+	}
+	c.config.Logger.Debugf("%s Evaluated int flag successfully: '%s'", sdk_codes.EvaluationSuccess, key)
 	return int64(value), nil
 }
 
@@ -548,10 +572,15 @@ func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultVa
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaultValue float64) (float64, error) {
 	if !c.initializedBool {
-		c.config.Logger.Info("Error when calling NumberVariation and returning default variation: 'Client is not initialized'")
+		c.config.Logger.Infof("%s Error while number number flag and returning default variation: 'Client is not initialized'", sdk_codes.EvaluationFailed)
 		return defaultValue, fmt.Errorf("%w: Client is not initialized", DefaultVariationReturnedError)
 	}
-	value := c.evaluator.NumberVariation(key, target, defaultValue)
+	value, err := c.evaluator.NumberVariation(key, target, defaultValue)
+	if err != nil {
+		c.config.Logger.Infof("%s Error while evaluating number flag '%s', err: %v", sdk_codes.EvaluationFailed, key, err)
+		return value, fmt.Errorf("%w: `%v`", DefaultVariationReturnedError, err)
+	}
+	c.config.Logger.Debugf("%s Evaluated number flag successfully: '%s'", sdk_codes.EvaluationSuccess, key)
 	return value, nil
 }
 
@@ -561,10 +590,15 @@ func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaul
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultValue types.JSON) (types.JSON, error) {
 	if !c.initializedBool {
-		c.config.Logger.Info("Error when calling JSONVariation and returning default variation: 'Client is not initialized'")
+		c.config.Logger.Infof("%s Error while evaluating json flag and returning default variation: 'Client is not initialized'", sdk_codes.EvaluationFailed)
 		return defaultValue, fmt.Errorf("%w: Client is not initialized", DefaultVariationReturnedError)
 	}
-	value := c.evaluator.JSONVariation(key, target, defaultValue)
+	value, err := c.evaluator.JSONVariation(key, target, defaultValue)
+	if err != nil {
+		c.config.Logger.Infof("%s Error while evaluating json flag '%s', err: %v", sdk_codes.EvaluationFailed, key, err)
+		return value, fmt.Errorf("%w: `%v`", DefaultVariationReturnedError, err)
+	}
+	c.config.Logger.Debugf("%s Evaluated json flag successfully: '%s'", sdk_codes.EvaluationSuccess, key)
 	return value, nil
 }
 
@@ -577,13 +611,21 @@ func (c *CfClient) Close() error {
 	if c.stopped.get() {
 		return errors.New("client already closed")
 	}
+	c.config.Logger.Infof("%s Closing SDK", sdk_codes.CloseStarted)
 	close(c.stop)
 
 	c.stopped.set(true)
+
+	// This flag is used by `IsInitialized` so set to true.
+	c.initializedBoolLock.Lock()
+	c.initializedBool = false
+	c.initializedBoolLock.Unlock()
+	c.config.Logger.Infof("%s SDK Closed successfully", sdk_codes.CloseSuccess)
+
 	return nil
 }
 
-// Environment returns environment based on authenticated SDK key
+// Environment returns environment based on authenticated SDK flagIdentifier
 func (c *CfClient) Environment() string {
 	return c.environmentID
 }

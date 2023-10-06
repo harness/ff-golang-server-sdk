@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"regexp"
 	"sort"
 	"strconv"
@@ -400,67 +401,63 @@ func (e Evaluator) getVariationForTheFlag(flag *rest.FeatureConfig, target *Targ
 }
 
 // BoolVariation returns boolean evaluation for target
-func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue bool) bool {
+func (e Evaluator) BoolVariation(identifier string, target *Target, defaultValue bool) (bool, error) {
 	//flagVariation, err := e.evaluate(identifier, target, "boolean")
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		e.logger.Errorf("Error while evaluating boolean flag '%s', err: %v", identifier, err)
-		return defaultValue
+		return defaultValue, err
 	}
-	return strings.ToLower(flagVariation.Variation.Value) == "true"
+	return strings.ToLower(flagVariation.Variation.Value) == "true", nil
 }
 
 // StringVariation returns string evaluation for target
-func (e Evaluator) StringVariation(identifier string, target *Target, defaultValue string) string {
+func (e Evaluator) StringVariation(identifier string, target *Target, defaultValue string) (string, error) {
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		e.logger.Errorf("Error while evaluating string flag '%s', err: %v", identifier, err)
-		return defaultValue
+		return defaultValue, err
 	}
-	return flagVariation.Variation.Value
+	return flagVariation.Variation.Value, nil
 }
 
 // IntVariation returns int evaluation for target
-func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue int) int {
+func (e Evaluator) IntVariation(identifier string, target *Target, defaultValue int) (int, error) {
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		e.logger.Errorf("Error while evaluating int flag '%s', err: %v", identifier, err)
-		return defaultValue
+		return defaultValue, err
 	}
 	val, err := strconv.Atoi(flagVariation.Variation.Value)
 	if err != nil {
-		return defaultValue
+		return defaultValue, err
 	}
-	return val
+	return val, nil
 }
 
 // NumberVariation returns number evaluation for target
-func (e Evaluator) NumberVariation(identifier string, target *Target, defaultValue float64) float64 {
+func (e Evaluator) NumberVariation(identifier string, target *Target, defaultValue float64) (float64, error) {
 	//all numbers are stored as ints in the database
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		e.logger.Errorf("Error while evaluating number flag '%s', err: %v", identifier, err)
-		return defaultValue
+		return defaultValue, err
 	}
 	val, err := strconv.ParseFloat(flagVariation.Variation.Value, 64)
 	if err != nil {
-		return defaultValue
+		return defaultValue, err
 	}
-	return val
+	return val, nil
 }
 
 // JSONVariation returns json evaluation for target
 func (e Evaluator) JSONVariation(identifier string, target *Target,
-	defaultValue map[string]interface{}) map[string]interface{} {
+	defaultValue map[string]interface{}) (map[string]interface{}, error) {
 	flagVariation, err := e.evaluate(identifier, target)
 	if err != nil {
-		e.logger.Errorf("Error while evaluating json flag '%s', err: %v", identifier, err)
-		return defaultValue
+		return defaultValue, err
 	}
 	val := make(map[string]interface{})
 	err = json.Unmarshal([]byte(flagVariation.Variation.Value), &val)
 	if err != nil {
-		return defaultValue
+		return defaultValue, err
 	}
-	return val
+	e.logger.Debugf("%s Evaluated json flag successfully: '%s'", sdk_codes.EvaluationSuccess, identifier)
+	return val, nil
 }
