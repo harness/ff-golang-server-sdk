@@ -605,17 +605,21 @@ func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultV
 // Close shuts down the Feature Flag client. After calling this, the client
 // should no longer be used
 func (c *CfClient) Close() error {
-	c.config.Logger.Infof("%s Closing SDK", sdk_codes.CloseStarted)
 	if !c.initializedBool {
 		return errors.New("attempted to close client that is not initialized")
 	}
 	if c.stopped.get() {
 		return errors.New("client already closed")
 	}
+	c.config.Logger.Infof("%s Closing SDK", sdk_codes.CloseStarted)
 	close(c.stop)
 
 	c.stopped.set(true)
 
+	// This flag is used by `IsInitialized` so set to true.
+	c.initializedBoolLock.Lock()
+	c.initializedBool = false
+	c.initializedBoolLock.Unlock()
 	c.config.Logger.Infof("%s SDK Closed successfully", sdk_codes.CloseSuccess)
 
 	return nil
