@@ -8,6 +8,7 @@ import (
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/log"
 	"github.com/harness/ff-golang-server-sdk/rest"
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"github.com/harness/ff-golang-server-sdk/test_helpers"
 	"github.com/harness/ff-golang-server-sdk/types"
 	"github.com/jarcoal/httpmock"
@@ -80,23 +81,28 @@ func registerMultipleResponseResponders(authResponder []httpmock.Responder, targ
 
 func TestCfClient_NewClient(t *testing.T) {
 
+	successCodes := []sdk_codes.SDKCode{sdk_codes.InitSuccess, sdk_codes.AuthSuccess, sdk_codes.PollStart, sdk_codes.MetricsStarted}
+	errorCodes := []sdk_codes.SDKCode{sdk_codes.InitAuthError, sdk_codes.AuthFailed}
+	retryCodes := []sdk_codes.SDKCode{sdk_codes.InitAuthError, sdk_codes.AuthFailed}
 	tests := []struct {
 		name          string
 		newClientFunc func() (*CfClient, error)
 		mockResponder func()
+		sdkCodes      []sdk_codes.SDKCode
 		err           error
 	}{
 		{
 			name: "Synchronous Client: successfully initializes",
 			newClientFunc: func() (*CfClient, error) {
-				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true))
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithLogger(types.MockLogger{}))
 			},
 			mockResponder: func() {
 				authSuccessResponse := AuthResponse(200, ValidAuthToken)
 				registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
-			err: nil,
+			sdkCodes: successCodes,
+			err:      nil,
 		},
 		{
 			name: "Synchronous Client: `IsInitialized` and `WaithWaitForInitialzed` called successfully initializes",
@@ -112,7 +118,8 @@ func TestCfClient_NewClient(t *testing.T) {
 				registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 
 			},
-			err: nil,
+			sdkCodes: successCodes,
+			err:      nil,
 		},
 		{
 			name: "Synchronous client: Empty SDK flagIdentifier fails to initialize",
@@ -120,6 +127,7 @@ func TestCfClient_NewClient(t *testing.T) {
 				return newClient(http.DefaultClient, EmptySDKKey, WithWaitForInitialized(true))
 			},
 			mockResponder: nil,
+			sdkCodes:      errorCodes,
 			err:           EmptySDKKeyError,
 		},
 		{
@@ -135,6 +143,7 @@ func TestCfClient_NewClient(t *testing.T) {
 				authErrorResponse := AuthResponseDetailed(401, "401", bodyString)
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 			},
+			sdkCodes: errorCodes,
 			err: NonRetryableAuthError{
 				StatusCode: "401",
 				Message:    "invalid flagIdentifier or target provided",
@@ -153,6 +162,7 @@ func TestCfClient_NewClient(t *testing.T) {
 				authErrorResponse := AuthResponseDetailed(403, "403", bodyString)
 				registerResponders(authErrorResponse, TargetSegmentsResponse, FeatureConfigsResponse)
 			},
+			sdkCodes: errorCodes,
 			err: NonRetryableAuthError{
 				StatusCode: "403",
 				Message:    "forbidden",
@@ -180,7 +190,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Synchronous client: Authentication failed with 500 and succeeds after one retry",
 			newClientFunc: func() (*CfClient, error) {
-				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithSleeper(test_helpers.MockSleeper{}))
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithSleeper(types.MockSleeper{}))
 			},
 			mockResponder: func() {
 				bodyString := `{
@@ -198,7 +208,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Synchronous client: Authentication failed and succeeds just before exceeding max retries",
 			newClientFunc: func() (*CfClient, error) {
-				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithSleeper(test_helpers.MockSleeper{}))
+				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithSleeper(types.MockSleeper{}))
 				return newClient, err
 			},
 			mockResponder: func() {
@@ -224,7 +234,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Synchronous client: Authentication failed and exceeds max retries",
 			newClientFunc: func() (*CfClient, error) {
-				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithSleeper(test_helpers.MockSleeper{}))
+				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithSleeper(types.MockSleeper{}))
 				return newClient, err
 			},
 			mockResponder: func() {
@@ -277,7 +287,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Asynchronous client: Empty SDK flagIdentifier, times out waiting",
 			newClientFunc: func() (*CfClient, error) {
-				client, err := newClient(http.DefaultClient, EmptySDKKey, WithSleeper(test_helpers.MockSleeper{}))
+				client, err := newClient(http.DefaultClient, EmptySDKKey, WithSleeper(types.MockSleeper{}))
 				if ok, err := client.IsInitialized(); !ok {
 					return client, err
 				}
@@ -289,7 +299,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Asynchronous client: Authentication failed with 401 and no retry, times out waiting",
 			newClientFunc: func() (*CfClient, error) {
-				client, err := newClient(http.DefaultClient, InvaliDSDKKey, WithSleeper(test_helpers.MockSleeper{}))
+				client, err := newClient(http.DefaultClient, InvaliDSDKKey, WithSleeper(types.MockSleeper{}))
 				if ok, err := client.IsInitialized(); !ok {
 					return client, err
 				}
@@ -309,7 +319,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Asynchronous client: Authentication failed with 403 and no retry, times out waiting",
 			newClientFunc: func() (*CfClient, error) {
-				client, err := newClient(http.DefaultClient, ValidSDKKey, WithSleeper(test_helpers.MockSleeper{}))
+				client, err := newClient(http.DefaultClient, ValidSDKKey, WithSleeper(types.MockSleeper{}))
 				if ok, err := client.IsInitialized(); !ok {
 					return client, err
 				}
@@ -328,7 +338,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Asynchronous client: Authentication failed with 404 and times out waiting",
 			newClientFunc: func() (*CfClient, error) {
-				client, err := newClient(http.DefaultClient, ValidSDKKey, WithSleeper(test_helpers.MockSleeper{}))
+				client, err := newClient(http.DefaultClient, ValidSDKKey, WithSleeper(types.MockSleeper{}))
 				if ok, err := client.IsInitialized(); !ok {
 					return client, err
 				}
@@ -503,7 +513,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 		{
 			name: "Evaluations with Synchronous client with a server error",
 			clientFunc: func() (*CfClient, error) {
-				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(2), WithSleeper(test_helpers.MockSleeper{}))
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(2), WithSleeper(types.MockSleeper{}))
 			},
 			mockResponder: func() {
 				bodyString := `{
@@ -558,7 +568,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 		{
 			name: "Evaluations with Async client with a server error",
 			clientFunc: func() (*CfClient, error) {
-				return newClient(http.DefaultClient, ValidSDKKey, WithMaxAuthRetries(2), WithSleeper(test_helpers.MockSleeper{}))
+				return newClient(http.DefaultClient, ValidSDKKey, WithMaxAuthRetries(2), WithSleeper(types.MockSleeper{}))
 			},
 			mockResponder: func() {
 				bodyString := `{

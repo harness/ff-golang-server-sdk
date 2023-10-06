@@ -521,7 +521,7 @@ func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultValue bool) (bool, error) {
 	if !c.initializedBool {
-		c.config.Logger.Infof("%s Error while evaluating boolean flag and returning default variation: 'Client is not initialized'", sdk_codes.EvaluationFailed)
+		c.config.Logger.Infof("%s Error while evaluating boolean flag and returning default variation, err: 'Client is not initialized'", sdk_codes.EvaluationFailed)
 		return defaultValue, fmt.Errorf("%w: Client is not initialized", DefaultVariationReturnedError)
 	}
 	value, err := c.evaluator.BoolVariation(key, target, defaultValue)
@@ -538,7 +538,7 @@ func (c *CfClient) BoolVariation(key string, target *evaluation.Target, defaultV
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaultValue string) (string, error) {
 	if !c.initializedBool {
-		c.config.Logger.Infof("%s Error while evaluating string flag and returning default variation: 'Client is not initialized'", sdk_codes.EvaluationFailed)
+		c.config.Logger.Infof("%s Error while evaluating string flag and returning default variation, err: 'Client is not initialized'", sdk_codes.EvaluationFailed)
 		return defaultValue, fmt.Errorf("%w: Client is not initialized", DefaultVariationReturnedError)
 	}
 	value, err := c.evaluator.StringVariation(key, target, defaultValue)
@@ -555,7 +555,7 @@ func (c *CfClient) StringVariation(key string, target *evaluation.Target, defaul
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultValue int64) (int64, error) {
 	if !c.initializedBool {
-		c.config.Logger.Infof("%s Error while evaluating int flag and returning default variation: 'Client is not initialized'", sdk_codes.EvaluationFailed)
+		c.config.Logger.Infof("%s Error while evaluating int flag and returning default variation, err: 'Client is not initialized'", sdk_codes.EvaluationFailed)
 		return defaultValue, fmt.Errorf("%w: Client is not initialized", DefaultVariationReturnedError)
 	}
 	value, err := c.evaluator.IntVariation(key, target, int(defaultValue))
@@ -572,7 +572,7 @@ func (c *CfClient) IntVariation(key string, target *evaluation.Target, defaultVa
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaultValue float64) (float64, error) {
 	if !c.initializedBool {
-		c.config.Logger.Infof("%s Error while number number flag and returning default variation: 'Client is not initialized'", sdk_codes.EvaluationFailed)
+		c.config.Logger.Infof("%s Error while number number flag and returning default variation, err: 'Client is not initialized'", sdk_codes.EvaluationFailed)
 		return defaultValue, fmt.Errorf("%w: Client is not initialized", DefaultVariationReturnedError)
 	}
 	value, err := c.evaluator.NumberVariation(key, target, defaultValue)
@@ -590,7 +590,7 @@ func (c *CfClient) NumberVariation(key string, target *evaluation.Target, defaul
 // Returns defaultValue if there is an error or if the flag doesn't exist
 func (c *CfClient) JSONVariation(key string, target *evaluation.Target, defaultValue types.JSON) (types.JSON, error) {
 	if !c.initializedBool {
-		c.config.Logger.Infof("%s Error while evaluating json flag and returning default variation: 'Client is not initialized'", sdk_codes.EvaluationFailed)
+		c.config.Logger.Infof("%s Error while evaluating json flag and returning default variation, err: 'Client is not initialized'", sdk_codes.EvaluationFailed)
 		return defaultValue, fmt.Errorf("%w: Client is not initialized", DefaultVariationReturnedError)
 	}
 	value, err := c.evaluator.JSONVariation(key, target, defaultValue)

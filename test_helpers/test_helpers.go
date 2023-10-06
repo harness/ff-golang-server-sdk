@@ -5,7 +5,6 @@ import (
 	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/jarcoal/httpmock"
 	"net/http"
-	"time"
 )
 
 func MakeBoolFeatureConfigs(name, defaultVariation, offVariation, state string, preReqs ...rest.Prerequisite) []rest.FeatureConfig {
@@ -92,12 +91,4 @@ func intPtr(value int64) *int64 {
 
 func strPtr(value string) *string {
 	return &value
-}
-
-type MockSleeper struct {
-	SleepTime time.Duration
-}
-
-func (ms MockSleeper) Sleep(d time.Duration) {
-	time.Sleep(ms.SleepTime)
 }
