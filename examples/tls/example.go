@@ -19,7 +19,7 @@ var (
 )
 
 func main() {
-	log.Println("Harness SDK Getting Started")
+	log.Println("Harness SDK TLS Example")
 
 	certPool, err := loadCertificates([]string{"path to PEM", "path to PEM"})
 	if err != nil {
