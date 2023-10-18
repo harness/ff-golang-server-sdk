@@ -21,7 +21,7 @@ var (
 func main() {
 	log.Println("Harness SDK TLS Example")
 
-	certPool, err := loadCertificates([]string{"path to PEM", "path to PEM"})
+	certPool, err := loadCertificates([]string{"/Users/erowlands/Documents/andytlscerts/CA.crt"})
 	if err != nil {
 		log.Printf("Failed to parse PEM files: `%s`\n", err)
 	}
@@ -42,7 +42,7 @@ func main() {
 
 	// Note that this code uses ffserver hostname as an example, likely you'll have your own hostname or IP.
 	// You should ensure the endpoint is returning a cert with valid SANs configured for the host/IP.
-	client, err := harness.NewCfClient(sdkKey, harness.WithEventsURL("https://ffserver:8001/api/1.0"), harness.WithURL("https://ffserver:8001/api/1.0"), harness.WithWaitForInitialized(true), harness.WithHTTPClient(&httpClient))
+	client, err := harness.NewCfClient(sdkKey, harness.WithEventsURL("https://ffserver:8003/api/1.0"), harness.WithURL("https://ffserver:8003/api/1.0"), harness.WithWaitForInitialized(true), harness.WithHTTPClient(&httpClient))
 
 	elapsedTime := time.Since(startTime)
 	log.Printf("Took '%v' seconds to get a client initialization result ", elapsedTime.Seconds())
@@ -90,9 +90,7 @@ func getEnvOrDefault(key, defaultStr string) string {
 func loadCertificates(filePaths []string) (*x509.CertPool, error) {
 	pool := x509.NewCertPool()
 	for _, ca := range filePaths {
-		var caBytes []byte
-		var err error
-		caBytes, err = os.ReadFile(ca)
+		caBytes, err := os.ReadFile(ca)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read CA certificate from file: %w", err)
 		}
