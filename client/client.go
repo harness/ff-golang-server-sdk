@@ -244,6 +244,9 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	c.config.Logger.Info("Registering SSE consumer")
 	sseClient := sse.NewClient(fmt.Sprintf("%s/stream?cluster=%s", c.config.url, c.clusterIdentifier))
 
+	// Use the SDKs http client
+	sseClient.Connection = c.config.httpClient
+
 	streamErr := func() {
 		c.config.Logger.Warnf("%s Stream disconnected. Swapping to polling mode", sdk_codes.StreamDisconnected)
 		c.mux.RLock()
@@ -400,7 +403,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	metricsClient, err := metricsclient.NewClientWithResponses(c.config.eventsURL,
 		metricsclient.WithRequestEditorFn(bearerTokenProvider.Intercept),
 		metricsclient.WithRequestEditorFn(c.InterceptAddCluster),
-		metricsclient.WithHTTPClient(http.DefaultClient),
+		metricsclient.WithHTTPClient(c.config.httpClient),
 	)
 	if err != nil {
 		return err
