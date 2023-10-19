@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/harness/ff-golang-server-sdk/sdk_codes"
+	"golang.org/x/sync/errgroup"
 	"log"
 	"math/rand"
 	"net/http"
@@ -187,46 +188,53 @@ func (c *CfClient) IsInitialized() (bool, error) {
 }
 
 func (c *CfClient) retrieve(ctx context.Context) bool {
-	ok := true
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		rCtx, cancel := context.WithTimeout(ctx, time.Minute)
-		defer cancel()
+	var g errgroup.Group
+
+	rCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
+	// First goroutine for retrieving flags.
+	g.Go(func() error {
 		err := c.retrieveFlags(rCtx)
 		if err != nil {
-			ok = false
-			c.config.Logger.Errorf("error while retrieving flags: %v", err.Error())
+			c.config.Logger.Errorf("error while retrieving flags: %v", err)
+			return err
 		}
-	}()
+		return nil
+	})
 
-	go func() {
-		defer wg.Done()
-		rCtx, cancel := context.WithTimeout(ctx, time.Minute)
-		defer cancel()
+	// Second goroutine for retrieving segments.
+	g.Go(func() error {
 		err := c.retrieveSegments(rCtx)
 		if err != nil {
-			ok = false
-			c.config.Logger.Errorf("error while retrieving segments: %v", err.Error())
+			c.config.Logger.Errorf("error while retrieving segments: %v", err)
+			return err
 		}
-	}()
-	wg.Wait()
-	if ok {
-		c.config.Logger.Info("Data poll finished successfully")
-	} else {
+		return nil
+	})
+
+	// Wait for all goroutines in the group to finish.
+	err := g.Wait()
+
+	// Check if there were any errors during processing.
+	if err != nil {
 		c.config.Logger.Error("Data poll finished with errors")
+		return false
 	}
 
-	if ok {
-		// This flag is used by `IsInitialized` so set to true.
-		c.initializedBoolLock.Lock()
-		c.initializedBool = true
-		c.initializedBoolLock.Unlock()
+	c.config.Logger.Info("Data poll finished successfully")
 
+	c.initializedBoolLock.Lock()
+	defer c.initializedBoolLock.Unlock()
+
+	// This function is used to mark the client as "initialized" once flags and segemtns have been loaded,
+	// but it's also used for the polling thread, so we check if the client is already initialized before
+	// marking it as such.
+	if !c.initializedBool {
+		c.initializedBool = true
 		close(c.initialized)
 	}
-	return ok
+	return true
 }
 
 func (c *CfClient) streamConnect(ctx context.Context) {
