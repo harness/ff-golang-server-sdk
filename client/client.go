@@ -479,7 +479,7 @@ func (c *CfClient) retrieveFlags(ctx context.Context) error {
 	}
 
 	if flags.JSON200 == nil {
-		return nil
+		return fmt.Errorf("%w: `%v`", FetchFlagsError, flags.HTTPResponse.Status)
 	}
 
 	c.repository.SetFlags(true, c.environmentID, *flags.JSON200...)
