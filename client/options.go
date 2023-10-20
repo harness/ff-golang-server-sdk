@@ -83,9 +83,10 @@ func WithStoreEnabled(val bool) ConfigOption {
 	}
 }
 
-// WithHTTPClient set http client for use in interactions with ff server
+// WithHTTPClient set auth and http client for use in interactions with ff server
 func WithHTTPClient(client *http.Client) ConfigOption {
 	return func(config *config) {
+		config.authHttpClient = client
 		config.httpClient = client
 	}
 }

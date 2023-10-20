@@ -25,6 +25,7 @@ type SSEClient struct {
 	logger              logger.Logger
 	onStreamError       func()
 	eventStreamListener EventStreamListener
+	streamDisconnected  chan struct{}
 
 	proxyMode bool
 }
@@ -41,8 +42,9 @@ func NewSSEClient(
 	logger logger.Logger,
 	onStreamError func(),
 	eventStreamListener EventStreamListener,
-
 	proxyMode bool,
+	streamDisconnected chan struct{},
+
 ) *SSEClient {
 	client.Headers["Authorization"] = fmt.Sprintf("Bearer %s", token)
 	client.Headers["API-Key"] = apiKey
@@ -57,6 +59,7 @@ func NewSSEClient(
 		onStreamError:       onStreamError,
 		eventStreamListener: eventStreamListener,
 		proxyMode:           proxyMode,
+		streamDisconnected:  streamDisconnected,
 	}
 	return sseClient
 }
@@ -103,7 +106,7 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 		})
 		if err != nil {
-			c.logger.Warnf("Error initializing stream: %s", err.Error())
+			c.logger.Warnf("Error initializing stream: %s", err)
 		}
 
 		// The SSE library we use swallows the EOF error returned if a connection is closed by the server
@@ -111,6 +114,8 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		// this and the server closes the connection the Go SDK will still think it's connected to the stream
 		// even though it isn't
 		c.onStreamError()
+
+		c.streamDisconnected <- struct{}{}
 	}()
 
 	return out

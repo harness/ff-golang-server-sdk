@@ -10,6 +10,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -54,6 +55,7 @@ type CfClient struct {
 	token               string
 	streamConnected     bool
 	streamConnectedLock sync.RWMutex
+	streamDisconnected  chan struct{}
 	authenticated       chan struct{}
 	postEvalChan        chan evaluation.PostEvalData
 	initializedBool     bool
@@ -79,16 +81,17 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	analyticsService := analyticsservice.NewAnalyticsService(time.Minute, config.Logger)
 
 	client := &CfClient{
-		sdkKey:            sdkKey,
-		config:            config,
-		authenticated:     make(chan struct{}),
-		analyticsService:  analyticsService,
-		clusterIdentifier: "1",
-		postEvalChan:      make(chan evaluation.PostEvalData),
-		stop:              make(chan struct{}),
-		stopped:           newAtomicBool(false),
-		initialized:       make(chan struct{}),
-		initializedErr:    make(chan error),
+		sdkKey:             sdkKey,
+		config:             config,
+		authenticated:      make(chan struct{}),
+		analyticsService:   analyticsService,
+		clusterIdentifier:  "1",
+		postEvalChan:       make(chan evaluation.PostEvalData),
+		stop:               make(chan struct{}),
+		stopped:            newAtomicBool(false),
+		initialized:        make(chan struct{}),
+		initializedErr:     make(chan error),
+		streamDisconnected: make(chan struct{}),
 	}
 
 	if sdkKey == "" {
@@ -155,6 +158,9 @@ func (c *CfClient) start() {
 	}()
 	go c.setAnalyticsServiceClient(ctx)
 	go c.pullCronJob(ctx)
+	if c.config.enableStream {
+		go c.stream(ctx)
+	}
 }
 
 // PostEvaluateProcessor push the data to the analytics service
@@ -187,7 +193,7 @@ func (c *CfClient) IsInitialized() (bool, error) {
 	return false, InitializeTimeoutError{}
 }
 
-func (c *CfClient) retrieve(ctx context.Context) bool {
+func (c *CfClient) retrieve(ctx context.Context) {
 	var g errgroup.Group
 
 	rCtx, cancel := context.WithTimeout(ctx, time.Minute)
@@ -219,7 +225,7 @@ func (c *CfClient) retrieve(ctx context.Context) bool {
 	// Check if there were any errors during processing.
 	if err != nil {
 		c.config.Logger.Error("Data poll finished with errors")
-		return false
+		return
 	}
 
 	c.config.Logger.Info("Data poll finished successfully")
@@ -227,14 +233,13 @@ func (c *CfClient) retrieve(ctx context.Context) bool {
 	c.initializedBoolLock.Lock()
 	defer c.initializedBoolLock.Unlock()
 
-	// This function is used to mark the client as "initialized" once flags and segemtns have been loaded,
+	// This function is used to mark the client as "initialized" once flags and segments have been loaded,
 	// but it's also used for the polling thread, so we check if the client is already initialized before
 	// marking it as such.
 	if !c.initializedBool {
 		c.initializedBool = true
 		close(c.initialized)
 	}
-	return true
 }
 
 func (c *CfClient) streamConnect(ctx context.Context) {
@@ -272,11 +277,11 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 		}
 	}
 	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.repository, c.api, c.config.Logger, streamErr,
-		c.config.eventStreamListener, c.config.proxyMode)
+		c.config.eventStreamListener, c.config.proxyMode, c.streamDisconnected)
 
 	// Connect kicks off a goroutine that attempts to establish a stream connection
 	// while this is happening we set streamConnected to true - if any errors happen
-	// in this process streamConnected will be set back to false by the streamErr function
+	// in this process streamConnected will be set back to false by the streamDisconnected function
 	conn.Connect(ctx, c.environmentID, c.sdkKey)
 	c.streamConnected = true
 }
@@ -311,7 +316,14 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 		jitter := time.Duration(rand.Float64() * float64(currentDelay))
 		delayWithJitter := currentDelay + jitter
 
-		c.config.Logger.Errorf("%s Authentication failed with error: '%s'. Retrying in %v.", sdk_codes.AuthAttempt, err, delayWithJitter)
+		maxAttemptLog := ""
+		if c.config.maxAuthRetries == -1 {
+			maxAttemptLog = "∞"
+		} else {
+			maxAttemptLog = strconv.Itoa(c.config.maxAuthRetries)
+		}
+
+		c.config.Logger.Errorf("%s Authentication attempt %d of %s failed with error: '%s'. Retrying in %v.", sdk_codes.AuthAttempt, attempts, maxAttemptLog, err, delayWithJitter)
 		c.config.sleeper.Sleep(delayWithJitter)
 
 		currentDelay *= time.Duration(factor)
@@ -329,7 +341,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	defer c.mux.RUnlock()
 
 	// dont check err just retry
-	httpClient, err := rest.NewClientWithResponses(c.config.url, rest.WithHTTPClient(c.config.httpClient))
+	httpClient, err := rest.NewClientWithResponses(c.config.url, rest.WithHTTPClient(c.config.authHttpClient))
 	if err != nil {
 		return err
 	}
@@ -428,25 +440,47 @@ func (c *CfClient) makeTicker(interval uint) *time.Ticker {
 	return time.NewTicker(time.Second * time.Duration(interval))
 }
 
+func (c *CfClient) stream(ctx context.Context) {
+	// wait until initialized with initial state
+	<-c.initialized
+	c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
+	c.config.Logger.Info("Attempting to start stream")
+	c.streamConnect(ctx)
+
+	const maxBackoffDuration = 2 * time.Minute
+	backoffDuration := 2 * time.Second
+	for {
+		select {
+		case <-ctx.Done():
+			c.config.Logger.Infof("%s Stream stopped", sdk_codes.StreamStop)
+			return
+		case <-c.streamDisconnected:
+			// Sleep for the current backoff duration, exponentially increasing
+			time.Sleep(backoffDuration)
+
+			c.config.Logger.Info("Attempting to restart stream")
+			c.streamConnect(ctx)
+
+			backoffDuration *= 2
+			if backoffDuration > maxBackoffDuration {
+				backoffDuration = maxBackoffDuration
+			}
+		}
+	}
+}
+
 func (c *CfClient) pullCronJob(ctx context.Context) {
 	poll := func() {
 		c.mux.RLock()
-		c.config.Logger.Infof("%s Polling started, interval: %v", sdk_codes.PollStart, c.config.pullInterval)
+		defer c.mux.RUnlock()
 		if !c.streamConnected {
-			ok := c.retrieve(ctx)
-			// we should only try and start the stream after the poll succeeded to make sure we get the latest changes
-			if ok && c.config.enableStream {
-				c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
-				// here stream is enabled but not connected, so we attempt to reconnect
-				c.config.Logger.Info("Attempting to start stream")
-				c.streamConnect(ctx)
-			}
+			c.retrieve(ctx)
 		}
-		c.mux.RUnlock()
 	}
 	// wait until authenticated
 	<-c.authenticated
 
+	c.config.Logger.Infof("%s Polling started, interval: %v seconds", sdk_codes.PollStart, c.config.pullInterval)
 	// pull initial data
 	poll()
 
@@ -457,7 +491,6 @@ func (c *CfClient) pullCronJob(ctx context.Context) {
 		case <-ctx.Done():
 			pullingTicker.Stop()
 			c.config.Logger.Infof("%s Polling stopped", sdk_codes.PollStop)
-			c.config.Logger.Infof("%s Stream stopped", sdk_codes.StreamStop)
 			return
 		case <-pullingTicker.C:
 			poll()
