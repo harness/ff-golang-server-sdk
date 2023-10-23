@@ -1,6 +1,6 @@
 package logger
 
-// RetryableLogger implements the logger interface required by the go-retryablehttp client and wraps our internal logger
+// RetryableLogger implements the Logger interface required by the go-retryablehttp client and wraps our internal logger
 type RetryableLogger struct {
 	logger Logger
 }
