@@ -44,13 +44,13 @@ func newDefaultConfig(log logger.Logger) *config {
 	const requestTimeout = time.Second * 30
 
 	// Authentication uses a default http client + timeout as we have our own custom retry logic for authentication.
-	authHttpClient := http.DefaultClient
+	authHttpClient := &http.Client{}
 	authHttpClient.Timeout = requestTimeout
 
 	// Remaining requests use a go-retryablehttp client to handle retries.
 	requestHttpClient := retryablehttp.NewClient()
 	requestHttpClient.Logger = logger.NewRetryableLogger(log)
-	requestHttpClient.RetryMax = 1
+	requestHttpClient.RetryMax = 10
 
 	// Assign a custom ErrorHandler. By default, the go-retryablehttp library doesn't return the final
 	// network error from the server but instead reports that it has exhausted all retry attempts.
@@ -60,13 +60,13 @@ func newDefaultConfig(log logger.Logger) *config {
 			message = fmt.Sprintf("Error after '%d' connection attempts: '%s'", numTries, resp.Status)
 		}
 
+		// In practice, the error is usually nil and the response is used, but include this for any
+		// edge cases.
 		if err != nil {
-			fmt.Printf("Error after %d connection attempts: %v\n", numTries, err)
+			message = fmt.Sprintf("Error after %d connection attempts: %v\n", numTries, err)
 		}
 
-		customError := fmt.Errorf(message)
-
-		return resp, customError
+		return resp, fmt.Errorf(message)
 	}
 
 	return &config{

@@ -219,10 +219,8 @@ func (c *CfClient) retrieve(ctx context.Context) {
 		return nil
 	})
 
-	// Wait for all goroutines in the group to finish.
 	err := g.Wait()
 
-	// Check if there were any errors during processing.
 	if err != nil {
 		c.config.Logger.Error("Data poll finished with errors")
 		return
@@ -455,7 +453,6 @@ func (c *CfClient) stream(ctx context.Context) {
 			c.config.Logger.Infof("%s Stream stopped", sdk_codes.StreamStop)
 			return
 		case <-c.streamDisconnected:
-			// Sleep for the current backoff duration, exponentially increasing
 			time.Sleep(backoffDuration)
 
 			c.config.Logger.Info("Attempting to restart stream")
