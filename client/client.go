@@ -55,7 +55,7 @@ type CfClient struct {
 	token               string
 	streamConnected     bool
 	streamConnectedLock sync.RWMutex
-	streamDisconnected  chan struct{}
+	streamDisconnected  chan error
 	authenticated       chan struct{}
 	postEvalChan        chan evaluation.PostEvalData
 	initializedBool     bool
@@ -91,7 +91,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		stopped:            newAtomicBool(false),
 		initialized:        make(chan struct{}),
 		initializedErr:     make(chan error),
-		streamDisconnected: make(chan struct{}),
+		streamDisconnected: make(chan error),
 	}
 
 	if sdkKey == "" {
@@ -124,7 +124,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 
 		select {
 		case <-client.initialized:
-			config.Logger.Infof("%s The SDK has successfully initialized'", sdk_codes.InitSuccess)
+			config.Logger.Infof("%s The SDK has successfully initialized", sdk_codes.InitSuccess)
 			return client, nil
 		case err := <-client.initializedErr:
 			initErr = err
@@ -437,8 +437,8 @@ func (c *CfClient) stream(ctx context.Context) {
 		case <-ctx.Done():
 			c.config.Logger.Infof("%s Stream stopped", sdk_codes.StreamStop)
 			return
-		case <-c.streamDisconnected:
-			c.config.Logger.Warnf("%s Stream disconnected. Swapping to polling mode", sdk_codes.StreamDisconnected)
+		case err := <-c.streamDisconnected:
+			c.config.Logger.Warnf("%s Stream disconnected: '%s' Swapping to polling mode", sdk_codes.StreamDisconnected, err)
 			c.mux.RLock()
 			c.streamConnected = false
 			c.mux.RUnlock()

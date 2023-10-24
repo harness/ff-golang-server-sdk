@@ -24,7 +24,7 @@ type SSEClient struct {
 	repository          repository.Repository
 	logger              logger.Logger
 	eventStreamListener EventStreamListener
-	streamDisconnected  chan struct{}
+	streamDisconnected  chan error
 
 	proxyMode bool
 }
@@ -41,7 +41,7 @@ func NewSSEClient(
 	logger logger.Logger,
 	eventStreamListener EventStreamListener,
 	proxyMode bool,
-	streamDisconnected chan struct{},
+	streamDisconnected chan error,
 
 ) *SSEClient {
 	client.Headers["Authorization"] = fmt.Sprintf("Bearer %s", token)
@@ -108,15 +108,14 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 			case out <- event:
 			case <-deadStreamTimer.C:
 				//  No event was received for 30 seconds.
-				c.logger.Warnf("No SSE events received for 30 seconds. Assuming stream is dead and restarting.")
-				c.streamDisconnected <- struct{}{}
+				c.streamDisconnected <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
 				return
 			}
 
 		})
 		if err != nil {
 			c.logger.Warnf("Error initializing stream: %s", err)
-			c.streamDisconnected <- struct{}{}
+			c.streamDisconnected <- err
 			return
 		}
 
@@ -125,7 +124,7 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		// So we need to signal the stream disconnected channel any time we've exited SubscribeWithContext.
 		// If we don't do this and the server closes the connection the Go SDK will still think it's connected to the stream
 		// even though it isn't
-		c.streamDisconnected <- struct{}{}
+		c.streamDisconnected <- fmt.Errorf("server closed the connection")
 	}()
 
 	return out
