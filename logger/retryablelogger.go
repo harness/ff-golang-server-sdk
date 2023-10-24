@@ -12,7 +12,18 @@ func NewRetryableLogger(logger Logger) RetryableLogger {
 	return s
 }
 
-// Printf - logs any printf messages from the http client as debug logs
-func (s RetryableLogger) Printf(string string, args ...interface{}) {
-	s.logger.Debugf(string, args...)
+func (a RetryableLogger) Error(msg string, args ...interface{}) {
+	a.logger.Error(msg, args)
+}
+
+func (a RetryableLogger) Info(msg string, args ...interface{}) {
+	a.logger.Info(msg, args)
+}
+
+func (a RetryableLogger) Debug(msg string, args ...interface{}) {
+	a.logger.Debug(msg, args)
+}
+
+func (a RetryableLogger) Warn(msg string, args ...interface{}) {
+	a.logger.Warn(msg, args)
 }

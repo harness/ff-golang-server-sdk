@@ -8,6 +8,7 @@ import (
 var (
 	EmptySDKKeyError              = errors.New("default variation was returned")
 	DefaultVariationReturnedError = errors.New("default variation was returned")
+	FetchFlagsError               = errors.New("fetching flags failed")
 )
 
 type NonRetryableAuthError struct {

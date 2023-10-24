@@ -747,7 +747,7 @@ var FeatureConfigsResponse = func(req *http.Request) (*http.Response, error) {
 }
 
 func TestCfClient_Close(t *testing.T) {
-	registerResponders(AuthResponse(200, ValidAuthToken), TargetSegmentsResponse, TargetSegmentsResponse)
+	registerResponders(AuthResponse(200, ValidAuthToken), TargetSegmentsResponse, FeatureConfigsResponse)
 	client, err := newClient(&http.Client{}, ValidSDKKey, WithWaitForInitialized(true))
 	if err != nil {
 		t.Error(err)

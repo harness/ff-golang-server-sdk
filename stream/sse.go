@@ -23,8 +23,8 @@ type SSEClient struct {
 	client              *sse.Client
 	repository          repository.Repository
 	logger              logger.Logger
-	onStreamError       func()
 	eventStreamListener EventStreamListener
+	streamDisconnected  chan struct{}
 
 	proxyMode bool
 }
@@ -39,24 +39,21 @@ func NewSSEClient(
 	repository repository.Repository,
 	api rest.ClientWithResponsesInterface,
 	logger logger.Logger,
-	onStreamError func(),
 	eventStreamListener EventStreamListener,
-
 	proxyMode bool,
+	streamDisconnected chan struct{},
+
 ) *SSEClient {
 	client.Headers["Authorization"] = fmt.Sprintf("Bearer %s", token)
 	client.Headers["API-Key"] = apiKey
-	client.OnDisconnect(func(client *sse.Client) {
-		onStreamError()
-	})
 	sseClient := &SSEClient{
 		client:              client,
 		repository:          repository,
 		api:                 api,
 		logger:              logger,
-		onStreamError:       onStreamError,
 		eventStreamListener: eventStreamListener,
 		proxyMode:           proxyMode,
+		streamDisconnected:  streamDisconnected,
 	}
 	return sseClient
 }
@@ -77,7 +74,6 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 	// of polling the service then re-establishing a new stream once we can connect
 	c.client.ReconnectStrategy = &backoff.StopBackOff{}
 	// it is blocking operation, it needs to go in go routine
-
 	out := make(chan Event)
 	go func() {
 		defer close(out)
@@ -103,14 +99,17 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 		})
 		if err != nil {
-			c.logger.Warnf("Error initializing stream: %s", err.Error())
+			c.logger.Warnf("Error initializing stream: %s", err)
+			c.streamDisconnected <- struct{}{}
+			return
 		}
 
-		// The SSE library we use swallows the EOF error returned if a connection is closed by the server
-		// so we need to call onStreamError any time we've exited SubscribeWithContext. If we don't do
-		// this and the server closes the connection the Go SDK will still think it's connected to the stream
+		// Even though we handle the error above, The SSE library we use currently returns a nil error for io.EOF errors, which can
+		// happen if ff-server closes the connection at the 24 hours point.
+		// So we need to signal the stream disconnected channel any time we've exited SubscribeWithContext.
+		// If we don't do this and the server closes the connection the Go SDK will still think it's connected to the stream
 		// even though it isn't
-		c.onStreamError()
+		c.streamDisconnected <- struct{}{}
 	}()
 
 	return out
