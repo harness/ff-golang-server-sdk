@@ -224,7 +224,7 @@ func (c *CfClient) retrieve(ctx context.Context) {
 	if err != nil {
 		// We just log the error and continue. In the case of initialization, this means we mark the client as initialized
 		// if we can't poll for initial state, and default evaluations are likely to be returned.
-		c.config.Logger.Error("Data poll finished with errors")
+		c.config.Logger.Errorf("Data poll finished with errors: %s", err)
 	} else {
 		c.config.Logger.Info("Data poll finished successfully")
 	}
