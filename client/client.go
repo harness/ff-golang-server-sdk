@@ -259,23 +259,7 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	// Use the SDKs http client
 	sseClient.Connection = c.config.httpClient
 
-	streamErr := func() {
-		c.config.Logger.Warnf("%s Stream disconnected. Swapping to polling mode", sdk_codes.StreamDisconnected)
-		c.mux.RLock()
-		defer c.mux.RUnlock()
-		c.streamConnected = false
-
-		// If an eventStreamListener has been passed to the Proxy lets notify it of the disconnected
-		// to let it know something is up with the stream it has been listening to
-		if c.config.eventStreamListener != nil {
-			c.config.eventStreamListener.Pub(context.Background(), stream.Event{
-				APIKey:      c.sdkKey,
-				Environment: c.environmentID,
-				Err:         stream.ErrStreamDisconnect,
-			})
-		}
-	}
-	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.repository, c.api, c.config.Logger, streamErr,
+	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.repository, c.api, c.config.Logger,
 		c.config.eventStreamListener, c.config.proxyMode, c.streamDisconnected)
 
 	// Connect kicks off a goroutine that attempts to establish a stream connection
@@ -454,15 +438,33 @@ func (c *CfClient) stream(ctx context.Context) {
 			c.config.Logger.Infof("%s Stream stopped", sdk_codes.StreamStop)
 			return
 		case <-c.streamDisconnected:
+			c.config.Logger.Warnf("%s Stream disconnected. Swapping to polling mode", sdk_codes.StreamDisconnected)
+			c.mux.RLock()
+			c.streamConnected = false
+			c.mux.RUnlock()
+
+			// If an eventStreamListener has been passed to the Proxy lets notify it of the disconnected
+			// to let it know something is up with the stream it has been listening to
+			if c.config.eventStreamListener != nil {
+				c.config.eventStreamListener.Pub(context.Background(), stream.Event{
+					APIKey:      c.sdkKey,
+					Environment: c.environmentID,
+					Err:         stream.ErrStreamDisconnect,
+				})
+			}
+
 			time.Sleep(backoffDuration)
 
 			c.config.Logger.Info("Attempting to restart stream")
 			c.streamConnect(ctx)
 
-			backoffDuration *= 2
 			if backoffDuration > maxBackoffDuration {
 				backoffDuration = maxBackoffDuration
+				return
 			}
+
+			backoffDuration *= 2
+
 		}
 	}
 }
