@@ -14,7 +14,7 @@ import (
 	backoff "gopkg.in/cenkalti/backoff.v1"
 
 	jsoniter "github.com/json-iterator/go"
-	"github.com/r3labs/sse"
+	"github.com/r3labs/sse/v2"
 )
 
 // SSEClient is Server Send Event object
@@ -73,6 +73,7 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 	// don't use the default exponentialBackoff strategy - we have our own disconnect logic
 	// of polling the service then re-establishing a new stream once we can connect
 	c.client.ReconnectStrategy = &backoff.StopBackOff{}
+
 	// it is blocking operation, it needs to go in go routine
 	out := make(chan Event)
 

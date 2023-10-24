@@ -30,7 +30,7 @@ import (
 	"github.com/harness/ff-golang-server-sdk/stream"
 	"github.com/harness/ff-golang-server-sdk/types"
 
-	"github.com/r3labs/sse"
+	"github.com/r3labs/sse/v2"
 )
 
 // CfClient is the Feature Flag client.
@@ -452,9 +452,10 @@ func (c *CfClient) stream(ctx context.Context) {
 				})
 			}
 
+			c.config.Logger.Infof("%s Stream connection lost. Retrying in %s (attempt %d)", sdk_codes.StreamRetry, backoffDuration.String(), reconnectionAttempt)
+
 			time.Sleep(backoffDuration)
 
-			c.config.Logger.Infof("%s Attempt %d to restart stream", sdk_codes.StreamRetry, reconnectionAttempt)
 			c.streamConnect(ctx)
 
 			reconnectionAttempt += 1
