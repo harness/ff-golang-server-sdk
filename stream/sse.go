@@ -114,7 +114,6 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 		})
 		if err != nil {
-			c.logger.Warnf("Error initializing stream: %s", err)
 			c.streamDisconnected <- err
 			return
 		}

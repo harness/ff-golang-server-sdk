@@ -253,7 +253,6 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 
 	c.mux.RLock()
 	defer c.mux.RUnlock()
-	c.config.Logger.Info("Registering SSE consumer")
 	sseClient := sse.NewClient(fmt.Sprintf("%s/stream?cluster=%s", c.config.url, c.clusterIdentifier))
 
 	// Use the SDKs http client
@@ -427,11 +426,11 @@ func (c *CfClient) stream(ctx context.Context) {
 	// wait until initialized with initial state
 	<-c.initialized
 	c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
-	c.config.Logger.Info("Attempting to start stream")
 	c.streamConnect(ctx)
 
 	const maxBackoffDuration = 2 * time.Minute
 	backoffDuration := 2 * time.Second
+	reconnectionAttempt := 1
 	for {
 		select {
 		case <-ctx.Done():
@@ -455,9 +454,10 @@ func (c *CfClient) stream(ctx context.Context) {
 
 			time.Sleep(backoffDuration)
 
-			c.config.Logger.Info("Attempting to restart stream")
+			c.config.Logger.Infof("%s Attempt %d to restart stream", sdk_codes.StreamRetry, reconnectionAttempt)
 			c.streamConnect(ctx)
 
+			reconnectionAttempt += 1
 			if backoffDuration > maxBackoffDuration {
 				backoffDuration = maxBackoffDuration
 				return
