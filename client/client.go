@@ -222,11 +222,12 @@ func (c *CfClient) retrieve(ctx context.Context) {
 	err := g.Wait()
 
 	if err != nil {
+		// We just log the error and continue. In the case of initialization, this means we mark the client as initialized
+		// if we can't poll for initial state, and default evaluations are likely to be returned.
 		c.config.Logger.Error("Data poll finished with errors")
-		return
+	} else {
+		c.config.Logger.Info("Data poll finished successfully")
 	}
-
-	c.config.Logger.Info("Data poll finished successfully")
 
 	c.initializedBoolLock.Lock()
 	defer c.initializedBoolLock.Unlock()
