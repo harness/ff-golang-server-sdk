@@ -153,7 +153,7 @@ func (c *CfClient) start() {
 
 	go func() {
 		if err := c.initAuthentication(context.Background()); err != nil {
-			c.config.Logger.Error("%s The SDK has failed to initialize due to an authentication error:  %v' ", sdk_codes.InitAuthError, err)
+			c.config.Logger.Errorf("%s The SDK has failed to initialize due to an authentication error:  %v' ", sdk_codes.InitAuthError, err)
 			c.initializedErr <- err
 		}
 	}()
@@ -291,7 +291,8 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 		// If the error is retryable, check if we've exceeded the max retries.
 		attempts++
 		if c.config.maxAuthRetries != -1 && attempts > c.config.maxAuthRetries {
-			return backoff.Permanent(errors.New("exceeded maximum authentication attempts")) // Making this error non-retryable.
+			c.config.Logger.Errorf("%s Authentication failed with error: '%s'. Exceeded max attempts: '%v'.", sdk_codes.AuthExceededRetries, err, c.config.maxAuthRetries)
+			return backoff.Permanent(err) // Making this error non-retryable.
 		}
 
 		return err
