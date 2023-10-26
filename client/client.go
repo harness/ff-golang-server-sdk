@@ -299,7 +299,11 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 
 	retryStrategy := backoff.WithContext(c.config.retryStrategy, ctx)
 
-	err := backoff.Retry(operation, retryStrategy)
+	notify := func(err error, duration time.Duration) {
+		c.config.Logger.Errorf("%s Authentication failed with error: '%s'. Retrying in %v.", sdk_codes.AuthAttempt, err, duration)
+	}
+
+	err := backoff.RetryNotify(operation, retryStrategy, notify)
 
 	if err != nil {
 		// Handle the case where the operation has failed after all retries.
