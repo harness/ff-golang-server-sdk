@@ -93,7 +93,6 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		defer close(out)
 
 		err := c.client.SubscribeWithContext(ctx, "*", func(msg *sse.Event) {
-			c.logger.Infof("%s Event received: %s", sdk_codes.StreamEvent, msg.Data)
 
 			if !deadStreamTimer.Stop() {
 				<-deadStreamTimer.C // if timer already expired, drain the channel
@@ -102,8 +101,11 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 			// Heartbeat event
 			if len(msg.Data) <= 0 {
+				c.logger.Debugf("%s Heartbeat event received", sdk_codes.StreamEvent)
 				return
 			}
+
+			c.logger.Infof("%s Event received: %s", sdk_codes.StreamEvent, msg.Data)
 
 			event := Event{
 				APIKey:      apiKey,
