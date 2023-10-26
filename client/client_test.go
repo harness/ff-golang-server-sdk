@@ -210,7 +210,7 @@ func TestCfClient_NewClient(t *testing.T) {
 				}`
 				var responses []httpmock.Responder
 				// Add a bunch of error responses
-				for i := 0; i < 10; i++ {
+				for i := 0; i < 9; i++ {
 					responses = append(responses, AuthResponseDetailed(500, "internal server error", bodyString))
 				}
 
@@ -236,7 +236,7 @@ func TestCfClient_NewClient(t *testing.T) {
 				}`
 				var responses []httpmock.Responder
 				// Add a bunch of error responses
-				for i := 0; i < 11; i++ {
+				for i := 0; i < 10; i++ {
 					responses = append(responses, AuthResponseDetailed(500, "internal server error", bodyString))
 				}
 

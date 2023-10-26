@@ -288,9 +288,10 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 			return backoff.Permanent(err)
 		}
 
-		// If the error is retryable, check if we've exceeded the max retries.
 		attempts++
-		if c.config.maxAuthRetries != -1 && attempts > c.config.maxAuthRetries {
+
+		// If the error is retryable, check if we've exceeded the max retries.
+		if c.config.maxAuthRetries != -1 && attempts >= c.config.maxAuthRetries {
 			c.config.Logger.Errorf("%s Authentication failed with error: '%s'. Exceeded max attempts: '%v'.", sdk_codes.AuthExceededRetries, err, c.config.maxAuthRetries)
 			return backoff.Permanent(err) // Making this error non-retryable.
 		}
@@ -308,7 +309,7 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 
 	if err != nil {
 		// Handle the case where the operation has failed after all retries.
-		c.config.Logger.Errorf("%s Authentication failed after %d attempts: '%s'.", sdk_codes.AuthExceededRetries, attempts+1, err)
+		c.config.Logger.Errorf("%s Authentication failed after %d attempts: '%s'.", sdk_codes.AuthExceededRetries, attempts, err)
 	}
 
 	return err
