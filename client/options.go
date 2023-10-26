@@ -129,6 +129,7 @@ func WithMaxAuthRetries(i int) ConfigOption {
 }
 
 // WithRetryStrategy WiWithRetryStrategy sets the backoff and retry strategy for regular http clients used by the SDK, i.e. not the go-retryablehttp client
+// Mainly used for testing purposes, as the SDKs default backoff strategy should be sufficient for most if not all scenarios.
 func WithRetryStrategy(retryStrategy *backoff.ExponentialBackOff) ConfigOption {
 	return func(config *config) {
 		config.retryStrategy = retryStrategy
