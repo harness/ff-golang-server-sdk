@@ -79,7 +79,6 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 	onConnect := func(s *sse.Client) {
 		c.streamConnected <- struct{}{}
-		c.logger.Infof("ASDSADSAD")
 	}
 	c.client.OnConnect(onConnect)
 	// it is blocking operation, it needs to go in go routine
