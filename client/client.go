@@ -436,13 +436,16 @@ func (c *CfClient) stream(ctx context.Context) {
 				ticker.Stop()
 			}
 			return
+
 		case <-c.streamConnected:
 			c.config.Logger.Infof("%s Stream successfully connected", sdk_codes.StreamStarted)
 			if ticker != nil {
 				ticker.Stop()
 			}
-			ticker = backoff.NewTicker(c.config.authRetryStrategy)
+			// Reset the reconnection attempt and ticker
 			reconnectionAttempt = 1
+			ticker = backoff.NewTicker(c.config.streamingRetryStrategy)
+
 		case err := <-c.streamDisconnected:
 			c.config.Logger.Warnf("%s Stream disconnected: '%s' Swapping to polling mode", sdk_codes.StreamDisconnected, err)
 			c.mux.RLock()
@@ -459,12 +462,18 @@ func (c *CfClient) stream(ctx context.Context) {
 				})
 			}
 
-			//c.config.Logger.Infof("%s Stream connection lost. Retrying in %s (attempt %d)", sdk_codes.StreamRetry, backoffDuration.String(), reconnectionAttempt)
-
-			c.streamConnect(ctx)
-
+			c.config.Logger.Infof("%s Stream connection lost. Retrying in %s (attempt %d)", sdk_codes.StreamRetry, c.config.streamingRetryStrategy.NextBackOff().String(), reconnectionAttempt)
 			reconnectionAttempt += 1
 
+			// Backoff before retrying
+			select {
+			case <-ticker.C:
+			case <-ctx.Done():
+				c.config.Logger.Infof("%s Stream stopped during reconnection", sdk_codes.StreamStop)
+				ticker.Stop()
+				return
+			}
+			c.streamConnect(ctx)
 		}
 	}
 }
