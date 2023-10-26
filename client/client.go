@@ -354,7 +354,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	// Defensive check to handle the case that all responses are nil
 	if response.JSON200 == nil {
 		return RetryableAuthError{
-			StatusCode: "No errpr status code returned from server",
+			StatusCode: "No error status code returned from server",
 			Message:    "No error message returned from server ",
 		}
 	}
