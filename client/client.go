@@ -299,7 +299,7 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 		return err
 	}
 
-	retryStrategy := backoff.WithContext(c.config.retryStrategy, ctx)
+	retryStrategy := backoff.WithContext(c.config.authRetryStrategy, ctx)
 
 	notify := func(err error, duration time.Duration) {
 		c.config.Logger.Warnf("%s Authentication attempt %d failed with error: '%s'. Retrying in %v.", sdk_codes.AuthAttempt, attempts, err, duration)
@@ -425,17 +425,24 @@ func (c *CfClient) stream(ctx context.Context) {
 	c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
 	c.streamConnect(ctx)
 
-	const maxBackoffDuration = 2 * time.Minute
-	backoffDuration := 2 * time.Second
+	// Use a ticker to handle our backoff and retry attempts
+	var ticker *backoff.Ticker
 	reconnectionAttempt := 1
 	for {
 		select {
 		case <-ctx.Done():
 			c.config.Logger.Infof("%s Stream stopped", sdk_codes.StreamStop)
+			if ticker != nil {
+				ticker.Stop()
+			}
 			return
 		case <-c.streamConnected:
 			c.config.Logger.Infof("%s Stream successfully connected", sdk_codes.StreamStarted)
-			backoffDuration = 2 * time.Second
+			if ticker != nil {
+				ticker.Stop()
+			}
+			ticker = backoff.NewTicker(c.config.authRetryStrategy)
+			reconnectionAttempt = 1
 		case err := <-c.streamDisconnected:
 			c.config.Logger.Warnf("%s Stream disconnected: '%s' Swapping to polling mode", sdk_codes.StreamDisconnected, err)
 			c.mux.RLock()
@@ -452,19 +459,11 @@ func (c *CfClient) stream(ctx context.Context) {
 				})
 			}
 
-			c.config.Logger.Infof("%s Stream connection lost. Retrying in %s (attempt %d)", sdk_codes.StreamRetry, backoffDuration.String(), reconnectionAttempt)
-
-			time.Sleep(backoffDuration)
+			//c.config.Logger.Infof("%s Stream connection lost. Retrying in %s (attempt %d)", sdk_codes.StreamRetry, backoffDuration.String(), reconnectionAttempt)
 
 			c.streamConnect(ctx)
 
 			reconnectionAttempt += 1
-			if backoffDuration > maxBackoffDuration {
-				backoffDuration = maxBackoffDuration
-				return
-			}
-
-			backoffDuration *= 2
 
 		}
 	}

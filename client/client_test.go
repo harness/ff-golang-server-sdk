@@ -182,7 +182,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Synchronous client: Authentication failed with 500 and succeeds after one retry",
 			newClientFunc: func() (*CfClient, error) {
-				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithAuthRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
 			},
 			mockResponder: func() {
 				bodyString := `{
@@ -200,7 +200,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Synchronous client: Authentication failed and succeeds just before exceeding max retries",
 			newClientFunc: func() (*CfClient, error) {
-				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
+				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithAuthRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
 				return newClient, err
 			},
 			mockResponder: func() {
@@ -226,7 +226,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Synchronous client: Authentication failed and exceeds max retries",
 			newClientFunc: func() (*CfClient, error) {
-				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
+				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithAuthRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
 				return newClient, err
 			},
 			mockResponder: func() {
@@ -505,7 +505,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 		{
 			name: "Evaluations with Synchronous client with a server error",
 			clientFunc: func() (*CfClient, error) {
-				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(2), WithRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(2), WithAuthRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
 			},
 			mockResponder: func() {
 				bodyString := `{
@@ -560,7 +560,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 		{
 			name: "Evaluations with Async client with a server error",
 			clientFunc: func() (*CfClient, error) {
-				return newClient(http.DefaultClient, ValidSDKKey, WithMaxAuthRetries(2), WithRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
+				return newClient(http.DefaultClient, ValidSDKKey, WithMaxAuthRetries(2), WithAuthRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
 			},
 			mockResponder: func() {
 				bodyString := `{

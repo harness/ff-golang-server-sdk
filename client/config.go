@@ -16,24 +16,25 @@ import (
 )
 
 type config struct {
-	url                 string
-	eventsURL           string
-	pullInterval        uint // in seconds
-	Cache               cache.Cache
-	Store               storage.Storage
-	Logger              logger.Logger
-	httpClient          *http.Client
-	authHttpClient      *http.Client
-	enableStream        bool
-	enableStore         bool
-	target              evaluation.Target
-	eventStreamListener stream.EventStreamListener
-	enableAnalytics     bool
-	proxyMode           bool
-	waitForInitialized  bool
-	maxAuthRetries      int
-	retryStrategy       *backoff.ExponentialBackOff
-	sleeper             types.Sleeper
+	url                    string
+	eventsURL              string
+	pullInterval           uint // in seconds
+	Cache                  cache.Cache
+	Store                  storage.Storage
+	Logger                 logger.Logger
+	httpClient             *http.Client
+	authHttpClient         *http.Client
+	enableStream           bool
+	enableStore            bool
+	target                 evaluation.Target
+	eventStreamListener    stream.EventStreamListener
+	enableAnalytics        bool
+	proxyMode              bool
+	waitForInitialized     bool
+	maxAuthRetries         int
+	authRetryStrategy      *backoff.ExponentialBackOff
+	streamingRetryStrategy *backoff.ExponentialBackOff
+	sleeper                types.Sleeper
 }
 
 func newDefaultConfig(log logger.Logger) *config {
@@ -47,10 +48,6 @@ func newDefaultConfig(log logger.Logger) *config {
 	const requestTimeout = time.Second * 30
 	authHttpClient := &http.Client{}
 	authHttpClient.Timeout = requestTimeout
-	exponentialBackOff := backoff.NewExponentialBackOff()
-	exponentialBackOff.InitialInterval = 1 * time.Second
-	exponentialBackOff.MaxInterval = 1 * time.Minute
-	exponentialBackOff.Multiplier = 2.0
 
 	// Remaining requests use a go-retryablehttp client to handle retries.
 	requestHttpClient := retryablehttp.NewClient()
@@ -88,8 +85,17 @@ func newDefaultConfig(log logger.Logger) *config {
 		enableAnalytics: true,
 		proxyMode:       false,
 		// Indicate that we should retry forever by default
-		maxAuthRetries: -1,
-		retryStrategy:  exponentialBackOff,
-		sleeper:        &types.RealClock{},
+		maxAuthRetries:         -1,
+		authRetryStrategy:      getDefaultExpBackoff(),
+		streamingRetryStrategy: getDefaultExpBackoff(),
+		sleeper:                &types.RealClock{},
 	}
+}
+
+func getDefaultExpBackoff() *backoff.ExponentialBackOff {
+	exponentialBackOff := backoff.NewExponentialBackOff()
+	exponentialBackOff.InitialInterval = 1 * time.Second
+	exponentialBackOff.MaxInterval = 1 * time.Minute
+	exponentialBackOff.Multiplier = 2.0
+	return exponentialBackOff
 }
