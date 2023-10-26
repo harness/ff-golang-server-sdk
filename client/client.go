@@ -43,29 +43,30 @@ import (
 // should call Close() to ensure that all of its connections and goroutines are shut down and
 // that any pending analytics events have been delivered.
 type CfClient struct {
-	evaluator           *evaluation.Evaluator
-	repository          repository.Repository
-	mux                 sync.RWMutex
-	api                 rest.ClientWithResponsesInterface
-	metricsapi          metricsclient.ClientWithResponsesInterface
-	sdkKey              string
-	auth                rest.AuthenticationRequest
-	config              *config
-	environmentID       string
-	token               string
-	streamConnected     bool
-	streamConnectedLock sync.RWMutex
-	streamDisconnected  chan error
-	authenticated       chan struct{}
-	postEvalChan        chan evaluation.PostEvalData
-	initializedBool     bool
-	initializedBoolLock sync.RWMutex
-	initialized         chan struct{}
-	initializedErr      chan error
-	analyticsService    *analyticsservice.AnalyticsService
-	clusterIdentifier   string
-	stop                chan struct{}
-	stopped             *atomicBool
+	evaluator               *evaluation.Evaluator
+	repository              repository.Repository
+	mux                     sync.RWMutex
+	api                     rest.ClientWithResponsesInterface
+	metricsapi              metricsclient.ClientWithResponsesInterface
+	sdkKey                  string
+	auth                    rest.AuthenticationRequest
+	config                  *config
+	environmentID           string
+	token                   string
+	streamConnectedBool     bool
+	streamConnectedBoolLock sync.RWMutex
+	streamConnected         chan struct{}
+	streamDisconnected      chan error
+	authenticated           chan struct{}
+	postEvalChan            chan evaluation.PostEvalData
+	initializedBool         bool
+	initializedBoolLock     sync.RWMutex
+	initialized             chan struct{}
+	initializedErr          chan error
+	analyticsService        *analyticsservice.AnalyticsService
+	clusterIdentifier       string
+	stop                    chan struct{}
+	stopped                 *atomicBool
 }
 
 // NewCfClient creates a new client instance that connects to CF with the default configuration.
@@ -91,6 +92,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		stopped:            newAtomicBool(false),
 		initialized:        make(chan struct{}),
 		initializedErr:     make(chan error),
+		streamConnected:    make(chan struct{}),
 		streamDisconnected: make(chan error),
 	}
 
@@ -170,7 +172,7 @@ func (c *CfClient) PostEvaluateProcessor(data *evaluation.PostEvalData) {
 
 // IsStreamConnected determines if the stream is currently connected
 func (c *CfClient) IsStreamConnected() bool {
-	return c.streamConnected
+	return c.streamConnectedBool
 }
 
 // GetClusterIdentifier returns the cluster identifier we're connected to
@@ -243,9 +245,9 @@ func (c *CfClient) retrieve(ctx context.Context) {
 
 func (c *CfClient) streamConnect(ctx context.Context) {
 	// we only ever want one stream to be setup - other threads must wait before trying to establish a connection
-	c.streamConnectedLock.Lock()
-	defer c.streamConnectedLock.Unlock()
-	if !c.config.enableStream || c.streamConnected {
+	c.streamConnectedBoolLock.Lock()
+	defer c.streamConnectedBoolLock.Unlock()
+	if !c.config.enableStream || c.streamConnectedBool {
 		return
 	}
 
@@ -259,13 +261,13 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	sseClient.Connection = c.config.httpClient
 
 	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.repository, c.api, c.config.Logger,
-		c.config.eventStreamListener, c.config.proxyMode, c.streamDisconnected)
+		c.config.eventStreamListener, c.config.proxyMode, c.streamConnected, c.streamDisconnected)
 
 	// Connect kicks off a goroutine that attempts to establish a stream connection
-	// while this is happening we set streamConnected to true - if any errors happen
-	// in this process streamConnected will be set back to false by the streamDisconnected function
+	// while this is happening we set streamConnectedBool to true - if any errors happen
+	// in this process streamConnectedBool will be set back to false by the streamDisconnected function
 	conn.Connect(ctx, c.environmentID, c.sdkKey)
-	c.streamConnected = true
+	c.streamConnectedBool = true
 }
 
 func (c *CfClient) initAuthentication(ctx context.Context) error {
@@ -436,10 +438,12 @@ func (c *CfClient) stream(ctx context.Context) {
 		case <-ctx.Done():
 			c.config.Logger.Infof("%s Stream stopped", sdk_codes.StreamStop)
 			return
+		case <-c.streamConnected:
+			c.config.Logger.Infof("%s Stream successfully connected", sdk_codes.StreamStarted)
 		case err := <-c.streamDisconnected:
 			c.config.Logger.Warnf("%s Stream disconnected: '%s' Swapping to polling mode", sdk_codes.StreamDisconnected, err)
 			c.mux.RLock()
-			c.streamConnected = false
+			c.streamConnectedBool = false
 			c.mux.RUnlock()
 
 			// If an eventStreamListener has been passed to the Proxy lets notify it of the disconnected
@@ -474,7 +478,7 @@ func (c *CfClient) pullCronJob(ctx context.Context) {
 	poll := func() {
 		c.mux.RLock()
 		defer c.mux.RUnlock()
-		if !c.streamConnected {
+		if !c.streamConnectedBool {
 			c.retrieve(ctx)
 		}
 	}

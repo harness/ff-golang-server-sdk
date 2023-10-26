@@ -24,6 +24,7 @@ type SSEClient struct {
 	repository          repository.Repository
 	logger              logger.Logger
 	eventStreamListener EventStreamListener
+	streamConnected     chan struct{}
 	streamDisconnected  chan error
 
 	proxyMode bool
@@ -41,6 +42,7 @@ func NewSSEClient(
 	logger logger.Logger,
 	eventStreamListener EventStreamListener,
 	proxyMode bool,
+	streamConnected chan struct{},
 	streamDisconnected chan error,
 
 ) *SSEClient {
@@ -53,6 +55,7 @@ func NewSSEClient(
 		logger:              logger,
 		eventStreamListener: eventStreamListener,
 		proxyMode:           proxyMode,
+		streamConnected:     streamConnected,
 		streamDisconnected:  streamDisconnected,
 	}
 	return sseClient
@@ -69,17 +72,14 @@ func (c *SSEClient) Connect(ctx context.Context, environment string, apiKey stri
 
 // Connect will subscribe to SSE stream
 func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey string) <-chan Event {
-	c.logger.Infof("%s Start subscribing to Stream", sdk_codes.StreamStarted)
+	c.logger.Infof("%s Attempting to start stream")
 	// don't use the default exponentialBackoff strategy - we have our own disconnect logic
 	// of polling the service then re-establishing a new stream once we can connect
 	c.client.ReconnectStrategy = &backoff.StopBackOff{}
 
 	onConnect := func(s *sse.Client) {
+		c.streamConnected <- struct{}{}
 		c.logger.Infof("ASDSADSAD")
-		// You can interact with the 'c' client instance or do any other necessary operations here.
-		// For example:
-		// c.IsConnected = true
-		// c.SSEClient.Subscribe(...)
 	}
 	c.client.OnConnect(onConnect)
 	// it is blocking operation, it needs to go in go routine
