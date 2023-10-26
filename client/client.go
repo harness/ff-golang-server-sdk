@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"golang.org/x/sync/errgroup"
 	"log"
-	"math/rand"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -271,14 +270,12 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 }
 
 func (c *CfClient) initAuthentication(ctx context.Context) error {
-	baseDelay := 1 * time.Second
-	maxDelay := 1 * time.Minute
-	factor := 2.0
-	currentDelay := baseDelay
 
-	attempts := 0
+	// Variable to count the number of attempts.
+	var attempts int
 
-	for {
+	// Define the operation to be retried.
+	operation := func() error {
 		err := c.authenticate(ctx)
 		if err == nil {
 			c.config.Logger.Infof("%s Authenticated successfully'", sdk_codes.AuthSuccess)
@@ -287,37 +284,29 @@ func (c *CfClient) initAuthentication(ctx context.Context) error {
 
 		var nonRetryableAuthError NonRetryableAuthError
 		if errors.As(err, &nonRetryableAuthError) {
-			c.config.Logger.Error("%s Authentication failed with a non-retryable error: '%s %s' Default variations will now be served", sdk_codes.AuthFailed, nonRetryableAuthError.StatusCode, nonRetryableAuthError.Message)
-			return err
+			c.config.Logger.Error("%s Authentication failed with a non-retryable error: '%s %s'. Default variations will now be served.", sdk_codes.AuthFailed, nonRetryableAuthError.StatusCode, nonRetryableAuthError.Message)
+			return backoff.Permanent(err)
 		}
 
-		// -1 is the default maxAuthRetries option and indicates there should be no max attempts
-		if c.config.maxAuthRetries != -1 && attempts >= c.config.maxAuthRetries {
-			c.config.Logger.Errorf("%s Authentication failed with error: '%s'. Exceeded max attempts: '%v'.", sdk_codes.AuthExceededRetries, err, c.config.maxAuthRetries)
-			return err
-		}
-
-		jitter := time.Duration(rand.Float64() * float64(currentDelay))
-		delayWithJitter := currentDelay + jitter
-
-		maxAttemptLog := ""
-		if c.config.maxAuthRetries == -1 {
-			maxAttemptLog = "∞"
-		} else {
-			maxAttemptLog = strconv.Itoa(c.config.maxAuthRetries)
-		}
-
-		c.config.Logger.Errorf("%s Authentication attempt %d of %s failed with error: '%s'. Retrying in %v.", sdk_codes.AuthAttempt, attempts, maxAttemptLog, err, delayWithJitter)
-		c.config.sleeper.Sleep(delayWithJitter)
-
-		currentDelay *= time.Duration(factor)
-		if currentDelay > maxDelay {
-			currentDelay = maxDelay
-		}
-
+		// If the error is retryable, check if we've exceeded the max retries.
 		attempts++
+		if c.config.maxAuthRetries != -1 && attempts > c.config.maxAuthRetries {
+			return backoff.Permanent(errors.New("exceeded maximum authentication attempts")) // Making this error non-retryable.
+		}
 
+		return err
 	}
+
+	retryStrategy := backoff.WithContext(c.config.retryStrategy, ctx)
+
+	err := backoff.Retry(operation, retryStrategy)
+
+	if err != nil {
+		// Handle the case where the operation has failed after all retries.
+		c.config.Logger.Errorf("%s Authentication failed after %d attempts: '%s'.", sdk_codes.AuthExceededRetries, attempts+1, err)
+	}
+
+	return err
 }
 
 func (c *CfClient) authenticate(ctx context.Context) error {
@@ -440,6 +429,7 @@ func (c *CfClient) stream(ctx context.Context) {
 			return
 		case <-c.streamConnected:
 			c.config.Logger.Infof("%s Stream successfully connected", sdk_codes.StreamStarted)
+			backoffDuration = 2 * time.Second
 		case err := <-c.streamDisconnected:
 			c.config.Logger.Warnf("%s Stream disconnected: '%s' Swapping to polling mode", sdk_codes.StreamDisconnected, err)
 			c.mux.RLock()

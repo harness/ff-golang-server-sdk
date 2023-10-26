@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/ff-golang-server-sdk/cache"
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/logger"
@@ -122,6 +123,12 @@ func WithWaitForInitialized(b bool) ConfigOption {
 func WithMaxAuthRetries(i int) ConfigOption {
 	return func(config *config) {
 		config.maxAuthRetries = i
+	}
+}
+
+func WithRetryStrategy(retryStrategy *backoff.ExponentialBackOff) ConfigOption {
+	return func(config *config) {
+		config.retryStrategy = retryStrategy
 	}
 }
 

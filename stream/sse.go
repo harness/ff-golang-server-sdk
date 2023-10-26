@@ -8,10 +8,10 @@ import (
 
 	"github.com/harness/ff-golang-server-sdk/pkg/repository"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/ff-golang-server-sdk/dto"
 	"github.com/harness/ff-golang-server-sdk/logger"
 	"github.com/harness/ff-golang-server-sdk/rest"
-	backoff "gopkg.in/cenkalti/backoff.v1"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/r3labs/sse/v2"

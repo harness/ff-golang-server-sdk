@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/ff-golang-server-sdk/cache"
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/logger"
@@ -31,6 +32,7 @@ type config struct {
 	proxyMode           bool
 	waitForInitialized  bool
 	maxAuthRetries      int
+	retryStrategy       *backoff.ExponentialBackOff
 	sleeper             types.Sleeper
 }
 
@@ -41,11 +43,14 @@ func newDefaultConfig(log logger.Logger) *config {
 		defaultStore = storage.NewFileStore("defaultProject", storage.GetHarnessDir(log), log)
 	}
 
-	const requestTimeout = time.Second * 30
-
 	// Authentication uses a default http client + timeout as we have our own custom retry logic for authentication.
+	const requestTimeout = time.Second * 30
 	authHttpClient := &http.Client{}
 	authHttpClient.Timeout = requestTimeout
+	exponentialBackOff := backoff.NewExponentialBackOff()
+	exponentialBackOff.InitialInterval = 1 * time.Second
+	exponentialBackOff.MaxInterval = 1 * time.Minute
+	exponentialBackOff.Multiplier = 2.0
 
 	// Remaining requests use a go-retryablehttp client to handle retries.
 	requestHttpClient := retryablehttp.NewClient()
@@ -84,6 +89,7 @@ func newDefaultConfig(log logger.Logger) *config {
 		proxyMode:       false,
 		// Indicate that we should retry forever by default
 		maxAuthRetries: -1,
+		retryStrategy:  exponentialBackOff,
 		sleeper:        &types.RealClock{},
 	}
 }
