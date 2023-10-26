@@ -425,8 +425,11 @@ func (c *CfClient) stream(ctx context.Context) {
 	c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
 	c.streamConnect(ctx)
 
-	// Use a ticker to handle our backoff and retry attempts
-	var ticker *backoff.Ticker
+	streamingRetryStrategy := c.config.streamingRetryStrategy
+	// Create an initial ticker to handle the case where we don't open a succesful connection on our first attempt
+	ticker := backoff.NewTicker(streamingRetryStrategy)
+
+	defer ticker.Stop()
 	reconnectionAttempt := 1
 	for {
 		select {
@@ -439,12 +442,11 @@ func (c *CfClient) stream(ctx context.Context) {
 
 		case <-c.streamConnected:
 			c.config.Logger.Infof("%s Stream successfully connected", sdk_codes.StreamStarted)
-			if ticker != nil {
-				ticker.Stop()
-			}
 			// Reset the reconnection attempt and ticker
 			reconnectionAttempt = 1
-			ticker = backoff.NewTicker(c.config.streamingRetryStrategy)
+			streamingRetryStrategy.Reset()
+			ticker.Stop()
+			ticker = nil
 
 		case err := <-c.streamDisconnected:
 			c.config.Logger.Warnf("%s Stream disconnected: '%s' Swapping to polling mode", sdk_codes.StreamDisconnected, err)
@@ -462,7 +464,11 @@ func (c *CfClient) stream(ctx context.Context) {
 				})
 			}
 
-			c.config.Logger.Infof("%s Stream connection lost. Retrying in %s (attempt %d)", sdk_codes.StreamRetry, c.config.streamingRetryStrategy.NextBackOff().String(), reconnectionAttempt)
+			if ticker == nil {
+				ticker = backoff.NewTicker(streamingRetryStrategy)
+			}
+
+			c.config.Logger.Infof("%s Stream connection lost: '%v' Retrying in %fs (attempt %d)", sdk_codes.StreamRetry, err, streamingRetryStrategy.NextBackOff().Seconds(), reconnectionAttempt)
 			reconnectionAttempt += 1
 
 			// Backoff before retrying
