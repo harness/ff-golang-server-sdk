@@ -74,6 +74,14 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 	// of polling the service then re-establishing a new stream once we can connect
 	c.client.ReconnectStrategy = &backoff.StopBackOff{}
 
+	onConnect := func(s *sse.Client) {
+		c.logger.Infof("ASDSADSAD")
+		// You can interact with the 'c' client instance or do any other necessary operations here.
+		// For example:
+		// c.IsConnected = true
+		// c.SSEClient.Subscribe(...)
+	}
+	c.client.OnConnect(onConnect)
 	// it is blocking operation, it needs to go in go routine
 	out := make(chan Event)
 
