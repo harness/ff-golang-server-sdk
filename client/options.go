@@ -114,24 +114,28 @@ func WithProxyMode(b bool) ConfigOption {
 	}
 }
 
+// WithWaitForInitialized configures the SDK to block the thread until initialization succeeds or fails
 func WithWaitForInitialized(b bool) ConfigOption {
 	return func(config *config) {
 		config.waitForInitialized = b
 	}
 }
 
+// WithMaxAuthRetries sets how many times the SDK will retry if authentication fails
 func WithMaxAuthRetries(i int) ConfigOption {
 	return func(config *config) {
 		config.maxAuthRetries = i
 	}
 }
 
+// WithRetryStrategy WiWithRetryStrategy sets the backoff and retry strategy for regular http clients used by the SDK, i.e. not the go-retryablehttp client
 func WithRetryStrategy(retryStrategy *backoff.ExponentialBackOff) ConfigOption {
 	return func(config *config) {
 		config.retryStrategy = retryStrategy
 	}
 }
 
+// WithSleeper is used to aid in testing functionality that sleeps
 func WithSleeper(sleeper types.Sleeper) ConfigOption {
 	return func(config *config) {
 		config.sleeper = sleeper

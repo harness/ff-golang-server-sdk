@@ -762,6 +762,7 @@ func TestCfClient_Close(t *testing.T) {
 	assert.NotNil(t, client.Close())
 }
 
+// getInstantRetryStrategy returns a strategy that retries every millisecond for testing purposes
 func getInstantRetryStrategy() *backoff.ExponentialBackOff {
 	exponentialBackOff := backoff.NewExponentialBackOff()
 	exponentialBackOff.InitialInterval = 1 * time.Millisecond
