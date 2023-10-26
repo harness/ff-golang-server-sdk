@@ -95,9 +95,10 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		err := c.client.SubscribeWithContext(ctx, "*", func(msg *sse.Event) {
 
 			if !deadStreamTimer.Stop() {
-				<-deadStreamTimer.C // if timer already expired, drain the channel
+				// if timer already expired, drain the channel
+				<-deadStreamTimer.C
 			}
-			deadStreamTimer.Reset(30 * time.Second) // Resetting the timer since we've just received something.
+			deadStreamTimer.Reset(30 * time.Second)
 
 			// Heartbeat event
 			if len(msg.Data) <= 0 {
