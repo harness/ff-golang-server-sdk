@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/ff-golang-server-sdk/dto"
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/log"
@@ -16,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 )
 
 const (
@@ -198,7 +200,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Synchronous client: Authentication failed and succeeds just before exceeding max retries",
 			newClientFunc: func() (*CfClient, error) {
-				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithSleeper(test_helpers.MockSleeper{}))
+				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
 				return newClient, err
 			},
 			mockResponder: func() {
@@ -758,4 +760,12 @@ func TestCfClient_Close(t *testing.T) {
 
 	t.Log("When I close the client for the second time I should an error")
 	assert.NotNil(t, client.Close())
+}
+
+func getInstantRetryStrategy() *backoff.ExponentialBackOff {
+	exponentialBackOff := backoff.NewExponentialBackOff()
+	exponentialBackOff.InitialInterval = 1 * time.Millisecond
+	exponentialBackOff.MaxInterval = 1 * time.Millisecond
+	exponentialBackOff.Multiplier = 0
+	return exponentialBackOff
 }
