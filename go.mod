@@ -3,6 +3,7 @@ module github.com/harness/ff-golang-server-sdk
 go 1.18
 
 require (
+	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/deepmap/oapi-codegen v1.11.0
 	github.com/getkin/kin-openapi v0.94.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
@@ -19,7 +20,6 @@ require (
 	go.uber.org/zap v1.16.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	gopkg.in/cenkalti/backoff.v1 v1.1.0
 )
 
 require (
@@ -36,6 +36,7 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
+	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
