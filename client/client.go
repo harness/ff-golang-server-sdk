@@ -468,7 +468,7 @@ func (c *CfClient) stream(ctx context.Context) {
 				ticker = backoff.NewTicker(streamingRetryStrategy)
 			}
 
-			c.config.Logger.Infof("%s Stream connection lost: '%v' Retrying in %fs (attempt %d)", sdk_codes.StreamRetry, err, streamingRetryStrategy.NextBackOff().Seconds(), reconnectionAttempt)
+			c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, streamingRetryStrategy.NextBackOff().Seconds(), reconnectionAttempt)
 			reconnectionAttempt += 1
 
 			// Backoff before retrying
