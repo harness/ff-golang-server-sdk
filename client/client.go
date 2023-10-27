@@ -56,6 +56,7 @@ type CfClient struct {
 	streamConnectedBoolLock sync.RWMutex
 	streamConnected         chan struct{}
 	streamDisconnected      chan error
+	pollingChan             chan pollAction
 	authenticatedChan       chan struct{}
 	postEvalChan            chan evaluation.PostEvalData
 	initializedBool         bool
@@ -67,6 +68,15 @@ type CfClient struct {
 	stop                    chan struct{}
 	stopped                 *atomicBool
 }
+
+// pollAction is the type for representing different messages that can be passed to the channel responsible
+// signalling that polling should be started or stopped
+type pollAction string
+
+const (
+	start pollAction = "start" // will be 0
+	stop  pollAction = "stop"  // will be 1
+)
 
 // NewCfClient creates a new client instance that connects to CF with the default configuration.
 // For advanced configuration options use ConfigOptions functions
@@ -93,6 +103,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		initializedErrChan: make(chan error),
 		streamConnected:    make(chan struct{}),
 		streamDisconnected: make(chan error),
+		pollingChan:        make(chan pollAction),
 	}
 
 	if sdkKey == "" {
@@ -422,21 +433,20 @@ func (c *CfClient) makeTicker(interval uint) *time.Ticker {
 func (c *CfClient) stream(ctx context.Context) {
 	// wait until initialized with initial state
 	<-c.initializedChan
-	c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
 	c.streamConnect(ctx)
 
 	streamingRetryStrategy := c.config.streamingRetryStrategy
 	// Create an initial ticker to handle the case where we don't open a succesful connection on our first attempt
-	ticker := backoff.NewTicker(streamingRetryStrategy)
+	reconnectTicker := backoff.NewTicker(streamingRetryStrategy)
 
-	defer ticker.Stop()
+	defer reconnectTicker.Stop()
 	reconnectionAttempt := 1
 	for {
 		select {
 		case <-ctx.Done():
 			c.config.Logger.Infof("%s Stream stopped", sdk_codes.StreamStop)
-			if ticker != nil {
-				ticker.Stop()
+			if reconnectTicker != nil {
+				reconnectTicker.Stop()
 			}
 			return
 
@@ -445,11 +455,19 @@ func (c *CfClient) stream(ctx context.Context) {
 			// Reset the reconnection attempt and ticker
 			reconnectionAttempt = 1
 			streamingRetryStrategy.Reset()
-			ticker.Stop()
-			ticker = nil
+			reconnectTicker.Stop()
+			reconnectTicker = nil
+
+			// Signal that we should stop polling
+			c.pollingChan <- stop
 
 		case err := <-c.streamDisconnected:
 			c.config.Logger.Warnf("%s Stream disconnected: '%s' Swapping to polling mode", sdk_codes.StreamDisconnected, err)
+
+			// Signal that we should start polling
+			// Signal that we should stop polling
+			c.pollingChan <- start
+
 			c.mux.RLock()
 			c.streamConnectedBool = false
 			c.mux.RUnlock()
@@ -464,8 +482,8 @@ func (c *CfClient) stream(ctx context.Context) {
 				})
 			}
 
-			if ticker == nil {
-				ticker = backoff.NewTicker(streamingRetryStrategy)
+			if reconnectTicker == nil {
+				reconnectTicker = backoff.NewTicker(streamingRetryStrategy)
 			}
 
 			c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, streamingRetryStrategy.NextBackOff().Seconds(), reconnectionAttempt)
@@ -473,10 +491,10 @@ func (c *CfClient) stream(ctx context.Context) {
 
 			// Backoff before retrying
 			select {
-			case <-ticker.C:
+			case <-reconnectTicker.C:
 			case <-ctx.Done():
 				c.config.Logger.Infof("%s Stream stopped during reconnection", sdk_codes.StreamStop)
-				ticker.Stop()
+				reconnectTicker.Stop()
 				return
 			}
 			c.streamConnect(ctx)
@@ -499,17 +517,34 @@ func (c *CfClient) pullCronJob(ctx context.Context) {
 	// pull initial data
 	poll()
 
-	// start cron
+	// Start polling
 	pullingTicker := c.makeTicker(c.config.pullInterval)
 	for {
 		select {
+		case action := <-c.pollingChan:
+			switch action {
+			case start:
+				// Start the ticker.
+				if pullingTicker == nil { // Ensure that we don't create a ticker if one is already running.
+					pullingTicker = c.makeTicker(c.config.pullInterval)
+					c.config.Logger.Infof("%s Polling Started", sdk_codes.PollStart)
+				}
+			case stop:
+				// Stop the ticker.
+				if pullingTicker != nil {
+					pullingTicker.Stop()
+					pullingTicker = nil
+					c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
+				}
+			}
+		case <-pullingTicker.C:
+			poll()
 		case <-ctx.Done():
 			pullingTicker.Stop()
 			c.config.Logger.Infof("%s Polling stopped", sdk_codes.PollStop)
 			return
-		case <-pullingTicker.C:
-			poll()
 		}
+
 	}
 }
 
