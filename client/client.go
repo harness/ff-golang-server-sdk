@@ -46,7 +46,7 @@ type CfClient struct {
 	repository              repository.Repository
 	mux                     sync.RWMutex
 	api                     rest.ClientWithResponsesInterface
-	metricsapi              metricsclient.ClientWithResponsesInterface
+	metricsApi              metricsclient.ClientWithResponsesInterface
 	sdkKey                  string
 	auth                    rest.AuthenticationRequest
 	config                  *config
@@ -54,8 +54,8 @@ type CfClient struct {
 	token                   string
 	streamConnectedBool     bool
 	streamConnectedBoolLock sync.RWMutex
-	streamConnected         chan struct{}
-	streamDisconnected      chan error
+	streamConnectedChan     chan struct{}
+	streamDisconnectedChan  chan error
 	authenticatedChan       chan struct{}
 	postEvalChan            chan evaluation.PostEvalData
 	initializedBool         bool
@@ -81,18 +81,18 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	analyticsService := analyticsservice.NewAnalyticsService(time.Minute, config.Logger)
 
 	client := &CfClient{
-		sdkKey:             sdkKey,
-		config:             config,
-		authenticatedChan:  make(chan struct{}),
-		analyticsService:   analyticsService,
-		clusterIdentifier:  "1",
-		postEvalChan:       make(chan evaluation.PostEvalData),
-		stop:               make(chan struct{}),
-		stopped:            newAtomicBool(false),
-		initializedChan:    make(chan struct{}),
-		initializedErrChan: make(chan error),
-		streamConnected:    make(chan struct{}),
-		streamDisconnected: make(chan error),
+		sdkKey:                 sdkKey,
+		config:                 config,
+		authenticatedChan:      make(chan struct{}),
+		analyticsService:       analyticsService,
+		clusterIdentifier:      "1",
+		postEvalChan:           make(chan evaluation.PostEvalData),
+		stop:                   make(chan struct{}),
+		stopped:                newAtomicBool(false),
+		initializedChan:        make(chan struct{}),
+		initializedErrChan:     make(chan error),
+		streamConnectedChan:    make(chan struct{}),
+		streamDisconnectedChan: make(chan error),
 	}
 
 	if sdkKey == "" {
@@ -260,7 +260,7 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	sseClient.Connection = c.config.httpClient
 
 	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.repository, c.api, c.config.Logger,
-		c.config.eventStreamListener, c.config.proxyMode, c.streamConnected, c.streamDisconnected)
+		c.config.eventStreamListener, c.config.proxyMode, c.streamConnectedChan, c.streamDisconnectedChan)
 
 	// Connect kicks off a goroutine that attempts to establish a stream connection
 	// while this is happening we set streamConnectedBool to true - if any errors happen
@@ -409,7 +409,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	}
 
 	c.api = restClient
-	c.metricsapi = metricsClient
+	c.metricsApi = metricsClient
 	c.config.Logger.Info("Authentication complete")
 	close(c.authenticatedChan)
 	return nil
@@ -440,7 +440,7 @@ func (c *CfClient) stream(ctx context.Context) {
 			}
 			return
 
-		case <-c.streamConnected:
+		case <-c.streamConnectedChan:
 			c.config.Logger.Infof("%s Stream successfully connected", sdk_codes.StreamStarted)
 			// Reset the reconnection attempt and ticker
 			reconnectionAttempt = 1
@@ -448,7 +448,7 @@ func (c *CfClient) stream(ctx context.Context) {
 			ticker.Stop()
 			ticker = nil
 
-		case err := <-c.streamDisconnected:
+		case err := <-c.streamDisconnectedChan:
 			c.config.Logger.Warnf("%s Stream disconnected: '%s' Swapping to polling mode", sdk_codes.StreamDisconnected, err)
 			c.mux.RLock()
 			c.streamConnectedBool = false
@@ -573,7 +573,7 @@ func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 		return
 	}
 	c.config.Logger.Info("Posting analytics data enabled")
-	c.analyticsService.Start(ctx, &c.metricsapi, c.environmentID)
+	c.analyticsService.Start(ctx, &c.metricsApi, c.environmentID)
 }
 
 // BoolVariation returns the value of a boolean feature flag for a given target.
