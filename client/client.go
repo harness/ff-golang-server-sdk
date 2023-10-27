@@ -56,12 +56,12 @@ type CfClient struct {
 	streamConnectedBoolLock sync.RWMutex
 	streamConnected         chan struct{}
 	streamDisconnected      chan error
-	authenticated           chan struct{}
+	authenticatedChan       chan struct{}
 	postEvalChan            chan evaluation.PostEvalData
 	initializedBool         bool
 	initializedBoolLock     sync.RWMutex
-	initialized             chan struct{}
-	initializedErr          chan error
+	initializedChan         chan struct{}
+	initializedErrChan      chan error
 	analyticsService        *analyticsservice.AnalyticsService
 	clusterIdentifier       string
 	stop                    chan struct{}
@@ -83,14 +83,14 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 	client := &CfClient{
 		sdkKey:             sdkKey,
 		config:             config,
-		authenticated:      make(chan struct{}),
+		authenticatedChan:  make(chan struct{}),
 		analyticsService:   analyticsService,
 		clusterIdentifier:  "1",
 		postEvalChan:       make(chan evaluation.PostEvalData),
 		stop:               make(chan struct{}),
 		stopped:            newAtomicBool(false),
-		initialized:        make(chan struct{}),
-		initializedErr:     make(chan error),
+		initializedChan:    make(chan struct{}),
+		initializedErrChan: make(chan error),
 		streamConnected:    make(chan struct{}),
 		streamDisconnected: make(chan error),
 	}
@@ -124,10 +124,10 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		var initErr error
 
 		select {
-		case <-client.initialized:
+		case <-client.initializedChan:
 			config.Logger.Infof("%s The SDK has successfully initialized", sdk_codes.InitSuccess)
 			return client, nil
-		case err := <-client.initializedErr:
+		case err := <-client.initializedErrChan:
 			initErr = err
 		}
 
@@ -154,7 +154,7 @@ func (c *CfClient) start() {
 	go func() {
 		if err := c.initAuthentication(context.Background()); err != nil {
 			c.config.Logger.Errorf("%s The SDK has failed to initialize due to an authentication error:  %v' ", sdk_codes.InitAuthError, err)
-			c.initializedErr <- err
+			c.initializedErrChan <- err
 		}
 	}()
 	go c.setAnalyticsServiceClient(ctx)
@@ -238,7 +238,7 @@ func (c *CfClient) retrieve(ctx context.Context) {
 	// marking it as such.
 	if !c.initializedBool {
 		c.initializedBool = true
-		close(c.initialized)
+		close(c.initializedChan)
 	}
 }
 
@@ -250,7 +250,7 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 		return
 	}
 
-	<-c.authenticated
+	<-c.authenticatedChan
 
 	c.mux.RLock()
 	defer c.mux.RUnlock()
@@ -411,7 +411,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	c.api = restClient
 	c.metricsapi = metricsClient
 	c.config.Logger.Info("Authentication complete")
-	close(c.authenticated)
+	close(c.authenticatedChan)
 	return nil
 }
 
@@ -421,7 +421,7 @@ func (c *CfClient) makeTicker(interval uint) *time.Ticker {
 
 func (c *CfClient) stream(ctx context.Context) {
 	// wait until initialized with initial state
-	<-c.initialized
+	<-c.initializedChan
 	c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
 	c.streamConnect(ctx)
 
@@ -493,7 +493,7 @@ func (c *CfClient) pullCronJob(ctx context.Context) {
 		}
 	}
 	// wait until authenticated
-	<-c.authenticated
+	<-c.authenticatedChan
 
 	c.config.Logger.Infof("%s Polling started, interval: %v seconds", sdk_codes.PollStart, c.config.pullInterval)
 	// pull initial data
@@ -515,7 +515,7 @@ func (c *CfClient) pullCronJob(ctx context.Context) {
 
 func (c *CfClient) retrieveFlags(ctx context.Context) error {
 
-	<-c.authenticated
+	<-c.authenticatedChan
 
 	c.mux.RLock()
 	defer c.mux.RUnlock()
@@ -540,7 +540,7 @@ func (c *CfClient) retrieveFlags(ctx context.Context) error {
 
 func (c *CfClient) retrieveSegments(ctx context.Context) error {
 
-	<-c.authenticated
+	<-c.authenticatedChan
 
 	c.mux.RLock()
 	defer c.mux.RUnlock()
@@ -565,7 +565,7 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 
 func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 
-	<-c.authenticated
+	<-c.authenticatedChan
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 	if !c.config.enableAnalytics {
