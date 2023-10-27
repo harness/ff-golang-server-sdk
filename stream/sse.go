@@ -72,7 +72,7 @@ func (c *SSEClient) Connect(ctx context.Context, environment string, apiKey stri
 
 // Connect will subscribe to SSE stream
 func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey string) <-chan Event {
-	c.logger.Infof("%s Attempting to start stream")
+	c.logger.Info("Attempting to start stream")
 	// don't use the default exponentialBackoff strategy - we have our own disconnect logic
 	// of polling the service then re-establishing a new stream once we can connect
 	c.client.ReconnectStrategy = &backoff.StopBackOff{}
