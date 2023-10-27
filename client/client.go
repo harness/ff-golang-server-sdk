@@ -422,7 +422,6 @@ func (c *CfClient) makeTicker(interval uint) *time.Ticker {
 func (c *CfClient) stream(ctx context.Context) {
 	// wait until initialized with initial state
 	<-c.initializedChan
-	c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
 	c.streamConnect(ctx)
 
 	streamingRetryStrategy := c.config.streamingRetryStrategy
@@ -442,6 +441,8 @@ func (c *CfClient) stream(ctx context.Context) {
 
 		case <-c.streamConnectedChan:
 			c.config.Logger.Infof("%s Stream successfully connected", sdk_codes.StreamStarted)
+			c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
+
 			// Reset the reconnection attempt and ticker
 			reconnectionAttempt = 1
 			streamingRetryStrategy.Reset()
@@ -449,7 +450,8 @@ func (c *CfClient) stream(ctx context.Context) {
 			ticker = nil
 
 		case err := <-c.streamDisconnectedChan:
-			c.config.Logger.Warnf("%s Stream disconnected: '%s' Swapping to polling mode", sdk_codes.StreamDisconnected, err)
+			c.config.Logger.Warnf("%s Stream disconnected: %s", sdk_codes.StreamDisconnected, err)
+			c.config.Logger.Infof("%s Polling started, interval: %v seconds", sdk_codes.PollStart, c.config.pullInterval)
 			c.mux.RLock()
 			c.streamConnectedBool = false
 			c.mux.RUnlock()
