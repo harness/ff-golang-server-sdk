@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/r3labs/sse/v2"
+	"github.com/harness-community/sse/v3"
 )
 
 // ErrStreamDisconnect is a stream disconnect error

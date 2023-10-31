@@ -13,8 +13,8 @@ import (
 	"github.com/harness/ff-golang-server-sdk/logger"
 	"github.com/harness/ff-golang-server-sdk/rest"
 
+	"github.com/harness-community/sse/v3"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/r3labs/sse/v2"
 )
 
 // SSEClient is Server Send Event object
@@ -100,10 +100,10 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 			deadStreamTimer.Reset(30 * time.Second)
 
 			// Heartbeat event
-			if len(msg.Data) <= 0 {
-				c.logger.Debugf("%s Heartbeat event received", sdk_codes.StreamEvent)
-				return
-			}
+			//if len(msg.Data) <= 0 {
+			//	c.logger.Debugf("%s Heartbeat event received", sdk_codes.StreamEvent)
+			//	return
+			//}
 
 			c.logger.Infof("%s Event received: %s", sdk_codes.StreamEvent, msg.Data)
 
