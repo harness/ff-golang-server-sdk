@@ -29,7 +29,7 @@ import (
 	"github.com/harness/ff-golang-server-sdk/stream"
 	"github.com/harness/ff-golang-server-sdk/types"
 
-	"github.com/r3labs/sse/v2"
+	"github.com/harness-community/sse/v3"
 )
 
 // CfClient is the Feature Flag client.
