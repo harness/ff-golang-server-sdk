@@ -87,13 +87,10 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 	const timeout = 30 * time.Second
 	deadStreamTimer := time.NewTimer(timeout)
 
-	// it is blocking operation, it needs to go in go routine
 	out := make(chan Event)
-
 	go func() {
 		defer close(out)
 
-		// Start the timer-monitoring goroutine here, but outside of the SubscribeWithContext call
 		go func() {
 			select {
 			case <-ctx.Done():
