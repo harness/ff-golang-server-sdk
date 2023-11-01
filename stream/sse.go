@@ -84,7 +84,7 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 	// If we haven't received a change event or heartbeat in 30 seconds, we consider the stream to be "dead" and force a
 	// reconnection
-	const timeout = 3 * time.Second
+	const timeout = 30 * time.Second
 	deadStreamTimer := time.NewTimer(timeout)
 
 	out := make(chan Event)
