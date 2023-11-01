@@ -81,26 +81,40 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		c.streamConnected <- struct{}{}
 	}
 	c.client.OnConnect(onConnect)
-	// it is blocking operation, it needs to go in go routine
-	out := make(chan Event)
 
 	// If we haven't received a change event or heartbeat in 30 seconds, we consider the stream to be "dead" and force a
 	// reconnection
 	const timeout = 30 * time.Second
 	deadStreamTimer := time.NewTimer(timeout)
+
+	// it is blocking operation, it needs to go in go routine
+	out := make(chan Event)
+
 	go func() {
 		defer close(out)
 
+		// Start the timer-monitoring goroutine here, but outside of the SubscribeWithContext call
+		go func() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-deadStreamTimer.C:
+				c.streamDisconnected <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
+				return
+			}
+		}()
+
 		err := c.client.SubscribeWithContext(ctx, "*", func(msg *sse.Event) {
 
+			// if timer already expired, drain the channel
 			if !deadStreamTimer.Stop() {
-				// if timer already expired, drain the channel
 				<-deadStreamTimer.C
 			}
-			deadStreamTimer.Reset(30 * time.Second)
+			deadStreamTimer.Reset(timeout)
 
 			// Heartbeat event
-			if len(msg.Data) <= 0 {
+			// Data should always be nil here, but use an extra defensive check in case it's a byte slice
+			if msg.Data == nil || len(msg.Data) < 1 {
 				c.logger.Debugf("%s Heartbeat event received", sdk_codes.StreamEvent)
 				return
 			}
@@ -117,10 +131,6 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 			case <-ctx.Done():
 				return
 			case out <- event:
-			case <-deadStreamTimer.C:
-				//  No event was received for 30 seconds.
-				c.streamDisconnected <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
-				return
 			}
 
 		})
