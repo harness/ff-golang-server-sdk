@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/ff-golang-server-sdk/dto"
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/log"
@@ -16,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 )
 
 const (
@@ -180,7 +182,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Synchronous client: Authentication failed with 500 and succeeds after one retry",
 			newClientFunc: func() (*CfClient, error) {
-				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithSleeper(test_helpers.MockSleeper{}))
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithAuthRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
 			},
 			mockResponder: func() {
 				bodyString := `{
@@ -198,7 +200,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Synchronous client: Authentication failed and succeeds just before exceeding max retries",
 			newClientFunc: func() (*CfClient, error) {
-				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithSleeper(test_helpers.MockSleeper{}))
+				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithAuthRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
 				return newClient, err
 			},
 			mockResponder: func() {
@@ -208,7 +210,7 @@ func TestCfClient_NewClient(t *testing.T) {
 				}`
 				var responses []httpmock.Responder
 				// Add a bunch of error responses
-				for i := 0; i < 10; i++ {
+				for i := 0; i < 9; i++ {
 					responses = append(responses, AuthResponseDetailed(500, "internal server error", bodyString))
 				}
 
@@ -224,7 +226,7 @@ func TestCfClient_NewClient(t *testing.T) {
 		{
 			name: "Synchronous client: Authentication failed and exceeds max retries",
 			newClientFunc: func() (*CfClient, error) {
-				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithSleeper(test_helpers.MockSleeper{}))
+				newClient, err := newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(10), WithAuthRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
 				return newClient, err
 			},
 			mockResponder: func() {
@@ -234,7 +236,7 @@ func TestCfClient_NewClient(t *testing.T) {
 				}`
 				var responses []httpmock.Responder
 				// Add a bunch of error responses
-				for i := 0; i < 11; i++ {
+				for i := 0; i < 10; i++ {
 					responses = append(responses, AuthResponseDetailed(500, "internal server error", bodyString))
 				}
 
@@ -503,7 +505,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 		{
 			name: "Evaluations with Synchronous client with a server error",
 			clientFunc: func() (*CfClient, error) {
-				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(2), WithSleeper(test_helpers.MockSleeper{}))
+				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true), WithMaxAuthRetries(2), WithAuthRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
 			},
 			mockResponder: func() {
 				bodyString := `{
@@ -558,7 +560,7 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 		{
 			name: "Evaluations with Async client with a server error",
 			clientFunc: func() (*CfClient, error) {
-				return newClient(http.DefaultClient, ValidSDKKey, WithMaxAuthRetries(2), WithSleeper(test_helpers.MockSleeper{}))
+				return newClient(http.DefaultClient, ValidSDKKey, WithMaxAuthRetries(2), WithAuthRetryStrategy(getInstantRetryStrategy()), WithSleeper(test_helpers.MockSleeper{}))
 			},
 			mockResponder: func() {
 				bodyString := `{
@@ -758,4 +760,13 @@ func TestCfClient_Close(t *testing.T) {
 
 	t.Log("When I close the client for the second time I should an error")
 	assert.NotNil(t, client.Close())
+}
+
+// getInstantRetryStrategy returns a strategy that retries every millisecond for testing purposes
+func getInstantRetryStrategy() *backoff.ExponentialBackOff {
+	exponentialBackOff := backoff.NewExponentialBackOff()
+	exponentialBackOff.InitialInterval = 1 * time.Millisecond
+	exponentialBackOff.MaxInterval = 1 * time.Millisecond
+	exponentialBackOff.Multiplier = 0
+	return exponentialBackOff
 }

@@ -8,13 +8,13 @@ import (
 
 	"github.com/harness/ff-golang-server-sdk/pkg/repository"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/ff-golang-server-sdk/dto"
 	"github.com/harness/ff-golang-server-sdk/logger"
 	"github.com/harness/ff-golang-server-sdk/rest"
-	backoff "gopkg.in/cenkalti/backoff.v1"
 
+	"github.com/harness-community/sse/v3"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/r3labs/sse"
 )
 
 // SSEClient is Server Send Event object
@@ -24,7 +24,8 @@ type SSEClient struct {
 	repository          repository.Repository
 	logger              logger.Logger
 	eventStreamListener EventStreamListener
-	streamDisconnected  chan struct{}
+	streamConnected     chan struct{}
+	streamDisconnected  chan error
 
 	proxyMode bool
 }
@@ -41,7 +42,8 @@ func NewSSEClient(
 	logger logger.Logger,
 	eventStreamListener EventStreamListener,
 	proxyMode bool,
-	streamDisconnected chan struct{},
+	streamConnected chan struct{},
+	streamDisconnected chan error,
 
 ) *SSEClient {
 	client.Headers["Authorization"] = fmt.Sprintf("Bearer %s", token)
@@ -53,6 +55,7 @@ func NewSSEClient(
 		logger:              logger,
 		eventStreamListener: eventStreamListener,
 		proxyMode:           proxyMode,
+		streamConnected:     streamConnected,
 		streamDisconnected:  streamDisconnected,
 	}
 	return sseClient
@@ -69,21 +72,53 @@ func (c *SSEClient) Connect(ctx context.Context, environment string, apiKey stri
 
 // Connect will subscribe to SSE stream
 func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey string) <-chan Event {
-	c.logger.Infof("%s Start subscribing to Stream", sdk_codes.StreamStarted)
+	c.logger.Info("Attempting to start stream")
 	// don't use the default exponentialBackoff strategy - we have our own disconnect logic
 	// of polling the service then re-establishing a new stream once we can connect
 	c.client.ReconnectStrategy = &backoff.StopBackOff{}
-	// it is blocking operation, it needs to go in go routine
+
+	onConnect := func(s *sse.Client) {
+		c.streamConnected <- struct{}{}
+	}
+	c.client.OnConnect(onConnect)
+
+	// If we haven't received a change event or heartbeat in 30 seconds, we consider the stream to be "dead" and force a
+	// reconnection
+	const timeout = 30 * time.Second
+	deadStreamTimer := time.NewTimer(timeout)
+
 	out := make(chan Event)
 	go func() {
 		defer close(out)
 
-		err := c.client.SubscribeWithContext(ctx, "*", func(msg *sse.Event) {
-			c.logger.Infof("%s Event received: %s", sdk_codes.StreamEvent, msg.Data)
-
-			if len(msg.Data) <= 0 {
+		go func() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-deadStreamTimer.C:
+				// Just stop the timer, no need to drain its channel here.
+				deadStreamTimer.Stop()
+				c.streamDisconnected <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
 				return
 			}
+		}()
+
+		err := c.client.SubscribeWithContext(ctx, "*", func(msg *sse.Event) {
+
+			// if timer already expired, drain the channel
+			if !deadStreamTimer.Stop() {
+				<-deadStreamTimer.C
+			}
+			deadStreamTimer.Reset(timeout)
+
+			// Heartbeat event
+			// Data should always be nil here, but use an extra defensive check in case it's a byte slice
+			if msg.Data == nil || len(msg.Data) < 1 {
+				c.logger.Debugf("%s Heartbeat event received", sdk_codes.StreamEvent)
+				return
+			}
+
+			c.logger.Infof("%s Event received: %s", sdk_codes.StreamEvent, msg.Data)
 
 			event := Event{
 				APIKey:      apiKey,
@@ -99,9 +134,15 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 		})
 		if err != nil {
-			c.logger.Warnf("Error initializing stream: %s", err)
-			c.streamDisconnected <- struct{}{}
+			if !deadStreamTimer.Stop() {
+				<-deadStreamTimer.C
+			}
+			c.streamDisconnected <- err
 			return
+		}
+
+		if !deadStreamTimer.Stop() {
+			<-deadStreamTimer.C
 		}
 
 		// Even though we handle the error above, The SSE library we use currently returns a nil error for io.EOF errors, which can
@@ -109,7 +150,7 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		// So we need to signal the stream disconnected channel any time we've exited SubscribeWithContext.
 		// If we don't do this and the server closes the connection the Go SDK will still think it's connected to the stream
 		// even though it isn't
-		c.streamDisconnected <- struct{}{}
+		c.streamDisconnected <- fmt.Errorf("server closed the connection")
 	}()
 
 	return out

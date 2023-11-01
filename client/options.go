@@ -1,6 +1,7 @@
 package client
 
 import (
+	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/ff-golang-server-sdk/cache"
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/logger"
@@ -113,18 +114,29 @@ func WithProxyMode(b bool) ConfigOption {
 	}
 }
 
+// WithWaitForInitialized configures the SDK to block the thread until initialization succeeds or fails
 func WithWaitForInitialized(b bool) ConfigOption {
 	return func(config *config) {
 		config.waitForInitialized = b
 	}
 }
 
+// WithMaxAuthRetries sets how many times the SDK will retry if authentication fails
 func WithMaxAuthRetries(i int) ConfigOption {
 	return func(config *config) {
 		config.maxAuthRetries = i
 	}
 }
 
+// WithAuthRetryStrategy sets the backoff and retry strategy for client authentication requests
+// Mainly used for testing purposes, as the SDKs default backoff strategy should be sufficient for most if not all scenarios.
+func WithAuthRetryStrategy(retryStrategy *backoff.ExponentialBackOff) ConfigOption {
+	return func(config *config) {
+		config.authRetryStrategy = retryStrategy
+	}
+}
+
+// WithSleeper is used to aid in testing functionality that sleeps
 func WithSleeper(sleeper types.Sleeper) ConfigOption {
 	return func(config *config) {
 		config.sleeper = sleeper

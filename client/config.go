@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/ff-golang-server-sdk/cache"
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/logger"
@@ -15,23 +16,25 @@ import (
 )
 
 type config struct {
-	url                 string
-	eventsURL           string
-	pullInterval        uint // in seconds
-	Cache               cache.Cache
-	Store               storage.Storage
-	Logger              logger.Logger
-	httpClient          *http.Client
-	authHttpClient      *http.Client
-	enableStream        bool
-	enableStore         bool
-	target              evaluation.Target
-	eventStreamListener stream.EventStreamListener
-	enableAnalytics     bool
-	proxyMode           bool
-	waitForInitialized  bool
-	maxAuthRetries      int
-	sleeper             types.Sleeper
+	url                    string
+	eventsURL              string
+	pullInterval           uint // in seconds
+	Cache                  cache.Cache
+	Store                  storage.Storage
+	Logger                 logger.Logger
+	httpClient             *http.Client
+	authHttpClient         *http.Client
+	enableStream           bool
+	enableStore            bool
+	target                 evaluation.Target
+	eventStreamListener    stream.EventStreamListener
+	enableAnalytics        bool
+	proxyMode              bool
+	waitForInitialized     bool
+	maxAuthRetries         int
+	authRetryStrategy      *backoff.ExponentialBackOff
+	streamingRetryStrategy *backoff.ExponentialBackOff
+	sleeper                types.Sleeper
 }
 
 func newDefaultConfig(log logger.Logger) *config {
@@ -41,9 +44,8 @@ func newDefaultConfig(log logger.Logger) *config {
 		defaultStore = storage.NewFileStore("defaultProject", storage.GetHarnessDir(log), log)
 	}
 
-	const requestTimeout = time.Second * 30
-
 	// Authentication uses a default http client + timeout as we have our own custom retry logic for authentication.
+	const requestTimeout = time.Second * 30
 	authHttpClient := &http.Client{}
 	authHttpClient.Timeout = requestTimeout
 
@@ -83,7 +85,17 @@ func newDefaultConfig(log logger.Logger) *config {
 		enableAnalytics: true,
 		proxyMode:       false,
 		// Indicate that we should retry forever by default
-		maxAuthRetries: -1,
-		sleeper:        &types.RealClock{},
+		maxAuthRetries:         -1,
+		authRetryStrategy:      getDefaultExpBackoff(),
+		streamingRetryStrategy: getDefaultExpBackoff(),
+		sleeper:                &types.RealClock{},
 	}
+}
+
+func getDefaultExpBackoff() *backoff.ExponentialBackOff {
+	exponentialBackOff := backoff.NewExponentialBackOff()
+	exponentialBackOff.InitialInterval = 1 * time.Second
+	exponentialBackOff.MaxInterval = 1 * time.Minute
+	exponentialBackOff.Multiplier = 2.0
+	return exponentialBackOff
 }
