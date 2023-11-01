@@ -84,7 +84,7 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 	// If we haven't received a change event or heartbeat in 30 seconds, we consider the stream to be "dead" and force a
 	// reconnection
-	const timeout = 30 * time.Second
+	const timeout = 3 * time.Second
 	deadStreamTimer := time.NewTimer(timeout)
 
 	out := make(chan Event)
@@ -96,6 +96,8 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 			case <-ctx.Done():
 				return
 			case <-deadStreamTimer.C:
+				// Just stop the timer, no need to drain its channel here.
+				deadStreamTimer.Stop()
 				c.streamDisconnected <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
 				return
 			}
@@ -132,8 +134,15 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 		})
 		if err != nil {
+			if !deadStreamTimer.Stop() {
+				<-deadStreamTimer.C
+			}
 			c.streamDisconnected <- err
 			return
+		}
+
+		if !deadStreamTimer.Stop() {
+			<-deadStreamTimer.C
 		}
 
 		// Even though we handle the error above, The SSE library we use currently returns a nil error for io.EOF errors, which can
