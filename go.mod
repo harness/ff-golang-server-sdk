@@ -8,7 +8,7 @@ require (
 	github.com/getkin/kin-openapi v0.94.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.3.0
-	github.com/harness-community/sse/v3 v3.0.0
+	github.com/harness-community/sse/v3 v3.1.0
 	github.com/hashicorp/go-retryablehttp v0.7.4
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/jarcoal/httpmock v1.0.8
