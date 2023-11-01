@@ -470,6 +470,9 @@ func (c *CfClient) stream(ctx context.Context) {
 				ticker = backoff.NewTicker(streamingRetryStrategy)
 			}
 
+			// Note, the retry interval logged here is just an approximate value.
+			// NextBackOff() will not be exactly the same value when used by the underlying ticker.
+			// There is currently no way to get the interval that the ticker has used.
 			c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, streamingRetryStrategy.NextBackOff().Seconds(), reconnectionAttempt)
 			reconnectionAttempt += 1
 
