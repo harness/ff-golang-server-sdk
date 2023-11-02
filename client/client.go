@@ -454,9 +454,13 @@ func (c *CfClient) stream(ctx context.Context) {
 	<-c.initializedChan
 	c.streamConnect(ctx)
 
-	// Initialize flags.
-	var isDeadStreamRunning int32
+	// A stream can disconnect for two reasons.
+	// 1. If the stream encounters an error
+	// 2. If we haven't detected any heartbeats in 30 seconds
+	// There's a possibility that these two events can coincide with each other and end up in a race condition,
+	// so we use two channels and these flags to syncronise between them, to ensure we only attempt to reconnect one.
 	var isStreamDisconnectRunning int32
+	var isDeadStreamRunning int32
 
 	streamingRetryStrategy := c.config.streamingRetryStrategy
 
