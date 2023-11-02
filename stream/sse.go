@@ -26,6 +26,7 @@ type SSEClient struct {
 	eventStreamListener EventStreamListener
 	streamConnected     chan struct{}
 	streamDisconnected  chan error
+	deadStream          chan error
 
 	proxyMode bool
 }
@@ -44,6 +45,7 @@ func NewSSEClient(
 	proxyMode bool,
 	streamConnected chan struct{},
 	streamDisconnected chan error,
+	deadStream chan error,
 
 ) *SSEClient {
 	client.Headers["Authorization"] = fmt.Sprintf("Bearer %s", token)
@@ -57,12 +59,14 @@ func NewSSEClient(
 		proxyMode:           proxyMode,
 		streamConnected:     streamConnected,
 		streamDisconnected:  streamDisconnected,
+		deadStream:          deadStream,
 	}
 	return sseClient
 }
 
 // Connect will subscribe to SSE stream
 func (c *SSEClient) Connect(ctx context.Context, environment string, apiKey string) {
+
 	go func() {
 		for event := range orDone(ctx, c.subscribe(ctx, environment, apiKey)) {
 			c.handleEvent(event)
@@ -90,10 +94,11 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		c.streamConnected <- struct{}{}
 	}
 	c.client.OnConnect(onConnect)
-
 	out := make(chan Event)
 	go func() {
 		defer close(out)
+		streamCtx, streamCancel := context.WithCancel(ctx)
+		defer streamCancel()
 
 		go func() {
 			select {
@@ -102,17 +107,15 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 			case <-deadStreamTimer.C:
 				// Just stop the timer, no need to drain its channel here.
 				deadStreamTimer.Stop()
-				c.streamDisconnected <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
+				streamCancel()
+				c.deadStream <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
 				return
 			}
 		}()
 
-		err := c.client.SubscribeWithContext(ctx, "*", func(msg *sse.Event) {
+		err := c.client.SubscribeWithContext(streamCtx, "*", func(msg *sse.Event) {
 
-			// if timer already expired, drain the channel
-			if !deadStreamTimer.Stop() {
-				<-deadStreamTimer.C
-			}
+			deadStreamTimer.Stop()
 			deadStreamTimer.Reset(timeout)
 
 			// Heartbeat event
@@ -138,17 +141,12 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 		})
 		if err != nil {
-			if !deadStreamTimer.Stop() {
-				<-deadStreamTimer.C
-			}
+			deadStreamTimer.Stop()
 			c.streamDisconnected <- err
 			return
 		}
 
-		if !deadStreamTimer.Stop() {
-			<-deadStreamTimer.C
-		}
-
+		deadStreamTimer.Stop()
 		// Even though we handle the error above, The SSE library we use currently returns a nil error for io.EOF errors, which can
 		// happen if ff-server closes the connection at the 24 hours point.
 		// So we need to signal the stream disconnected channel any time we've exited SubscribeWithContext.
