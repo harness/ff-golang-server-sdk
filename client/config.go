@@ -54,6 +54,25 @@ func newDefaultConfig(log logger.Logger) *config {
 	requestHttpClient.Logger = logger.NewRetryableLogger(log)
 	requestHttpClient.RetryMax = 10
 
+	// Create your HeaderProvider function.
+	headerProvider := func() (map[string]string, error) {
+		// Implement the logic to provide header values dynamically.
+		// Return your headers here.
+		return map[string]string{
+			"X-Dynamic-Header-1": "DynamicValue1",
+			"X-Dynamic-Header-2": "DynamicValue2",
+		}, nil
+	}
+
+	// Wrap the retryClient's Transport with your customTransport.
+	customTrans := &customTransport{
+		baseTransport: requestHttpClient.HTTPClient.Transport,
+		getHeaders:    headerProvider,
+	}
+
+	// Assign your customTransport to the retryClient.
+	requestHttpClient.HTTPClient.Transport = customTrans
+
 	// Assign a custom ErrorHandler. By default, the go-retryablehttp library doesn't return the final
 	// network error from the server but instead reports that it has exhausted all retry attempts.
 	requestHttpClient.ErrorHandler = func(resp *http.Response, err error, numTries int) (*http.Response, error) {

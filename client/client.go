@@ -402,6 +402,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	restClient, err := rest.NewClientWithResponses(c.config.url,
 		rest.WithRequestEditorFn(bearerTokenProvider.Intercept),
 		rest.WithRequestEditorFn(c.InterceptAddCluster),
+		rest.WithRequestEditorFn(addUsageHeaders),
 		rest.WithHTTPClient(c.config.httpClient),
 	)
 	if err != nil {
@@ -411,6 +412,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	metricsClient, err := metricsclient.NewClientWithResponses(c.config.eventsURL,
 		metricsclient.WithRequestEditorFn(bearerTokenProvider.Intercept),
 		metricsclient.WithRequestEditorFn(c.InterceptAddCluster),
+		metricsclient.WithRequestEditorFn(addUsageHeaders),
 		metricsclient.WithHTTPClient(c.config.httpClient),
 	)
 	if err != nil {
