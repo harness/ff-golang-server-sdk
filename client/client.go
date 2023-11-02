@@ -390,6 +390,15 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	if bearerTokenProviderErr != nil {
 		return bearerTokenProviderErr
 	}
+
+	// additional headers for tracking usage
+	addUsageHeaders := func(ctx context.Context, req *http.Request) error {
+		req.Header.Set("User-Agent", "GoSDK/"+analyticsservice.SdkVersion)
+		req.Header.Set("Harness-SDK-Info", fmt.Sprintf("Go %s Server", analyticsservice.SdkVersion))
+		req.Header.Set("Harness-EnvironmentID", c.environmentID)
+		return nil
+	}
+
 	restClient, err := rest.NewClientWithResponses(c.config.url,
 		rest.WithRequestEditorFn(bearerTokenProvider.Intercept),
 		rest.WithRequestEditorFn(c.InterceptAddCluster),

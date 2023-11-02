@@ -25,7 +25,7 @@ const (
 	variationValueAttribute      string = "featureValue"
 	targetAttribute              string = "target"
 	sdkVersionAttribute          string = "SDK_VERSION"
-	sdkVersion                   string = "0.1.14"
+	SdkVersion                   string = "0.1.15"
 	sdkTypeAttribute             string = "SDK_TYPE"
 	sdkType                      string = "server"
 	sdkLanguageAttribute         string = "SDK_LANGUAGE"
@@ -219,7 +219,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 			},
 			{
 				Key:   sdkVersionAttribute,
-				Value: sdkVersion,
+				Value: SdkVersion,
 			},
 		}
 
