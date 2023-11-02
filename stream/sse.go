@@ -77,15 +77,19 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 	// of polling the service then re-establishing a new stream once we can connect
 	c.client.ReconnectStrategy = &backoff.StopBackOff{}
 
+	// If we haven't received a change event or heartbeat in 30 seconds, we consider the stream to be "dead" and force a
+	// reconnection
+	const timeout = 5 * time.Second
+	deadStreamTimer := time.NewTimer(timeout)
+	// Stop the timer immediately, it will only start when the connection is established
+	deadStreamTimer.Stop()
+
 	onConnect := func(s *sse.Client) {
+		// Start the dead stream timer
+		deadStreamTimer.Reset(timeout)
 		c.streamConnected <- struct{}{}
 	}
 	c.client.OnConnect(onConnect)
-
-	// If we haven't received a change event or heartbeat in 30 seconds, we consider the stream to be "dead" and force a
-	// reconnection
-	const timeout = 30 * time.Second
-	deadStreamTimer := time.NewTimer(timeout)
 
 	out := make(chan Event)
 	go func() {
