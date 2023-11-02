@@ -83,7 +83,7 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 	// If we haven't received a change event or heartbeat in 30 seconds, we consider the stream to be "dead" and force a
 	// reconnection
-	const timeout = 5 * time.Second
+	const timeout = 30 * time.Second
 	deadStreamTimer := time.NewTimer(timeout)
 	// Stop the timer immediately, it will only start when the connection is established
 	deadStreamTimer.Stop()
@@ -97,8 +97,10 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 	out := make(chan Event)
 	go func() {
 		defer close(out)
-		streamCtx, streamCancel := context.WithCancel(ctx)
-		defer streamCancel()
+
+		// Create another context off of the main SDK context, so we can close dead streams.
+		deadStreamCtx, deadStreamCancel := context.WithCancel(ctx)
+		defer deadStreamCancel()
 
 		go func() {
 			select {
@@ -107,13 +109,13 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 			case <-deadStreamTimer.C:
 				// Just stop the timer, no need to drain its channel here.
 				deadStreamTimer.Stop()
-				streamCancel()
+				deadStreamCancel()
 				c.deadStream <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
 				return
 			}
 		}()
 
-		err := c.client.SubscribeWithContext(streamCtx, "*", func(msg *sse.Event) {
+		err := c.client.SubscribeWithContext(deadStreamCtx, "*", func(msg *sse.Event) {
 
 			deadStreamTimer.Stop()
 			deadStreamTimer.Reset(timeout)
