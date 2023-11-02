@@ -480,6 +480,10 @@ func (c *CfClient) stream(ctx context.Context) {
 			reconnectionAttempt = 1
 			streamingRetryStrategy.Reset()
 
+			c.mux.RLock()
+			c.streamConnectedBool = false
+			c.mux.RUnlock()
+
 			atomic.StoreInt32(&isDeadStreamRunning, 0)
 			atomic.StoreInt32(&isStreamDisconnectRunning, 0)
 
