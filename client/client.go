@@ -392,6 +392,8 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	}
 
 	// Use a custom transport which adds headers for tracking usage
+	// The `WithRequestEditorFn` cannot be used for SSE requests, so we need to provide a custom transport to the
+	// http client so that these headers can be added to all requests.
 	getHeadersFn := func() (map[string]string, error) {
 		return map[string]string{
 			"User-Agent":            "GoSDK/" + analyticsservice.SdkVersion,
@@ -406,7 +408,6 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 		getHeaders:    getHeadersFn,
 	}
 
-	// Assign your customTransport to the retryClient.
 	c.config.httpClient.Transport = customTrans
 
 	addUsageHeaders := func(ctx context.Context, req *http.Request) error {
