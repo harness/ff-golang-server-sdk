@@ -487,6 +487,7 @@ func (c *CfClient) stream(ctx context.Context) {
 				nextBackOff := streamingRetryStrategy.NextBackOff()
 				c.handleStreamDisconnect(ctx, nextBackOff)
 
+				reconnectionAttempt += 1
 				atomic.StoreInt32(&isDeadStreamRunning, 1)
 			}
 
@@ -498,6 +499,7 @@ func (c *CfClient) stream(ctx context.Context) {
 				c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, nextBackOff.Seconds(), reconnectionAttempt)
 				c.handleStreamDisconnect(ctx, nextBackOff)
 
+				reconnectionAttempt += 1
 				atomic.StoreInt32(&isStreamDisconnectRunning, 1)
 			}
 
