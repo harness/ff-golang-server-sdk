@@ -56,6 +56,7 @@ type CfClient struct {
 	streamConnectedBoolLock sync.RWMutex
 	streamConnectedChan     chan struct{}
 	streamDisconnectedChan  chan error
+	deadStreamChan          chan error
 	authenticatedChan       chan struct{}
 	postEvalChan            chan evaluation.PostEvalData
 	initializedBool         bool
@@ -93,6 +94,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		initializedErrChan:     make(chan error),
 		streamConnectedChan:    make(chan struct{}),
 		streamDisconnectedChan: make(chan error),
+		deadStreamChan:         make(chan error),
 	}
 
 	if sdkKey == "" {
@@ -260,13 +262,12 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	sseClient.Connection = c.config.httpClient
 
 	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.repository, c.api, c.config.Logger,
-		c.config.eventStreamListener, c.config.proxyMode, c.streamConnectedChan, c.streamDisconnectedChan)
+		c.config.eventStreamListener, c.config.proxyMode, c.streamConnectedChan, c.streamDisconnectedChan, c.deadStreamChan)
 
 	// Connect kicks off a goroutine that attempts to establish a stream connection
 	// while this is happening we set streamConnectedBool to true - if any errors happen
 	// in this process streamConnectedBool will be set back to false by the streamDisconnected function
 	conn.Connect(ctx, c.environmentID, c.sdkKey)
-	c.streamConnectedBool = true
 }
 
 func (c *CfClient) initAuthentication(ctx context.Context) error {
@@ -410,17 +411,17 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 
 	c.config.httpClient.Transport = customTrans
 
-	addUsageHeaders := func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("User-Agent", "GoSDK/"+analyticsservice.SdkVersion)
-		req.Header.Set("Harness-SDK-Info", fmt.Sprintf("Go %s Server", analyticsservice.SdkVersion))
-		req.Header.Set("Harness-EnvironmentID", c.environmentID)
-		return nil
-	}
+	//addUsageHeaders := func(ctx context.Context, req *http.Request) error {
+	//	req.Header.Set("User-Agent", "GoSDK/"+analyticsservice.SdkVersion)
+	//	req.Header.Set("Harness-SDK-Info", fmt.Sprintf("Go %s Server", analyticsservice.SdkVersion))
+	//	req.Header.Set("Harness-EnvironmentID", c.environmentID)
+	//	return nil
+	//}
 
 	restClient, err := rest.NewClientWithResponses(c.config.url,
 		rest.WithRequestEditorFn(bearerTokenProvider.Intercept),
 		rest.WithRequestEditorFn(c.InterceptAddCluster),
-		rest.WithRequestEditorFn(addUsageHeaders),
+		//rest.WithRequestEditorFn(addUsageHeaders),
 		rest.WithHTTPClient(c.config.httpClient),
 	)
 	if err != nil {
@@ -430,7 +431,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	metricsClient, err := metricsclient.NewClientWithResponses(c.config.eventsURL,
 		metricsclient.WithRequestEditorFn(bearerTokenProvider.Intercept),
 		metricsclient.WithRequestEditorFn(c.InterceptAddCluster),
-		metricsclient.WithRequestEditorFn(addUsageHeaders),
+		//metricsclient.WithRequestEditorFn(addUsageHeaders),
 		metricsclient.WithHTTPClient(c.config.httpClient),
 	)
 	if err != nil {
@@ -453,19 +454,18 @@ func (c *CfClient) stream(ctx context.Context) {
 	<-c.initializedChan
 	c.streamConnect(ctx)
 
-	streamingRetryStrategy := c.config.streamingRetryStrategy
-	// Create an initial ticker to handle the case where we don't open a succesful connection on our first attempt
-	ticker := backoff.NewTicker(streamingRetryStrategy)
+	// Initialize flags.
+	var isDeadStreamRunning int32
+	var isStreamDisconnectRunning int32
 
-	defer ticker.Stop()
+	streamingRetryStrategy := c.config.streamingRetryStrategy
+
 	reconnectionAttempt := 1
+
 	for {
 		select {
 		case <-ctx.Done():
 			c.config.Logger.Infof("%s Stream stopped", sdk_codes.StreamStop)
-			if ticker != nil {
-				ticker.Stop()
-			}
 			return
 
 		case <-c.streamConnectedChan:
@@ -475,47 +475,70 @@ func (c *CfClient) stream(ctx context.Context) {
 			// Reset the reconnection attempt and ticker
 			reconnectionAttempt = 1
 			streamingRetryStrategy.Reset()
-			ticker.Stop()
-			ticker = nil
+
+			atomic.StoreInt32(&isDeadStreamRunning, 0)
+			atomic.StoreInt32(&isStreamDisconnectRunning, 0)
+
+		case err := <-c.deadStreamChan:
+			if atomic.LoadInt32(&isStreamDisconnectRunning) == 0 {
+				c.notifyStreamDisconnect(isDeadStreamRunning, err)
+				c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, streamingRetryStrategy.NextBackOff().Seconds(), reconnectionAttempt)
+
+				nextBackOff := streamingRetryStrategy.NextBackOff()
+				c.handleStreamDisconnect(ctx, nextBackOff)
+
+				atomic.StoreInt32(&isDeadStreamRunning, 1)
+			}
 
 		case err := <-c.streamDisconnectedChan:
-			c.config.Logger.Warnf("%s Stream disconnected: %s", sdk_codes.StreamDisconnected, err)
-			c.config.Logger.Infof("%s Polling started, interval: %v seconds", sdk_codes.PollStart, c.config.pullInterval)
-			c.mux.RLock()
-			c.streamConnectedBool = false
-			c.mux.RUnlock()
+			if atomic.LoadInt32(&isDeadStreamRunning) == 0 {
+				c.notifyStreamDisconnect(isStreamDisconnectRunning, err)
 
-			// If an eventStreamListener has been passed to the Proxy lets notify it of the disconnected
-			// to let it know something is up with the stream it has been listening to
-			if c.config.eventStreamListener != nil {
-				c.config.eventStreamListener.Pub(context.Background(), stream.Event{
-					APIKey:      c.sdkKey,
-					Environment: c.environmentID,
-					Err:         stream.ErrStreamDisconnect,
-				})
+				nextBackOff := streamingRetryStrategy.NextBackOff()
+				c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, nextBackOff.Seconds(), reconnectionAttempt)
+				c.handleStreamDisconnect(ctx, nextBackOff)
+
+				atomic.StoreInt32(&isStreamDisconnectRunning, 1)
 			}
 
-			if ticker == nil {
-				ticker = backoff.NewTicker(streamingRetryStrategy)
-			}
-
-			// Note, the retry interval logged here is just an approximate value.
-			// NextBackOff() will not be exactly the same value when used by the underlying ticker.
-			// There is currently no way to get the interval that the ticker has used.
-			c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, streamingRetryStrategy.NextBackOff().Seconds(), reconnectionAttempt)
-			reconnectionAttempt += 1
-
-			// Backoff before retrying
-			select {
-			case <-ticker.C:
-			case <-ctx.Done():
-				c.config.Logger.Infof("%s Stream stopped during reconnection", sdk_codes.StreamStop)
-				ticker.Stop()
-				return
-			}
-			c.streamConnect(ctx)
 		}
 	}
+}
+
+func (c *CfClient) notifyStreamDisconnect(disconnectFlag int32, err error) {
+	if atomic.LoadInt32(&disconnectFlag) == 1 {
+		return
+	}
+
+	c.mux.RLock()
+	c.streamConnectedBool = false
+	c.mux.RUnlock()
+	// If an eventStreamListener has been passed to the Proxy lets notify it of the disconnected
+	// to let it know something is up with the stream it has been listening to
+	if c.config.eventStreamListener != nil {
+		c.config.eventStreamListener.Pub(context.Background(), stream.Event{
+			APIKey:      c.sdkKey,
+			Environment: c.environmentID,
+			Err:         stream.ErrStreamDisconnect,
+		})
+	}
+	c.config.Logger.Warnf("%s Stream disconnected: %s", sdk_codes.StreamDisconnected, err)
+	c.config.Logger.Infof("%s Polling started, interval: %v seconds", sdk_codes.PollStart, c.config.pullInterval)
+}
+
+func (c *CfClient) handleStreamDisconnect(ctx context.Context, nextBackOff time.Duration) {
+
+	// Wait for the backoff duration or context cancellation
+	select {
+	case <-time.After(nextBackOff):
+		// Time to retry connection
+		c.streamConnect(ctx)
+	case <-ctx.Done():
+		// Context was cancelled, stop trying to reconnect
+		c.config.Logger.Infof("%s Stream stopped during reconnection", sdk_codes.StreamStop)
+		return
+	}
+
 }
 
 func (c *CfClient) pullCronJob(ctx context.Context) {
