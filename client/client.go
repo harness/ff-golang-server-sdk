@@ -458,9 +458,9 @@ func (c *CfClient) stream(ctx context.Context) {
 	// 1. If the stream encounters an error
 	// 2. If we haven't detected any heartbeats in 30 seconds
 	// There's a possibility that these two events can coincide with each other and end up in a race condition,
-	// so we use two channels and these flags to syncronise between them, to ensure we only attempt to reconnect one.
-	var isStreamDisconnectRunning int32
-	var isDeadStreamRunning int32
+	// so we use two channels and these flags to synchronise between them, to ensure we only attempt to reconnect once.
+	var streamDisconnect int32
+	var deadStream int32
 
 	streamingRetryStrategy := c.config.streamingRetryStrategy
 
@@ -476,42 +476,53 @@ func (c *CfClient) stream(ctx context.Context) {
 			c.config.Logger.Infof("%s Stream successfully connected", sdk_codes.StreamStarted)
 			c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
 
-			// Reset the reconnection attempt and ticker
-			reconnectionAttempt = 1
+			// Ensure reconnection strategy is reset
 			streamingRetryStrategy.Reset()
+			reconnectionAttempt = 1
 
 			c.mux.RLock()
 			c.streamConnectedBool = true
 			c.mux.RUnlock()
 
-			atomic.StoreInt32(&isDeadStreamRunning, 0)
-			atomic.StoreInt32(&isStreamDisconnectRunning, 0)
+			atomic.StoreInt32(&deadStream, 0)
+			atomic.StoreInt32(&streamDisconnect, 0)
 
 		case err := <-c.deadStreamChan:
-			if atomic.LoadInt32(&isStreamDisconnectRunning) == 0 {
-				c.notifyStreamDisconnect(isDeadStreamRunning, err)
+			if atomic.LoadInt32(&streamDisconnect) == 0 {
+				c.notifyStreamDisconnect(deadStream, err)
 				c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, streamingRetryStrategy.NextBackOff().Seconds(), reconnectionAttempt)
 
 				nextBackOff := streamingRetryStrategy.NextBackOff()
 				c.handleStreamDisconnect(ctx, nextBackOff)
 
 				reconnectionAttempt += 1
-				atomic.StoreInt32(&isDeadStreamRunning, 1)
+				atomic.StoreInt32(&deadStream, 1)
 			}
 
 		case err := <-c.streamDisconnectedChan:
-			if atomic.LoadInt32(&isDeadStreamRunning) == 0 {
-				c.notifyStreamDisconnect(isStreamDisconnectRunning, err)
+			if atomic.LoadInt32(&deadStream) == 0 {
+				c.notifyStreamDisconnect(streamDisconnect, err)
 
 				nextBackOff := streamingRetryStrategy.NextBackOff()
 				c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, nextBackOff.Seconds(), reconnectionAttempt)
 				c.handleStreamDisconnect(ctx, nextBackOff)
 
 				reconnectionAttempt += 1
-				atomic.StoreInt32(&isStreamDisconnectRunning, 1)
+				atomic.StoreInt32(&streamDisconnect, 1)
 			}
 
 		}
+	}
+}
+
+func (c *CfClient) handleStreamDisconnect(ctx context.Context, nextBackOff time.Duration) {
+	select {
+	case <-time.After(nextBackOff):
+		c.streamConnect(ctx)
+	case <-ctx.Done():
+		// Context was cancelled, stop trying to reconnect
+		c.config.Logger.Infof("%s Stream stopped during reconnection", sdk_codes.StreamStop)
+		return
 	}
 }
 
@@ -534,21 +545,6 @@ func (c *CfClient) notifyStreamDisconnect(disconnectFlag int32, err error) {
 	}
 	c.config.Logger.Warnf("%s Stream disconnected: %s", sdk_codes.StreamDisconnected, err)
 	c.config.Logger.Infof("%s Polling started, interval: %v seconds", sdk_codes.PollStart, c.config.pullInterval)
-}
-
-func (c *CfClient) handleStreamDisconnect(ctx context.Context, nextBackOff time.Duration) {
-
-	// Wait for the backoff duration or context cancellation
-	select {
-	case <-time.After(nextBackOff):
-		// Time to retry connection
-		c.streamConnect(ctx)
-	case <-ctx.Done():
-		// Context was cancelled, stop trying to reconnect
-		c.config.Logger.Infof("%s Stream stopped during reconnection", sdk_codes.StreamStop)
-		return
-	}
-
 }
 
 func (c *CfClient) pullCronJob(ctx context.Context) {
