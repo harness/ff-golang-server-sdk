@@ -481,7 +481,7 @@ func (c *CfClient) stream(ctx context.Context) {
 			streamingRetryStrategy.Reset()
 
 			c.mux.RLock()
-			c.streamConnectedBool = false
+			c.streamConnectedBool = true
 			c.mux.RUnlock()
 
 			atomic.StoreInt32(&isDeadStreamRunning, 0)
