@@ -391,7 +391,24 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 		return bearerTokenProviderErr
 	}
 
-	// additional headers for tracking usage
+	// Use a custom transport which adds headers for tracking usage
+	getHeadersFn := func() (map[string]string, error) {
+		return map[string]string{
+			"User-Agent":            "GoSDK/" + analyticsservice.SdkVersion,
+			"Harness-SDK-Info":      fmt.Sprintf("Go %s Server", analyticsservice.SdkVersion),
+			"Harness-EnvironmentID": c.environmentID,
+		}, nil
+	}
+
+	// Wrap the retryClient's Transport with your customTransport.
+	customTrans := &customTransport{
+		baseTransport: c.config.httpClient.Transport,
+		getHeaders:    getHeadersFn,
+	}
+
+	// Assign your customTransport to the retryClient.
+	c.config.httpClient.Transport = customTrans
+
 	addUsageHeaders := func(ctx context.Context, req *http.Request) error {
 		req.Header.Set("User-Agent", "GoSDK/"+analyticsservice.SdkVersion)
 		req.Header.Set("Harness-SDK-Info", fmt.Sprintf("Go %s Server", analyticsservice.SdkVersion))
