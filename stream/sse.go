@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"time"
@@ -77,38 +78,41 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 	// of polling the service then re-establishing a new stream once we can connect
 	c.client.ReconnectStrategy = &backoff.StopBackOff{}
 
-	onConnect := func(s *sse.Client) {
-		c.streamConnected <- struct{}{}
-	}
-	c.client.OnConnect(onConnect)
-
 	// If we haven't received a change event or heartbeat in 30 seconds, we consider the stream to be "dead" and force a
 	// reconnection
 	const timeout = 30 * time.Second
 	deadStreamTimer := time.NewTimer(timeout)
+	// Stop the timer immediately, it will only start when the connection is established
+	deadStreamTimer.Stop()
 
+	onConnect := func(s *sse.Client) {
+		// Start the dead stream timer
+		deadStreamTimer.Reset(timeout)
+		c.streamConnected <- struct{}{}
+	}
+	c.client.OnConnect(onConnect)
 	out := make(chan Event)
 	go func() {
 		defer close(out)
+
+		// Create another context off of the main SDK context, so we can close dead streams.
+		deadStreamCtx, deadStreamCancel := context.WithCancel(ctx)
+		defer deadStreamCancel()
 
 		go func() {
 			select {
 			case <-ctx.Done():
 				return
 			case <-deadStreamTimer.C:
-				// Just stop the timer, no need to drain its channel here.
 				deadStreamTimer.Stop()
-				c.streamDisconnected <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
+				deadStreamCancel()
 				return
 			}
 		}()
 
-		err := c.client.SubscribeWithContext(ctx, "*", func(msg *sse.Event) {
+		err := c.client.SubscribeWithContext(deadStreamCtx, "*", func(msg *sse.Event) {
 
-			// if timer already expired, drain the channel
-			if !deadStreamTimer.Stop() {
-				<-deadStreamTimer.C
-			}
+			deadStreamTimer.Stop()
 			deadStreamTimer.Reset(timeout)
 
 			// Heartbeat event
@@ -134,22 +138,25 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 
 		})
 		if err != nil {
-			if !deadStreamTimer.Stop() {
-				<-deadStreamTimer.C
-			}
+			deadStreamTimer.Stop()
 			c.streamDisconnected <- err
 			return
 		}
 
-		if !deadStreamTimer.Stop() {
-			<-deadStreamTimer.C
+		deadStreamTimer.Stop()
+
+		// When we cancel the deadStreamContext, we exit the `SubscribeWithContext` function with a nil error.
+		// So we need an explicit check to see if the reason was
+		if errors.Is(deadStreamCtx.Err(), context.Canceled) {
+			c.streamDisconnected <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
+			return
 		}
 
-		// Even though we handle the error above, The SSE library we use currently returns a nil error for io.EOF errors, which can
+		// The SSE library we use currently returns a nil error for io.EOF errors, which can
 		// happen if ff-server closes the connection at the 24 hours point.
 		// So we need to signal the stream disconnected channel any time we've exited SubscribeWithContext.
 		// If we don't do this and the server closes the connection the Go SDK will still think it's connected to the stream
-		// even though it isn't
+		// even though it isn't.
 		c.streamDisconnected <- fmt.Errorf("server closed the connection")
 	}()
 

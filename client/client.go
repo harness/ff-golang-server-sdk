@@ -266,7 +266,6 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	// while this is happening we set streamConnectedBool to true - if any errors happen
 	// in this process streamConnectedBool will be set back to false by the streamDisconnected function
 	conn.Connect(ctx, c.environmentID, c.sdkKey)
-	c.streamConnectedBool = true
 }
 
 func (c *CfClient) initAuthentication(ctx context.Context) error {
@@ -390,6 +389,31 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	if bearerTokenProviderErr != nil {
 		return bearerTokenProviderErr
 	}
+
+	// Use a custom transport which adds headers for tracking usage
+	// The `WithRequestEditorFn` cannot be used for SSE requests, so we need to provide a custom transport to the
+	// http client so that these headers can be added to all requests.
+	getHeadersFn := func() (map[string]string, error) {
+		return map[string]string{
+			"User-Agent":            "GoSDK/" + analyticsservice.SdkVersion,
+			"Harness-SDK-Info":      fmt.Sprintf("Go %s Server", analyticsservice.SdkVersion),
+			"Harness-EnvironmentID": c.environmentID,
+		}, nil
+	}
+	
+	// Wrap the httpClient's transport with our own custom transport, which currently just adds extra headers
+	// for analytics purposes.
+	// If the httpClient doesn't have a Transport we can honour, then just use a default transport.
+	var baseTransport http.RoundTripper
+	if c.config.httpClient.Transport != nil {
+		baseTransport = c.config.httpClient.Transport
+	} else {
+		baseTransport = http.DefaultTransport
+	}
+	customTrans := NewCustomTransport(baseTransport, getHeadersFn)
+
+	c.config.httpClient.Transport = customTrans
+
 	restClient, err := rest.NewClientWithResponses(c.config.url,
 		rest.WithRequestEditorFn(bearerTokenProvider.Intercept),
 		rest.WithRequestEditorFn(c.InterceptAddCluster),
@@ -425,68 +449,66 @@ func (c *CfClient) stream(ctx context.Context) {
 	c.streamConnect(ctx)
 
 	streamingRetryStrategy := c.config.streamingRetryStrategy
-	// Create an initial ticker to handle the case where we don't open a succesful connection on our first attempt
-	ticker := backoff.NewTicker(streamingRetryStrategy)
 
-	defer ticker.Stop()
 	reconnectionAttempt := 1
+
 	for {
 		select {
 		case <-ctx.Done():
 			c.config.Logger.Infof("%s Stream stopped", sdk_codes.StreamStop)
-			if ticker != nil {
-				ticker.Stop()
-			}
 			return
 
 		case <-c.streamConnectedChan:
 			c.config.Logger.Infof("%s Stream successfully connected", sdk_codes.StreamStarted)
 			c.config.Logger.Infof("%s Polling Stopped", sdk_codes.PollStop)
 
-			// Reset the reconnection attempt and ticker
-			reconnectionAttempt = 1
+			// Ensure reconnection strategy is reset
 			streamingRetryStrategy.Reset()
-			ticker.Stop()
-			ticker = nil
+			reconnectionAttempt = 1
 
-		case err := <-c.streamDisconnectedChan:
-			c.config.Logger.Warnf("%s Stream disconnected: %s", sdk_codes.StreamDisconnected, err)
-			c.config.Logger.Infof("%s Polling started, interval: %v seconds", sdk_codes.PollStart, c.config.pullInterval)
 			c.mux.RLock()
-			c.streamConnectedBool = false
+			c.streamConnectedBool = true
 			c.mux.RUnlock()
 
-			// If an eventStreamListener has been passed to the Proxy lets notify it of the disconnected
-			// to let it know something is up with the stream it has been listening to
-			if c.config.eventStreamListener != nil {
-				c.config.eventStreamListener.Pub(context.Background(), stream.Event{
-					APIKey:      c.sdkKey,
-					Environment: c.environmentID,
-					Err:         stream.ErrStreamDisconnect,
-				})
-			}
+		case err := <-c.streamDisconnectedChan:
+			c.notifyStreamDisconnect(err)
 
-			if ticker == nil {
-				ticker = backoff.NewTicker(streamingRetryStrategy)
-			}
+			nextBackOff := streamingRetryStrategy.NextBackOff()
+			c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, nextBackOff.Seconds(), reconnectionAttempt)
+			c.handleStreamDisconnect(ctx, nextBackOff)
 
-			// Note, the retry interval logged here is just an approximate value.
-			// NextBackOff() will not be exactly the same value when used by the underlying ticker.
-			// There is currently no way to get the interval that the ticker has used.
-			c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, streamingRetryStrategy.NextBackOff().Seconds(), reconnectionAttempt)
 			reconnectionAttempt += 1
 
-			// Backoff before retrying
-			select {
-			case <-ticker.C:
-			case <-ctx.Done():
-				c.config.Logger.Infof("%s Stream stopped during reconnection", sdk_codes.StreamStop)
-				ticker.Stop()
-				return
-			}
-			c.streamConnect(ctx)
 		}
 	}
+}
+
+func (c *CfClient) handleStreamDisconnect(ctx context.Context, nextBackOff time.Duration) {
+	select {
+	case <-time.After(nextBackOff):
+		c.streamConnect(ctx)
+	case <-ctx.Done():
+		// Context was cancelled, stop trying to reconnect
+		c.config.Logger.Infof("%s Stream stopped during reconnection", sdk_codes.StreamStop)
+		return
+	}
+}
+
+func (c *CfClient) notifyStreamDisconnect(err error) {
+	c.mux.RLock()
+	c.streamConnectedBool = false
+	c.mux.RUnlock()
+	// If an eventStreamListener has been passed to the Proxy lets notify it of the disconnected
+	// to let it know something is up with the stream it has been listening to
+	if c.config.eventStreamListener != nil {
+		c.config.eventStreamListener.Pub(context.Background(), stream.Event{
+			APIKey:      c.sdkKey,
+			Environment: c.environmentID,
+			Err:         stream.ErrStreamDisconnect,
+		})
+	}
+	c.config.Logger.Warnf("%s Stream disconnected: %s", sdk_codes.StreamDisconnected, err)
+	c.config.Logger.Infof("%s Polling started, interval: %v seconds", sdk_codes.PollStart, c.config.pullInterval)
 }
 
 func (c *CfClient) pullCronJob(ctx context.Context) {
