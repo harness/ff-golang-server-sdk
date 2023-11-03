@@ -402,10 +402,21 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	}
 
 	// Wrap the retryClient's Transport with our customTransport.
-	customTrans := &customTransport{
-		baseTransport: c.config.httpClient.Transport,
-		getHeaders:    getHeadersFn,
+	//customTrans := &customTransport{
+	//	baseTransport: c.config.httpClient.Transport,
+	//	getHeaders:    getHeadersFn,
+	//}
+
+	// Wrap the httpClient's transport with our own custom transport, which currently just adds extra headers
+	// for analytics purposes.
+	// If the httpClient doesn't have a Transport we can honour, then just use a default transport.
+	var baseTransport http.RoundTripper
+	if c.config.httpClient.Transport != nil {
+		baseTransport = c.config.httpClient.Transport
+	} else {
+		baseTransport = http.DefaultTransport
 	}
+	customTrans := NewCustomTransport(baseTransport, getHeadersFn)
 
 	c.config.httpClient.Transport = customTrans
 

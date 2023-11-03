@@ -12,6 +12,14 @@ type customTransport struct {
 	getHeaders    HeadersFn
 }
 
+func NewCustomTransport(baseTransport http.RoundTripper, getHeaderFn HeadersFn) *customTransport {
+	customTransport := &customTransport{
+		baseTransport: baseTransport,
+		getHeaders:    getHeaderFn,
+	}
+	return customTransport
+}
+
 func (t *customTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Retrieve the headers using the provided function.
 	headers, err := t.getHeaders()
