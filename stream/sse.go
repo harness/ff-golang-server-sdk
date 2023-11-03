@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"time"
@@ -26,7 +27,6 @@ type SSEClient struct {
 	eventStreamListener EventStreamListener
 	streamConnected     chan struct{}
 	streamDisconnected  chan error
-	deadStream          chan error
 
 	proxyMode bool
 }
@@ -45,7 +45,6 @@ func NewSSEClient(
 	proxyMode bool,
 	streamConnected chan struct{},
 	streamDisconnected chan error,
-	deadStream chan error,
 
 ) *SSEClient {
 	client.Headers["Authorization"] = fmt.Sprintf("Bearer %s", token)
@@ -59,7 +58,6 @@ func NewSSEClient(
 		proxyMode:           proxyMode,
 		streamConnected:     streamConnected,
 		streamDisconnected:  streamDisconnected,
-		deadStream:          deadStream,
 	}
 	return sseClient
 }
@@ -107,10 +105,8 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 			case <-ctx.Done():
 				return
 			case <-deadStreamTimer.C:
-				// Just stop the timer, no need to drain its channel here.
 				deadStreamTimer.Stop()
 				deadStreamCancel()
-				c.deadStream <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
 				return
 			}
 		}()
@@ -149,11 +145,19 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		}
 
 		deadStreamTimer.Stop()
-		// Even though we handle the error above, The SSE library we use currently returns a nil error for io.EOF errors, which can
+
+		// When we cancel the deadStreamContext, we exit the `SubscribeWithContext` function with a nil error.
+		// So we need an explicit check to see if the reason was
+		if errors.Is(deadStreamCtx.Err(), context.Canceled) {
+			c.streamDisconnected <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
+			return
+		}
+
+		// The SSE library we use currently returns a nil error for io.EOF errors, which can
 		// happen if ff-server closes the connection at the 24 hours point.
 		// So we need to signal the stream disconnected channel any time we've exited SubscribeWithContext.
 		// If we don't do this and the server closes the connection the Go SDK will still think it's connected to the stream
-		// even though it isn't
+		// even though it isn't.
 		c.streamDisconnected <- fmt.Errorf("server closed the connection")
 	}()
 

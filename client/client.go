@@ -56,7 +56,6 @@ type CfClient struct {
 	streamConnectedBoolLock sync.RWMutex
 	streamConnectedChan     chan struct{}
 	streamDisconnectedChan  chan error
-	deadStreamChan          chan error
 	authenticatedChan       chan struct{}
 	postEvalChan            chan evaluation.PostEvalData
 	initializedBool         bool
@@ -94,7 +93,6 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		initializedErrChan:     make(chan error),
 		streamConnectedChan:    make(chan struct{}),
 		streamDisconnectedChan: make(chan error),
-		deadStreamChan:         make(chan error),
 	}
 
 	if sdkKey == "" {
@@ -262,7 +260,7 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	sseClient.Connection = c.config.httpClient
 
 	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.repository, c.api, c.config.Logger,
-		c.config.eventStreamListener, c.config.proxyMode, c.streamConnectedChan, c.streamDisconnectedChan, c.deadStreamChan)
+		c.config.eventStreamListener, c.config.proxyMode, c.streamConnectedChan, c.streamDisconnectedChan)
 
 	// Connect kicks off a goroutine that attempts to establish a stream connection
 	// while this is happening we set streamConnectedBool to true - if any errors happen
@@ -454,13 +452,10 @@ func (c *CfClient) stream(ctx context.Context) {
 	<-c.initializedChan
 	c.streamConnect(ctx)
 
-	// A stream can disconnect for two reasons.
-	// 1. If the stream encounters an error
-	// 2. If we haven't detected any heartbeats in 30 seconds
-	// There's a possibility that these two events can coincide with each other and end up in a race condition,
-	// so we use two channels and these flags to synchronise between them, to ensure we only attempt to reconnect once.
-	var streamDisconnect int32
-	var deadStream int32
+	//// Defensive flag to ensure we don't attempt to handle a disconnect event more than once. Should not occur, but
+	//// guarnatees we won't attempt to start more than one stream for a given disconnection event.
+	//var streamDisconnect int32
+	//var deadStream int32
 
 	streamingRetryStrategy := c.config.streamingRetryStrategy
 
@@ -484,32 +479,14 @@ func (c *CfClient) stream(ctx context.Context) {
 			c.streamConnectedBool = true
 			c.mux.RUnlock()
 
-			atomic.StoreInt32(&deadStream, 0)
-			atomic.StoreInt32(&streamDisconnect, 0)
-
-		case err := <-c.deadStreamChan:
-			if atomic.LoadInt32(&streamDisconnect) == 0 {
-				c.notifyStreamDisconnect(deadStream, err)
-				c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, streamingRetryStrategy.NextBackOff().Seconds(), reconnectionAttempt)
-
-				nextBackOff := streamingRetryStrategy.NextBackOff()
-				c.handleStreamDisconnect(ctx, nextBackOff)
-
-				reconnectionAttempt += 1
-				atomic.StoreInt32(&deadStream, 1)
-			}
-
 		case err := <-c.streamDisconnectedChan:
-			if atomic.LoadInt32(&deadStream) == 0 {
-				c.notifyStreamDisconnect(streamDisconnect, err)
+			c.notifyStreamDisconnect(err)
 
-				nextBackOff := streamingRetryStrategy.NextBackOff()
-				c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, nextBackOff.Seconds(), reconnectionAttempt)
-				c.handleStreamDisconnect(ctx, nextBackOff)
+			nextBackOff := streamingRetryStrategy.NextBackOff()
+			c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, nextBackOff.Seconds(), reconnectionAttempt)
+			c.handleStreamDisconnect(ctx, nextBackOff)
 
-				reconnectionAttempt += 1
-				atomic.StoreInt32(&streamDisconnect, 1)
-			}
+			reconnectionAttempt += 1
 
 		}
 	}
@@ -526,11 +503,7 @@ func (c *CfClient) handleStreamDisconnect(ctx context.Context, nextBackOff time.
 	}
 }
 
-func (c *CfClient) notifyStreamDisconnect(disconnectFlag int32, err error) {
-	if atomic.LoadInt32(&disconnectFlag) == 1 {
-		return
-	}
-
+func (c *CfClient) notifyStreamDisconnect(err error) {
 	c.mux.RLock()
 	c.streamConnectedBool = false
 	c.mux.RUnlock()
