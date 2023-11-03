@@ -500,29 +500,38 @@ func (c *CfClient) stream(ctx context.Context) {
 			}
 
 		case err := <-c.streamDisconnectedChan:
-			if atomic.LoadInt32(&deadStream) == 0 {
-				c.notifyStreamDisconnect(streamDisconnect, err)
+			//if atomic.LoadInt32(&deadStream) == 0 {
+			c.notifyStreamDisconnect(streamDisconnect, err)
 
-				nextBackOff := streamingRetryStrategy.NextBackOff()
-				c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, nextBackOff.Seconds(), reconnectionAttempt)
-				c.handleStreamDisconnect(ctx, nextBackOff)
+			nextBackOff := streamingRetryStrategy.NextBackOff()
+			c.config.Logger.Infof("%s Retrying stream connection in %fs (attempt %d)", sdk_codes.StreamRetry, nextBackOff.Seconds(), reconnectionAttempt)
+			c.handleStreamDisconnect(ctx, nextBackOff)
 
-				reconnectionAttempt += 1
-				atomic.StoreInt32(&streamDisconnect, 1)
-			}
+			reconnectionAttempt += 1
+			atomic.StoreInt32(&streamDisconnect, 1)
+			//}
 
 		}
 	}
 }
 
 func (c *CfClient) handleStreamDisconnect(ctx context.Context, nextBackOff time.Duration) {
-	select {
-	case <-time.After(nextBackOff):
-		c.streamConnect(ctx)
-	case <-ctx.Done():
-		// Context was cancelled, stop trying to reconnect
-		c.config.Logger.Infof("%s Stream stopped during reconnection", sdk_codes.StreamStop)
-		return
+	timer := time.NewTimer(nextBackOff)
+	defer timer.Stop()
+
+	for {
+		select {
+		case <-timer.C:
+			c.streamConnect(ctx)
+			return
+		case <-ctx.Done():
+			// Context was cancelled, stop trying to reconnect
+			c.config.Logger.Infof("%s Stream stopped during reconnection", sdk_codes.StreamStop)
+			return
+		case <-c.streamConnectedChan:
+			c.config.Logger.Infof("%s Stream reconnected", sdk_codes.StreamStarted)
+			return
+		}
 	}
 }
 
