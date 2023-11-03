@@ -401,7 +401,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 		}, nil
 	}
 
-	// Wrap the retryClient's Transport with your customTransport.
+	// Wrap the retryClient's Transport with our customTransport.
 	customTrans := &customTransport{
 		baseTransport: c.config.httpClient.Transport,
 		getHeaders:    getHeadersFn,
@@ -409,17 +409,9 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 
 	c.config.httpClient.Transport = customTrans
 
-	//addUsageHeaders := func(ctx context.Context, req *http.Request) error {
-	//	req.Header.Set("User-Agent", "GoSDK/"+analyticsservice.SdkVersion)
-	//	req.Header.Set("Harness-SDK-Info", fmt.Sprintf("Go %s Server", analyticsservice.SdkVersion))
-	//	req.Header.Set("Harness-EnvironmentID", c.environmentID)
-	//	return nil
-	//}
-
 	restClient, err := rest.NewClientWithResponses(c.config.url,
 		rest.WithRequestEditorFn(bearerTokenProvider.Intercept),
 		rest.WithRequestEditorFn(c.InterceptAddCluster),
-		//rest.WithRequestEditorFn(addUsageHeaders),
 		rest.WithHTTPClient(c.config.httpClient),
 	)
 	if err != nil {
@@ -429,7 +421,6 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	metricsClient, err := metricsclient.NewClientWithResponses(c.config.eventsURL,
 		metricsclient.WithRequestEditorFn(bearerTokenProvider.Intercept),
 		metricsclient.WithRequestEditorFn(c.InterceptAddCluster),
-		//metricsclient.WithRequestEditorFn(addUsageHeaders),
 		metricsclient.WithHTTPClient(c.config.httpClient),
 	)
 	if err != nil {
