@@ -452,11 +452,6 @@ func (c *CfClient) stream(ctx context.Context) {
 	<-c.initializedChan
 	c.streamConnect(ctx)
 
-	//// Defensive flag to ensure we don't attempt to handle a disconnect event more than once. Should not occur, but
-	//// guarnatees we won't attempt to start more than one stream for a given disconnection event.
-	//var streamDisconnect int32
-	//var deadStream int32
-
 	streamingRetryStrategy := c.config.streamingRetryStrategy
 
 	reconnectionAttempt := 1

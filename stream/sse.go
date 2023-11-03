@@ -64,7 +64,6 @@ func NewSSEClient(
 
 // Connect will subscribe to SSE stream
 func (c *SSEClient) Connect(ctx context.Context, environment string, apiKey string) {
-
 	go func() {
 		for event := range orDone(ctx, c.subscribe(ctx, environment, apiKey)) {
 			c.handleEvent(event)
