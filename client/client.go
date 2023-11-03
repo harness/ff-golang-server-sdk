@@ -400,13 +400,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 			"Harness-EnvironmentID": c.environmentID,
 		}, nil
 	}
-
-	// Wrap the retryClient's Transport with our customTransport.
-	//customTrans := &customTransport{
-	//	baseTransport: c.config.httpClient.Transport,
-	//	getHeaders:    getHeadersFn,
-	//}
-
+	
 	// Wrap the httpClient's transport with our own custom transport, which currently just adds extra headers
 	// for analytics purposes.
 	// If the httpClient doesn't have a Transport we can honour, then just use a default transport.
