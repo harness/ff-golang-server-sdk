@@ -6,7 +6,7 @@ import "net/http"
 type HeadersFn func() (map[string]string, error)
 
 // customTransport wraps an http.RoundTripper and allows adding headers dynamically. This means we can still use
-// the goretryable-http client's transport, which does the retrying for us.
+// the goretryable-http client's transport, or a user's transport if they've provided their own http client.
 type customTransport struct {
 	baseTransport http.RoundTripper
 	getHeaders    HeadersFn
