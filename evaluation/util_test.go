@@ -26,7 +26,7 @@ func Test_getAttrValueIsNil(t *testing.T) {
 			want: reflect.Value{},
 		},
 		{
-			name: "wrong attribute should return Value{}",
+			name: "wrong attribute should return ValueOf('')",
 			args: args{
 				target: &Target{
 					Identifier: harness,
@@ -36,7 +36,7 @@ func Test_getAttrValueIsNil(t *testing.T) {
 				},
 				attr: "no_identifier",
 			},
-			want: reflect.Value{},
+			want: reflect.ValueOf(""),
 		},
 	}
 	for _, tt := range tests {
