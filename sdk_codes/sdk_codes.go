@@ -24,6 +24,7 @@ const (
 	StreamStop         SDKCode = "SDKCODE:5004"
 	EvaluationSuccess  SDKCode = "SDKCODE:6000"
 	EvaluationFailed   SDKCode = "SDKCODE:6001"
+	MissingBucketBy    SDKCode = "SDKCODE:6002"
 	MetricsStarted     SDKCode = "SDKCODE:7000"
 	MetricsStopped     SDKCode = "SDKCODE:7001"
 	MetricsSendFail    SDKCode = "SDKCODE:7002"

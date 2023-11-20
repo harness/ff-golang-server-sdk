@@ -2,6 +2,7 @@ package evaluation
 
 import (
 	"fmt"
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"reflect"
 	"strconv"
 	"strings"
@@ -33,6 +34,8 @@ func getAttrValue(target *Target, attr string) reflect.Value {
 			value = reflect.ValueOf(target.Identifier)
 		case "name":
 			value = reflect.ValueOf(target.Name)
+		default:
+			value = reflect.ValueOf("")
 		}
 	}
 	return value
@@ -70,6 +73,7 @@ func findVariation(variations []rest.Variation, identifier string) (rest.Variati
 
 func getNormalizedNumber(identifier, bucketBy string) int {
 	value := []byte(strings.Join([]string{bucketBy, identifier}, ":"))
+	log.Debugf("MM3 input [%s]", string(value))
 	hasher := murmur3.New32()
 	_, err := hasher.Write(value)
 	if err != nil {
@@ -83,10 +87,18 @@ func isEnabled(target *Target, bucketBy string, percentage int) bool {
 	value := getAttrValue(target, bucketBy)
 	identifier := value.String()
 	if identifier == "" {
-		return false
+		var oldBB = bucketBy
+		bucketBy = "identifier"
+		value = getAttrValue(target, bucketBy)
+		identifier = value.String()
+		if identifier == "" {
+			return false
+		}
+		log.Warnf("%s BucketBy attribute not found in target attributes, falling back to 'identifier': missing=%s, using value=%s", sdk_codes.MissingBucketBy, oldBB, identifier)
 	}
 
 	bucketID := getNormalizedNumber(identifier, bucketBy)
+	log.Debugf("MM3 percentage_check=%d bucket_by=%s value=%s bucket=%d", percentage, bucketBy, identifier, bucketID)
 	return percentage > 0 && bucketID <= percentage
 }
 
