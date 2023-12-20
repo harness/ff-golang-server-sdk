@@ -272,6 +272,11 @@ pipeline:
             type: String
             default: "false"
             value: <+input>.allowedValues(true,false)
+          - name: pull_request
+            type: String
+            description: ""
+            required: false
+            value: <+input>.allowedValues(true,false)
   variables:
     - name: github_token
       type: Secret
