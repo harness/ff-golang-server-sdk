@@ -138,7 +138,7 @@ pipeline:
                             BUILD_MODE: local
                   when:
                     stageStatus: Success
-                    condition: <+pipeline.triggeredBy.name> == "OnRelease"
+                    condition: <+pipeline.triggeredBy.name> == "OnRelease" || <+pipeline.triggeredBy.name> == "GitPullRequest"
               - step:
                   type: Run
                   name: CVE scan
