@@ -18,6 +18,6 @@ inputSet:
           identifier: Publish_Release_Notes
           type: Approval
           variables:
-            - name: release
+            - name: release 
               type: String
               value: "false"
