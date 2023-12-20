@@ -10,7 +10,7 @@ inputSet:
         codebase:
           build:
             type: branch
-            spec:
+            spec: 
               branch: main
     stages:
       - stage:
