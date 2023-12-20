@@ -1,5 +1,6 @@
 inputSet:
   name: main
+  tags: {}
   identifier: main
   orgIdentifier: Feature_Flag
   projectIdentifier: FFPipelines
@@ -10,8 +11,8 @@ inputSet:
         codebase:
           build:
             type: branch
-            spec: 
-              branch: main
+            spec:
+              branch: <+trigger.branch>
     stages:
       - stage:
           identifier: Publish_Release_Notes
@@ -20,4 +21,3 @@ inputSet:
             - name: release
               type: String
               value: "false"
-  object Object: pipeline.properties.ci.codebase
