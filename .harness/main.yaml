@@ -1,0 +1,23 @@
+inputSet:
+  name: main
+  identifier: main
+  orgIdentifier: Feature_Flag
+  projectIdentifier: FFPipelines
+  pipeline:
+    identifier: ffgolangserversdk
+    properties:
+      ci:
+        codebase:
+          build:
+            type: branch
+            spec:
+              branch: main
+    stages:
+      - stage:
+          identifier: Publish_Release_Notes
+          type: Approval
+          variables:
+            - name: release
+              type: String
+              value: "false"
+  object Object: pipeline.properties.ci.codebase
