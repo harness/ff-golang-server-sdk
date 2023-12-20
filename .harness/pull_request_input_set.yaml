@@ -1,0 +1,26 @@
+inputSet:
+  name: pull_request_input_set
+  identifier: pull_request_input_set
+  orgIdentifier: Feature_Flag
+  projectIdentifier: FFPipelines
+  pipeline:
+    identifier: ffgolangserversdk
+    properties:
+      ci:
+        codebase:
+          build:
+            type: branch
+            spec:
+              branch: <+trigger.branch>
+    stages:
+      - stage:
+          identifier: Publish_Release_Notes
+          type: Approval
+          variables:
+            - name: release
+              type: String
+              value: "false"
+            - name: pull_request
+              type: String
+              value: "true"
+  object Object: pipeline.properties.ci.codebase
