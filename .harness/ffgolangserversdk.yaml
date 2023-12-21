@@ -267,16 +267,6 @@ pipeline:
         when:
           pipelineStatus: Success
           condition: <+stage.variables.release>
-        variables:
-          - name: release
-            type: String
-            default: "false"
-            value: <+input>.allowedValues(true,false)
-          - name: pull_request
-            type: String
-            description: ""
-            required: false
-            value: <+input>.allowedValues(true,false)
   variables:
     - name: github_token
       type: Secret
@@ -293,3 +283,13 @@ pipeline:
       type: Secret
       description: ""
       value: FF_CODECOV_TOKEN
+    - name: pull_request
+      type: String
+      description: ""
+      required: false
+      value: <+input>.allowedValues(true,false)
+    - name: release
+      type: String
+      description: ""
+      required: false
+      value: <+input>.allowedValues(true,false)
