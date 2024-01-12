@@ -293,3 +293,14 @@ pipeline:
       type: Secret
       description: ""
       value: FF_CODECOV_TOKEN
+  notificationRules:
+    - name: build failed
+      identifier: build_failed
+      pipelineEvents:
+        - type: PipelineFailed
+      notificationMethod:
+        type: Slack
+        spec:
+          userGroups: []
+          webhookUrl: <+variable.FF_SDK_BUILDS_SLACK_URL>
+      enabled: true
