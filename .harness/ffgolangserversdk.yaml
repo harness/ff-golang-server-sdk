@@ -138,7 +138,7 @@ pipeline:
                             BUILD_MODE: local
                   when:
                     stageStatus: Success
-                    condition: <+pipeline.variables.release> || <+pipeline.variables.pull_request>
+                    condition: "!empty(<+codebase.tag>)"
               - step:
                   type: Run
                   name: CVE scan
