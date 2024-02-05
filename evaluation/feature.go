@@ -59,7 +59,7 @@ func (c *Clause) Evaluate(target *Target, segments Segments, operator types.Valu
 			return operator.In(c.Value)
 		case equalOperator:
 			return operator.Equal(c.Value)
-		case gtOperator:
+		case greaterThan:
 			return operator.GreaterThan(c.Value)
 		case startsWithOperator:
 			return operator.StartsWith(c.Value)

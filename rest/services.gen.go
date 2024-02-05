@@ -100,22 +100,35 @@ type ClientInterface interface {
 	Authenticate(ctx context.Context, body AuthenticateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetFeatureConfig request
-	GetFeatureConfig(ctx context.Context, environmentUUID string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetFeatureConfig(ctx context.Context, environmentUUID string, params *GetFeatureConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetFeatureConfigByIdentifier request
-	GetFeatureConfigByIdentifier(ctx context.Context, environmentUUID string, identifier string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetFeatureConfigByIdentifier(ctx context.Context, environmentUUID string, identifier string, params *GetFeatureConfigByIdentifierParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetAllSegments request
-	GetAllSegments(ctx context.Context, environmentUUID string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetAllSegments(ctx context.Context, environmentUUID string, params *GetAllSegmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetSegmentByIdentifier request
-	GetSegmentByIdentifier(ctx context.Context, environmentUUID string, identifier string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetSegmentByIdentifier(ctx context.Context, environmentUUID string, identifier string, params *GetSegmentByIdentifierParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetEvaluations request
-	GetEvaluations(ctx context.Context, environmentUUID string, target string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetEvaluations(ctx context.Context, environmentUUID string, target string, params *GetEvaluationsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetEvaluationByIdentifier request
-	GetEvaluationByIdentifier(ctx context.Context, environmentUUID string, target string, feature string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetEvaluationByIdentifier(ctx context.Context, environmentUUID string, target string, feature string, params *GetEvaluationByIdentifierParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PostMetrics request with any body
+	PostMetricsWithBody(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PostMetrics(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, body PostMetricsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// AuthenticateProxyKey request with any body
+	AuthenticateProxyKeyWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	AuthenticateProxyKey(ctx context.Context, body AuthenticateProxyKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetProxyConfig request
+	GetProxyConfig(ctx context.Context, params *GetProxyConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// Stream request
 	Stream(ctx context.Context, params *StreamParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -145,8 +158,8 @@ func (c *Client) Authenticate(ctx context.Context, body AuthenticateJSONRequestB
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetFeatureConfig(ctx context.Context, environmentUUID string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetFeatureConfigRequest(c.Server, environmentUUID)
+func (c *Client) GetFeatureConfig(ctx context.Context, environmentUUID string, params *GetFeatureConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetFeatureConfigRequest(c.Server, environmentUUID, params)
 	if err != nil {
 		return nil, err
 	}
@@ -157,8 +170,8 @@ func (c *Client) GetFeatureConfig(ctx context.Context, environmentUUID string, r
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetFeatureConfigByIdentifier(ctx context.Context, environmentUUID string, identifier string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetFeatureConfigByIdentifierRequest(c.Server, environmentUUID, identifier)
+func (c *Client) GetFeatureConfigByIdentifier(ctx context.Context, environmentUUID string, identifier string, params *GetFeatureConfigByIdentifierParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetFeatureConfigByIdentifierRequest(c.Server, environmentUUID, identifier, params)
 	if err != nil {
 		return nil, err
 	}
@@ -169,8 +182,8 @@ func (c *Client) GetFeatureConfigByIdentifier(ctx context.Context, environmentUU
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetAllSegments(ctx context.Context, environmentUUID string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetAllSegmentsRequest(c.Server, environmentUUID)
+func (c *Client) GetAllSegments(ctx context.Context, environmentUUID string, params *GetAllSegmentsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetAllSegmentsRequest(c.Server, environmentUUID, params)
 	if err != nil {
 		return nil, err
 	}
@@ -181,8 +194,8 @@ func (c *Client) GetAllSegments(ctx context.Context, environmentUUID string, req
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetSegmentByIdentifier(ctx context.Context, environmentUUID string, identifier string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetSegmentByIdentifierRequest(c.Server, environmentUUID, identifier)
+func (c *Client) GetSegmentByIdentifier(ctx context.Context, environmentUUID string, identifier string, params *GetSegmentByIdentifierParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetSegmentByIdentifierRequest(c.Server, environmentUUID, identifier, params)
 	if err != nil {
 		return nil, err
 	}
@@ -193,8 +206,8 @@ func (c *Client) GetSegmentByIdentifier(ctx context.Context, environmentUUID str
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetEvaluations(ctx context.Context, environmentUUID string, target string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetEvaluationsRequest(c.Server, environmentUUID, target)
+func (c *Client) GetEvaluations(ctx context.Context, environmentUUID string, target string, params *GetEvaluationsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetEvaluationsRequest(c.Server, environmentUUID, target, params)
 	if err != nil {
 		return nil, err
 	}
@@ -205,8 +218,68 @@ func (c *Client) GetEvaluations(ctx context.Context, environmentUUID string, tar
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetEvaluationByIdentifier(ctx context.Context, environmentUUID string, target string, feature string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetEvaluationByIdentifierRequest(c.Server, environmentUUID, target, feature)
+func (c *Client) GetEvaluationByIdentifier(ctx context.Context, environmentUUID string, target string, feature string, params *GetEvaluationByIdentifierParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetEvaluationByIdentifierRequest(c.Server, environmentUUID, target, feature, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostMetricsWithBody(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostMetricsRequestWithBody(c.Server, environmentUUID, params, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PostMetrics(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, body PostMetricsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostMetricsRequest(c.Server, environmentUUID, params, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AuthenticateProxyKeyWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAuthenticateProxyKeyRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AuthenticateProxyKey(ctx context.Context, body AuthenticateProxyKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAuthenticateProxyKeyRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetProxyConfig(ctx context.Context, params *GetProxyConfigParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetProxyConfigRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +343,7 @@ func NewAuthenticateRequestWithBody(server string, contentType string, body io.R
 }
 
 // NewGetFeatureConfigRequest generates requests for GetFeatureConfig
-func NewGetFeatureConfigRequest(server string, environmentUUID string) (*http.Request, error) {
+func NewGetFeatureConfigRequest(server string, environmentUUID string, params *GetFeatureConfigParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -295,6 +368,26 @@ func NewGetFeatureConfigRequest(server string, environmentUUID string) (*http.Re
 		return nil, err
 	}
 
+	queryValues := queryURL.Query()
+
+	if params.Cluster != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster", runtime.ParamLocationQuery, *params.Cluster); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryURL.RawQuery = queryValues.Encode()
+
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
@@ -304,7 +397,7 @@ func NewGetFeatureConfigRequest(server string, environmentUUID string) (*http.Re
 }
 
 // NewGetFeatureConfigByIdentifierRequest generates requests for GetFeatureConfigByIdentifier
-func NewGetFeatureConfigByIdentifierRequest(server string, environmentUUID string, identifier string) (*http.Request, error) {
+func NewGetFeatureConfigByIdentifierRequest(server string, environmentUUID string, identifier string, params *GetFeatureConfigByIdentifierParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -336,6 +429,26 @@ func NewGetFeatureConfigByIdentifierRequest(server string, environmentUUID strin
 		return nil, err
 	}
 
+	queryValues := queryURL.Query()
+
+	if params.Cluster != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster", runtime.ParamLocationQuery, *params.Cluster); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryURL.RawQuery = queryValues.Encode()
+
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
@@ -345,7 +458,7 @@ func NewGetFeatureConfigByIdentifierRequest(server string, environmentUUID strin
 }
 
 // NewGetAllSegmentsRequest generates requests for GetAllSegments
-func NewGetAllSegmentsRequest(server string, environmentUUID string) (*http.Request, error) {
+func NewGetAllSegmentsRequest(server string, environmentUUID string, params *GetAllSegmentsParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -370,6 +483,26 @@ func NewGetAllSegmentsRequest(server string, environmentUUID string) (*http.Requ
 		return nil, err
 	}
 
+	queryValues := queryURL.Query()
+
+	if params.Cluster != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster", runtime.ParamLocationQuery, *params.Cluster); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryURL.RawQuery = queryValues.Encode()
+
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
@@ -379,7 +512,7 @@ func NewGetAllSegmentsRequest(server string, environmentUUID string) (*http.Requ
 }
 
 // NewGetSegmentByIdentifierRequest generates requests for GetSegmentByIdentifier
-func NewGetSegmentByIdentifierRequest(server string, environmentUUID string, identifier string) (*http.Request, error) {
+func NewGetSegmentByIdentifierRequest(server string, environmentUUID string, identifier string, params *GetSegmentByIdentifierParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -411,6 +544,26 @@ func NewGetSegmentByIdentifierRequest(server string, environmentUUID string, ide
 		return nil, err
 	}
 
+	queryValues := queryURL.Query()
+
+	if params.Cluster != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster", runtime.ParamLocationQuery, *params.Cluster); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryURL.RawQuery = queryValues.Encode()
+
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
@@ -420,7 +573,7 @@ func NewGetSegmentByIdentifierRequest(server string, environmentUUID string, ide
 }
 
 // NewGetEvaluationsRequest generates requests for GetEvaluations
-func NewGetEvaluationsRequest(server string, environmentUUID string, target string) (*http.Request, error) {
+func NewGetEvaluationsRequest(server string, environmentUUID string, target string, params *GetEvaluationsParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -452,6 +605,26 @@ func NewGetEvaluationsRequest(server string, environmentUUID string, target stri
 		return nil, err
 	}
 
+	queryValues := queryURL.Query()
+
+	if params.Cluster != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster", runtime.ParamLocationQuery, *params.Cluster); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryURL.RawQuery = queryValues.Encode()
+
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
@@ -461,7 +634,7 @@ func NewGetEvaluationsRequest(server string, environmentUUID string, target stri
 }
 
 // NewGetEvaluationByIdentifierRequest generates requests for GetEvaluationByIdentifier
-func NewGetEvaluationByIdentifierRequest(server string, environmentUUID string, target string, feature string) (*http.Request, error) {
+func NewGetEvaluationByIdentifierRequest(server string, environmentUUID string, target string, feature string, params *GetEvaluationByIdentifierParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -500,6 +673,240 @@ func NewGetEvaluationByIdentifierRequest(server string, environmentUUID string, 
 		return nil, err
 	}
 
+	queryValues := queryURL.Query()
+
+	if params.Cluster != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster", runtime.ParamLocationQuery, *params.Cluster); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryURL.RawQuery = queryValues.Encode()
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPostMetricsRequest calls the generic PostMetrics builder with application/json body
+func NewPostMetricsRequest(server string, environmentUUID EnvironmentPathParam, params *PostMetricsParams, body PostMetricsJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPostMetricsRequestWithBody(server, environmentUUID, params, "application/json", bodyReader)
+}
+
+// NewPostMetricsRequestWithBody generates requests for PostMetrics with any type of body
+func NewPostMetricsRequestWithBody(server string, environmentUUID EnvironmentPathParam, params *PostMetricsParams, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "environmentUUID", runtime.ParamLocationPath, environmentUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/metrics/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	queryValues := queryURL.Query()
+
+	if params.Cluster != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster", runtime.ParamLocationQuery, *params.Cluster); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryURL.RawQuery = queryValues.Encode()
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewAuthenticateProxyKeyRequest calls the generic AuthenticateProxyKey builder with application/json body
+func NewAuthenticateProxyKeyRequest(server string, body AuthenticateProxyKeyJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAuthenticateProxyKeyRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewAuthenticateProxyKeyRequestWithBody generates requests for AuthenticateProxyKey with any type of body
+func NewAuthenticateProxyKeyRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/proxy/auth")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewGetProxyConfigRequest generates requests for GetProxyConfig
+func NewGetProxyConfigRequest(server string, params *GetProxyConfigParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/proxy/config")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	queryValues := queryURL.Query()
+
+	if params.PageNumber != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageNumber", runtime.ParamLocationQuery, *params.PageNumber); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.PageSize != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pageSize", runtime.ParamLocationQuery, *params.PageSize); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.Cluster != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster", runtime.ParamLocationQuery, *params.Cluster); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.Environment != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "environment", runtime.ParamLocationQuery, *params.Environment); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if queryFrag, err := runtime.StyleParamWithLocation("form", true, "key", runtime.ParamLocationQuery, params.Key); err != nil {
+		return nil, err
+	} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+		return nil, err
+	} else {
+		for k, v := range parsed {
+			for _, v2 := range v {
+				queryValues.Add(k, v2)
+			}
+		}
+	}
+
+	queryURL.RawQuery = queryValues.Encode()
+
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
@@ -526,6 +933,26 @@ func NewStreamRequest(server string, params *StreamParams) (*http.Request, error
 	if err != nil {
 		return nil, err
 	}
+
+	queryValues := queryURL.Query()
+
+	if params.Cluster != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster", runtime.ParamLocationQuery, *params.Cluster); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryURL.RawQuery = queryValues.Encode()
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
@@ -593,22 +1020,35 @@ type ClientWithResponsesInterface interface {
 	AuthenticateWithResponse(ctx context.Context, body AuthenticateJSONRequestBody, reqEditors ...RequestEditorFn) (*AuthenticateResponse, error)
 
 	// GetFeatureConfig request
-	GetFeatureConfigWithResponse(ctx context.Context, environmentUUID string, reqEditors ...RequestEditorFn) (*GetFeatureConfigResponse, error)
+	GetFeatureConfigWithResponse(ctx context.Context, environmentUUID string, params *GetFeatureConfigParams, reqEditors ...RequestEditorFn) (*GetFeatureConfigResponse, error)
 
 	// GetFeatureConfigByIdentifier request
-	GetFeatureConfigByIdentifierWithResponse(ctx context.Context, environmentUUID string, identifier string, reqEditors ...RequestEditorFn) (*GetFeatureConfigByIdentifierResponse, error)
+	GetFeatureConfigByIdentifierWithResponse(ctx context.Context, environmentUUID string, identifier string, params *GetFeatureConfigByIdentifierParams, reqEditors ...RequestEditorFn) (*GetFeatureConfigByIdentifierResponse, error)
 
 	// GetAllSegments request
-	GetAllSegmentsWithResponse(ctx context.Context, environmentUUID string, reqEditors ...RequestEditorFn) (*GetAllSegmentsResponse, error)
+	GetAllSegmentsWithResponse(ctx context.Context, environmentUUID string, params *GetAllSegmentsParams, reqEditors ...RequestEditorFn) (*GetAllSegmentsResponse, error)
 
 	// GetSegmentByIdentifier request
-	GetSegmentByIdentifierWithResponse(ctx context.Context, environmentUUID string, identifier string, reqEditors ...RequestEditorFn) (*GetSegmentByIdentifierResponse, error)
+	GetSegmentByIdentifierWithResponse(ctx context.Context, environmentUUID string, identifier string, params *GetSegmentByIdentifierParams, reqEditors ...RequestEditorFn) (*GetSegmentByIdentifierResponse, error)
 
 	// GetEvaluations request
-	GetEvaluationsWithResponse(ctx context.Context, environmentUUID string, target string, reqEditors ...RequestEditorFn) (*GetEvaluationsResponse, error)
+	GetEvaluationsWithResponse(ctx context.Context, environmentUUID string, target string, params *GetEvaluationsParams, reqEditors ...RequestEditorFn) (*GetEvaluationsResponse, error)
 
 	// GetEvaluationByIdentifier request
-	GetEvaluationByIdentifierWithResponse(ctx context.Context, environmentUUID string, target string, feature string, reqEditors ...RequestEditorFn) (*GetEvaluationByIdentifierResponse, error)
+	GetEvaluationByIdentifierWithResponse(ctx context.Context, environmentUUID string, target string, feature string, params *GetEvaluationByIdentifierParams, reqEditors ...RequestEditorFn) (*GetEvaluationByIdentifierResponse, error)
+
+	// PostMetrics request with any body
+	PostMetricsWithBodyWithResponse(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostMetricsResponse, error)
+
+	PostMetricsWithResponse(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, body PostMetricsJSONRequestBody, reqEditors ...RequestEditorFn) (*PostMetricsResponse, error)
+
+	// AuthenticateProxyKey request with any body
+	AuthenticateProxyKeyWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AuthenticateProxyKeyResponse, error)
+
+	AuthenticateProxyKeyWithResponse(ctx context.Context, body AuthenticateProxyKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*AuthenticateProxyKeyResponse, error)
+
+	// GetProxyConfig request
+	GetProxyConfigWithResponse(ctx context.Context, params *GetProxyConfigParams, reqEditors ...RequestEditorFn) (*GetProxyConfigResponse, error)
 
 	// Stream request
 	StreamWithResponse(ctx context.Context, params *StreamParams, reqEditors ...RequestEditorFn) (*StreamResponse, error)
@@ -785,6 +1225,83 @@ func (r GetEvaluationByIdentifierResponse) StatusCode() int {
 	return 0
 }
 
+type PostMetricsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON401      *Error
+	JSON403      *Error
+	JSON500      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r PostMetricsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PostMetricsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type AuthenticateProxyKeyResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AuthenticationResponse
+	JSON401      *Error
+	JSON403      *Error
+	JSON404      *Error
+	JSON500      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r AuthenticateProxyKeyResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AuthenticateProxyKeyResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetProxyConfigResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ProxyConfig
+	JSON400      *Error
+	JSON401      *Error
+	JSON403      *Error
+	JSON404      *Error
+	JSON500      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r GetProxyConfigResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetProxyConfigResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type StreamResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -824,8 +1341,8 @@ func (c *ClientWithResponses) AuthenticateWithResponse(ctx context.Context, body
 }
 
 // GetFeatureConfigWithResponse request returning *GetFeatureConfigResponse
-func (c *ClientWithResponses) GetFeatureConfigWithResponse(ctx context.Context, environmentUUID string, reqEditors ...RequestEditorFn) (*GetFeatureConfigResponse, error) {
-	rsp, err := c.GetFeatureConfig(ctx, environmentUUID, reqEditors...)
+func (c *ClientWithResponses) GetFeatureConfigWithResponse(ctx context.Context, environmentUUID string, params *GetFeatureConfigParams, reqEditors ...RequestEditorFn) (*GetFeatureConfigResponse, error) {
+	rsp, err := c.GetFeatureConfig(ctx, environmentUUID, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -833,8 +1350,8 @@ func (c *ClientWithResponses) GetFeatureConfigWithResponse(ctx context.Context, 
 }
 
 // GetFeatureConfigByIdentifierWithResponse request returning *GetFeatureConfigByIdentifierResponse
-func (c *ClientWithResponses) GetFeatureConfigByIdentifierWithResponse(ctx context.Context, environmentUUID string, identifier string, reqEditors ...RequestEditorFn) (*GetFeatureConfigByIdentifierResponse, error) {
-	rsp, err := c.GetFeatureConfigByIdentifier(ctx, environmentUUID, identifier, reqEditors...)
+func (c *ClientWithResponses) GetFeatureConfigByIdentifierWithResponse(ctx context.Context, environmentUUID string, identifier string, params *GetFeatureConfigByIdentifierParams, reqEditors ...RequestEditorFn) (*GetFeatureConfigByIdentifierResponse, error) {
+	rsp, err := c.GetFeatureConfigByIdentifier(ctx, environmentUUID, identifier, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -842,8 +1359,8 @@ func (c *ClientWithResponses) GetFeatureConfigByIdentifierWithResponse(ctx conte
 }
 
 // GetAllSegmentsWithResponse request returning *GetAllSegmentsResponse
-func (c *ClientWithResponses) GetAllSegmentsWithResponse(ctx context.Context, environmentUUID string, reqEditors ...RequestEditorFn) (*GetAllSegmentsResponse, error) {
-	rsp, err := c.GetAllSegments(ctx, environmentUUID, reqEditors...)
+func (c *ClientWithResponses) GetAllSegmentsWithResponse(ctx context.Context, environmentUUID string, params *GetAllSegmentsParams, reqEditors ...RequestEditorFn) (*GetAllSegmentsResponse, error) {
+	rsp, err := c.GetAllSegments(ctx, environmentUUID, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -851,8 +1368,8 @@ func (c *ClientWithResponses) GetAllSegmentsWithResponse(ctx context.Context, en
 }
 
 // GetSegmentByIdentifierWithResponse request returning *GetSegmentByIdentifierResponse
-func (c *ClientWithResponses) GetSegmentByIdentifierWithResponse(ctx context.Context, environmentUUID string, identifier string, reqEditors ...RequestEditorFn) (*GetSegmentByIdentifierResponse, error) {
-	rsp, err := c.GetSegmentByIdentifier(ctx, environmentUUID, identifier, reqEditors...)
+func (c *ClientWithResponses) GetSegmentByIdentifierWithResponse(ctx context.Context, environmentUUID string, identifier string, params *GetSegmentByIdentifierParams, reqEditors ...RequestEditorFn) (*GetSegmentByIdentifierResponse, error) {
+	rsp, err := c.GetSegmentByIdentifier(ctx, environmentUUID, identifier, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -860,8 +1377,8 @@ func (c *ClientWithResponses) GetSegmentByIdentifierWithResponse(ctx context.Con
 }
 
 // GetEvaluationsWithResponse request returning *GetEvaluationsResponse
-func (c *ClientWithResponses) GetEvaluationsWithResponse(ctx context.Context, environmentUUID string, target string, reqEditors ...RequestEditorFn) (*GetEvaluationsResponse, error) {
-	rsp, err := c.GetEvaluations(ctx, environmentUUID, target, reqEditors...)
+func (c *ClientWithResponses) GetEvaluationsWithResponse(ctx context.Context, environmentUUID string, target string, params *GetEvaluationsParams, reqEditors ...RequestEditorFn) (*GetEvaluationsResponse, error) {
+	rsp, err := c.GetEvaluations(ctx, environmentUUID, target, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
@@ -869,12 +1386,55 @@ func (c *ClientWithResponses) GetEvaluationsWithResponse(ctx context.Context, en
 }
 
 // GetEvaluationByIdentifierWithResponse request returning *GetEvaluationByIdentifierResponse
-func (c *ClientWithResponses) GetEvaluationByIdentifierWithResponse(ctx context.Context, environmentUUID string, target string, feature string, reqEditors ...RequestEditorFn) (*GetEvaluationByIdentifierResponse, error) {
-	rsp, err := c.GetEvaluationByIdentifier(ctx, environmentUUID, target, feature, reqEditors...)
+func (c *ClientWithResponses) GetEvaluationByIdentifierWithResponse(ctx context.Context, environmentUUID string, target string, feature string, params *GetEvaluationByIdentifierParams, reqEditors ...RequestEditorFn) (*GetEvaluationByIdentifierResponse, error) {
+	rsp, err := c.GetEvaluationByIdentifier(ctx, environmentUUID, target, feature, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParseGetEvaluationByIdentifierResponse(rsp)
+}
+
+// PostMetricsWithBodyWithResponse request with arbitrary body returning *PostMetricsResponse
+func (c *ClientWithResponses) PostMetricsWithBodyWithResponse(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostMetricsResponse, error) {
+	rsp, err := c.PostMetricsWithBody(ctx, environmentUUID, params, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostMetricsResponse(rsp)
+}
+
+func (c *ClientWithResponses) PostMetricsWithResponse(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, body PostMetricsJSONRequestBody, reqEditors ...RequestEditorFn) (*PostMetricsResponse, error) {
+	rsp, err := c.PostMetrics(ctx, environmentUUID, params, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePostMetricsResponse(rsp)
+}
+
+// AuthenticateProxyKeyWithBodyWithResponse request with arbitrary body returning *AuthenticateProxyKeyResponse
+func (c *ClientWithResponses) AuthenticateProxyKeyWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AuthenticateProxyKeyResponse, error) {
+	rsp, err := c.AuthenticateProxyKeyWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAuthenticateProxyKeyResponse(rsp)
+}
+
+func (c *ClientWithResponses) AuthenticateProxyKeyWithResponse(ctx context.Context, body AuthenticateProxyKeyJSONRequestBody, reqEditors ...RequestEditorFn) (*AuthenticateProxyKeyResponse, error) {
+	rsp, err := c.AuthenticateProxyKey(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAuthenticateProxyKeyResponse(rsp)
+}
+
+// GetProxyConfigWithResponse request returning *GetProxyConfigResponse
+func (c *ClientWithResponses) GetProxyConfigWithResponse(ctx context.Context, params *GetProxyConfigParams, reqEditors ...RequestEditorFn) (*GetProxyConfigResponse, error) {
+	rsp, err := c.GetProxyConfig(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetProxyConfigResponse(rsp)
 }
 
 // StreamWithResponse request returning *StreamResponse
@@ -1157,6 +1717,161 @@ func ParseGetEvaluationByIdentifierResponse(rsp *http.Response) (*GetEvaluationB
 	return response, nil
 }
 
+// ParsePostMetricsResponse parses an HTTP response from a PostMetricsWithResponse call
+func ParsePostMetricsResponse(rsp *http.Response) (*PostMetricsResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PostMetricsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseAuthenticateProxyKeyResponse parses an HTTP response from a AuthenticateProxyKeyWithResponse call
+func ParseAuthenticateProxyKeyResponse(rsp *http.Response) (*AuthenticateProxyKeyResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AuthenticateProxyKeyResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AuthenticationResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetProxyConfigResponse parses an HTTP response from a GetProxyConfigWithResponse call
+func ParseGetProxyConfigResponse(rsp *http.Response) (*GetProxyConfigResponse, error) {
+	bodyBytes, err := ioutil.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetProxyConfigResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ProxyConfig
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseStreamResponse parses an HTTP response from a StreamWithResponse call
 func ParseStreamResponse(rsp *http.Response) (*StreamResponse, error) {
 	bodyBytes, err := ioutil.ReadAll(rsp.Body)
@@ -1176,41 +1891,74 @@ func ParseStreamResponse(rsp *http.Response) (*StreamResponse, error) {
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

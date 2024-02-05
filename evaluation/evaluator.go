@@ -18,15 +18,24 @@ import (
 const (
 	oneHundred = 100
 
-	segmentMatchOperator   = "segmentMatch"
-	matchOperator          = "match"
-	inOperator             = "in"
-	equalOperator          = "equal"
-	gtOperator             = "gt"
-	startsWithOperator     = "starts_with"
-	endsWithOperator       = "ends_with"
-	containsOperator       = "contains"
-	equalSensitiveOperator = "equal_sensitive"
+	segmentMatchOperator     = "segmentMatch"
+	matchOperator            = "match"
+	inOperator               = "in"
+	equalOperator            = "equal"
+	startsWithOperator       = "starts_with"
+	endsWithOperator         = "ends_with"
+	containsOperator         = "contains"
+	equalSensitiveOperator   = "equal_sensitive"
+	greaterThan              = "gt"
+	greaterThanOrEqual       = "ge"
+	lessThan                 = "lt"
+	lessThanOrEqual          = "le"
+	before                   = "before"
+	after                    = "after"
+	semverLessThan           = "semverLt"
+	semverLessThanOrEqual    = "semverLe"
+	semverGreaterThan        = "semverGt"
+	semverGreaterThanOrEqual = "semverGe"
 )
 
 var (
@@ -130,10 +139,60 @@ func (e Evaluator) evaluateClause(clause *rest.Clause, target *Target) bool {
 			}
 		}
 		return false
-	case gtOperator:
-		return object > value
 	case segmentMatchOperator:
 		return e.isTargetIncludedOrExcludedInSegment(values, target)
+	case greaterThan:
+		rule := 0
+		targetAttribute := 0
+		if i, err := strconv.Atoi(object); err == nil {
+			targetAttribute = i
+		}
+		if i, err := strconv.Atoi(value); err == nil {
+			rule = i
+		}
+		return targetAttribute > rule
+	case greaterThanOrEqual:
+		rule := 0
+		targetAttribute := 0
+		if i, err := strconv.Atoi(object); err == nil {
+			targetAttribute = i
+		}
+		if i, err := strconv.Atoi(value); err == nil {
+			rule = i
+		}
+		return targetAttribute >= rule
+	case lessThan:
+		rule := 0
+		targetAttribute := 0
+		if i, err := strconv.Atoi(object); err == nil {
+			targetAttribute = i
+		}
+		if i, err := strconv.Atoi(value); err == nil {
+			rule = i
+		}
+		return targetAttribute < rule
+	case lessThanOrEqual:
+		rule := 0
+		targetAttribute := 0
+		if i, err := strconv.Atoi(object); err == nil {
+			targetAttribute = i
+		}
+		if i, err := strconv.Atoi(value); err == nil {
+			rule = i
+		}
+		return targetAttribute <= rule
+	case before:
+		return object < value
+	case after:
+		return object < value
+	case semverLessThan:
+		return object < value
+	case semverLessThanOrEqual:
+		return object < value
+	case semverGreaterThan:
+		return object < value
+	case semverGreaterThanOrEqual:
+		return object < value
 	default:
 		return false
 	}
@@ -141,6 +200,7 @@ func (e Evaluator) evaluateClause(clause *rest.Clause, target *Target) bool {
 
 func (e Evaluator) evaluateClauses(clauses []rest.Clause, target *Target) bool {
 	for i := range clauses {
+		// Evaluate each clause within a rule.  Rules are OR'd, but Clauses are AND'd.
 		if !e.evaluateClause(&clauses[i], target) {
 			return false
 		}
@@ -162,7 +222,7 @@ func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target
 	})
 	for i := range servingRules {
 		rule := servingRules[i]
-		// if evaluation is false just continue to next rule
+		// if evaluation is false just continue to next rule (rules are always OR'd)
 		if !e.evaluateRule(&rule, target) {
 			continue
 		}
@@ -200,7 +260,7 @@ func (e Evaluator) evaluateVariationMap(variationsMap []rest.VariationMap, targe
 	for _, variationMap := range variationsMap {
 		if variationMap.Targets != nil {
 			for _, t := range *variationMap.Targets {
-				if *t.Identifier != "" && *t.Identifier == target.Identifier {
+				if t.Identifier != "" && t.Identifier == target.Identifier {
 					return variationMap.Variation
 				}
 			}
@@ -262,16 +322,22 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 			return true
 		}
 
-		// Should Target be included via segment rules
-		rules := segment.Rules
-		// if rules is nil pointer or points to the empty slice
-		if rules != nil && len(*rules) > 0 {
-			if included, clause := e.evaluateGroupRules(*rules, target); included {
-				e.logger.Debugf(
-					"Target [%s] included in group [%s] via rule %+v", target.Name, segment.Name, clause)
-				return true
+		if segment.ServingRules {
+			// new logic OR rules AND clauses
+		} else {
+			// Should Target be included via segment rules
+			rules := segment.Rules
+			// if rules is nil pointer or points to the empty slice
+			if rules != nil && len(*rules) > 0 {
+				if included, clause := e.evaluateGroupRules(*rules, target); included {
+					e.logger.Debugf(
+						"Target [%s] included in group [%s] via rule %+v", target.Name, segment.Name, clause)
+					return true
+				}
 			}
 		}
+
+
 
 	}
 	return false

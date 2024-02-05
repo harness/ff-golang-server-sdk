@@ -4,6 +4,7 @@
 package rest
 
 const (
+	ApiKeyAuthScopes = "ApiKeyAuth.Scopes"
 	BearerAuthScopes = "BearerAuth.Scopes"
 )
 
@@ -19,6 +20,11 @@ const (
 const (
 	FeatureStateOff FeatureState = "off"
 	FeatureStateOn  FeatureState = "on"
+)
+
+// Defines values for MetricsDataMetricsType.
+const (
+	MetricsDataMetricsTypeFFMETRICS MetricsDataMetricsType = "FFMETRICS"
 )
 
 // AuthenticationRequest defines model for AuthenticationRequest.
@@ -37,24 +43,42 @@ type AuthenticationResponse struct {
 	AuthToken string `json:"authToken"`
 }
 
-// Clause defines model for Clause.
+// A clause describes what conditions are used to evaluate a flag
 type Clause struct {
-	Attribute string   `json:"attribute"`
-	Id        string   `json:"id"`
-	Negate    bool     `json:"negate"`
-	Op        string   `json:"op"`
-	Values    []string `json:"values"`
+	// The attribute to use in the clause.  This can be any target attribute
+	Attribute string `json:"attribute"`
+
+	// The unique ID for the clause
+	Id *string `json:"id,omitempty"`
+
+	// Is the operation negated?
+	Negate bool `json:"negate"`
+
+	// The type of operation such as equals, starts_with, contains
+	Op string `json:"op"`
+
+	// The values that are compared against the operator
+	Values []string `json:"values"`
 }
 
-// Distribution defines model for Distribution.
+// Describes a distribution rule
 type Distribution struct {
-	BucketBy   string              `json:"bucketBy"`
+	// The attribute to use when distributing targets across buckets
+	BucketBy string `json:"bucketBy"`
+
+	// A list of variations and the weight that should be given to each
 	Variations []WeightedVariation `json:"variations"`
 }
 
 // Error defines model for Error.
 type Error struct {
-	Code    string `json:"code"`
+	// The http error code
+	Code string `json:"code"`
+
+	// Additional details about the error
+	Details *map[string]interface{} `json:"details,omitempty"`
+
+	// The reason the request failed
 	Message string `json:"message"`
 }
 
@@ -71,127 +95,271 @@ type Evaluations []Evaluation
 
 // FeatureConfig defines model for FeatureConfig.
 type FeatureConfig struct {
-	DefaultServe         Serve             `json:"defaultServe"`
-	Environment          string            `json:"environment"`
-	Feature              string            `json:"feature"`
-	Kind                 FeatureConfigKind `json:"kind"`
-	OffVariation         string            `json:"offVariation"`
-	Prerequisites        *[]Prerequisite   `json:"prerequisites,omitempty"`
-	Project              string            `json:"project"`
-	Rules                *[]ServingRule    `json:"rules,omitempty"`
-	State                FeatureState      `json:"state"`
-	VariationToTargetMap *[]VariationMap   `json:"variationToTargetMap,omitempty"`
-	Variations           []Variation       `json:"variations"`
-	Version              *int64            `json:"version,omitempty"`
+	// Describe the distribution rule and the variation that should be served to the target
+	DefaultServe  Serve             `json:"defaultServe"`
+	Environment   string            `json:"environment"`
+	Feature       string            `json:"feature"`
+	Kind          FeatureConfigKind `json:"kind"`
+	OffVariation  string            `json:"offVariation"`
+	Prerequisites *[]Prerequisite   `json:"prerequisites,omitempty"`
+	Project       string            `json:"project"`
+	Rules         *[]ServingRule    `json:"rules,omitempty"`
+
+	// The state of a flag either off or on
+	State                FeatureState    `json:"state"`
+	VariationToTargetMap *[]VariationMap `json:"variationToTargetMap,omitempty"`
+	Variations           []Variation     `json:"variations"`
+	Version              *int64          `json:"version,omitempty"`
 }
 
 // FeatureConfigKind defines model for FeatureConfig.Kind.
 type FeatureConfigKind string
 
-// FeatureState defines model for FeatureState.
+// The state of a flag either off or on
 type FeatureState string
+
+// KeyValue defines model for KeyValue.
+type KeyValue struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// Metrics defines model for Metrics.
+type Metrics struct {
+	MetricsData *[]MetricsData `json:"metricsData,omitempty"`
+	TargetData  *[]TargetData  `json:"targetData,omitempty"`
+}
+
+// MetricsData defines model for MetricsData.
+type MetricsData struct {
+	Attributes []KeyValue `json:"attributes"`
+	Count      int        `json:"count"`
+
+	// This can be of type FeatureMetrics
+	MetricsType MetricsDataMetricsType `json:"metricsType"`
+
+	// time at when this data was recorded
+	Timestamp int64 `json:"timestamp"`
+}
+
+// This can be of type FeatureMetrics
+type MetricsDataMetricsType string
 
 // Pagination defines model for Pagination.
 type Pagination struct {
-	ItemCount int  `json:"itemCount"`
-	PageCount int  `json:"pageCount"`
-	PageIndex int  `json:"pageIndex"`
-	PageSize  int  `json:"pageSize"`
-	Version   *int `json:"version,omitempty"`
+	// The total number of items
+	ItemCount int `json:"itemCount"`
+
+	// The total number of pages
+	PageCount int `json:"pageCount"`
+
+	// The current page
+	PageIndex int `json:"pageIndex"`
+
+	// The number of items per page
+	PageSize int `json:"pageSize"`
+
+	// The version of this object.  The version will be incremented each time the object is modified
+	Version *int `json:"version,omitempty"`
 }
 
-// Prerequisite defines model for Prerequisite.
+// Feature Flag pre-requisites
 type Prerequisite struct {
-	Feature    string   `json:"feature"`
+	// The feature identifier that is the prerequisite
+	Feature string `json:"feature"`
+
+	// A list of variations that must be met
 	Variations []string `json:"variations"`
 }
 
-// Segment defines model for Segment.
+// ProxyConfig defines model for ProxyConfig.
+type ProxyConfig struct {
+	// Embedded struct due to allOf(#/components/schemas/Pagination)
+	Pagination `yaml:",inline"`
+	// Embedded fields due to inline allOf schema
+	Environments *[]struct {
+		ApiKeys        *[]string        `json:"apiKeys,omitempty"`
+		FeatureConfigs *[]FeatureConfig `json:"featureConfigs,omitempty"`
+		Id             *string          `json:"id,omitempty"`
+		Segments       *[]Segment       `json:"segments,omitempty"`
+	} `json:"environments,omitempty"`
+}
+
+// A Target Group (Segment) response
 type Segment struct {
-	CreatedAt   *int64    `json:"createdAt,omitempty"`
-	Environment *string   `json:"environment,omitempty"`
-	Excluded    *[]Target `json:"excluded,omitempty"`
+	// The data and time in milliseconds when the group was created
+	CreatedAt *int64 `json:"createdAt,omitempty"`
 
-	// Unique identifier for the segment.
-	Identifier string    `json:"identifier"`
-	Included   *[]Target `json:"included,omitempty"`
-	ModifiedAt *int64    `json:"modifiedAt,omitempty"`
+	// The environment this target group belongs to
+	Environment *string `json:"environment,omitempty"`
 
-	// Name of the segment.
+	// A list of Targets who are excluded from this target group
+	Excluded *[]Target `json:"excluded,omitempty"`
+
+	// Unique identifier for the target group.
+	Identifier string `json:"identifier"`
+
+	// A list of Targets who belong to this target group
+	Included *[]Target `json:"included,omitempty"`
+
+	// The data and time in milliseconds when the group was last modified
+	ModifiedAt *int64 `json:"modifiedAt,omitempty"`
+
+	// Name of the target group.
 	Name string `json:"name"`
 
 	// An array of rules that can cause a user to be included in this segment.
-	Rules   *[]Clause `json:"rules,omitempty"`
-	Tags    *[]Tag    `json:"tags,omitempty"`
-	Version *int64    `json:"version,omitempty"`
+	Rules *[]Clause `json:"rules,omitempty"`
+
+	// An array of rules that can cause a user to be included in this segment.
+	ServingRules *[]ServingRule `json:"servingRules,omitempty"`
+
+	// Tags for this target group
+	Tags *[]Tag `json:"tags,omitempty"`
+
+	// The version of this group.  Each time it is modified the version is incremented
+	Version *int64 `json:"version,omitempty"`
 }
 
-// Serve defines model for Serve.
+// Describe the distribution rule and the variation that should be served to the target
 type Serve struct {
+	// Describes a distribution rule
 	Distribution *Distribution `json:"distribution,omitempty"`
 	Variation    *string       `json:"variation,omitempty"`
 }
 
-// ServingRule defines model for ServingRule.
+// The rule used to determine what variation to serve to a target
 type ServingRule struct {
-	Clauses  []Clause `json:"clauses"`
-	Priority int      `json:"priority"`
-	RuleId   string   `json:"ruleId"`
-	Serve    Serve    `json:"serve"`
+	// A list of clauses to use in the rule
+	Clauses []Clause `json:"clauses"`
+
+	// The rules priority relative to other rules.  The rules are evaluated in order with 1 being the highest
+	Priority int `json:"priority"`
+
+	// The unique identifier for this rule
+	RuleId *string `json:"ruleId,omitempty"`
+
+	// Describe the distribution rule and the variation that should be served to the target
+	Serve Serve `json:"serve"`
 }
 
-// A name and value pair.
+// A Tag object used to tag feature flags - consists of name and identifier
 type Tag struct {
-	Name  string  `json:"name"`
-	Value *string `json:"value,omitempty"`
+	// The identifier of the tag
+	Identifier string `json:"identifier"`
+
+	// The name of the tag
+	Name string `json:"name"`
 }
 
-// Target defines model for Target.
+// A Target object
 type Target struct {
-	Account     string                  `json:"account"`
-	Anonymous   *bool                   `json:"anonymous,omitempty"`
-	Attributes  *map[string]interface{} `json:"attributes,omitempty"`
-	CreatedAt   *int64                  `json:"createdAt,omitempty"`
-	Environment string                  `json:"environment"`
-	Identifier  string                  `json:"identifier"`
-	Name        string                  `json:"name"`
-	Org         string                  `json:"org"`
-	Project     string                  `json:"project"`
-	Segments    *[]Segment              `json:"segments,omitempty"`
+	// The account ID that the target belongs to
+	Account string `json:"account"`
+
+	// Indicates if this target is anonymous
+	Anonymous *bool `json:"anonymous,omitempty"`
+
+	// a JSON representation of the attributes for this target
+	Attributes *map[string]interface{} `json:"attributes,omitempty"`
+
+	// The date and time in milliseconds when this Target was created
+	CreatedAt *int64 `json:"createdAt,omitempty"`
+
+	// The identifier for the environment that the target belongs to
+	Environment string `json:"environment"`
+
+	// The unique identifier for this target
+	Identifier string `json:"identifier"`
+
+	// The name of this Target
+	Name string `json:"name"`
+
+	// The identifier for the organization that the target belongs to
+	Org string `json:"org"`
+
+	// The identifier for the project that this target belongs to
+	Project string `json:"project"`
+
+	// A list of Target Groups (Segments) that this Target belongs to
+	Segments *[]Segment `json:"segments,omitempty"`
 }
 
-// TargetMap defines model for TargetMap.
+// TargetData defines model for TargetData.
+type TargetData struct {
+	Attributes []KeyValue `json:"attributes"`
+	Identifier string     `json:"identifier"`
+	Name       string     `json:"name"`
+}
+
+// Target map provides the details of a target that belongs to a flag
 type TargetMap struct {
-	Identifier *string `json:"identifier,omitempty"`
-	Name       string  `json:"name"`
+	// The identifier for the target
+	Identifier string `json:"identifier"`
+
+	// The name of the target
+	Name string `json:"name"`
 }
 
-// Variation defines model for Variation.
+// A variation of a flag that can be returned to a target
 type Variation struct {
+	// A description of the variation
 	Description *string `json:"description,omitempty"`
-	Identifier  string  `json:"identifier"`
-	Name        *string `json:"name,omitempty"`
-	Value       string  `json:"value"`
+
+	// The unique identifier for the variation
+	Identifier string `json:"identifier"`
+
+	// The user friendly name of the variation
+	Name *string `json:"name,omitempty"`
+
+	// The variation value to serve such as true or false for a boolean flag
+	Value string `json:"value"`
 }
 
-// VariationMap defines model for VariationMap.
+// A mapping of variations to targets and target groups (segments).  The targets listed here should receive this variation.
 type VariationMap struct {
-	TargetSegments *[]string    `json:"targetSegments,omitempty"`
-	Targets        *[]TargetMap `json:"targets,omitempty"`
-	Variation      string       `json:"variation"`
+	// A list of target groups (segments)
+	TargetSegments *[]string `json:"targetSegments,omitempty"`
+
+	// A list of target mappings
+	Targets *[]TargetMap `json:"targets,omitempty"`
+
+	// The variation identifier
+	Variation string `json:"variation"`
 }
 
-// WeightedVariation defines model for WeightedVariation.
+// A variation and the weighting it should receive as part of a percentage rollout
 type WeightedVariation struct {
+	// The variation identifier
 	Variation string `json:"variation"`
-	Weight    int    `json:"weight"`
+
+	// The weight to be given to the variation in percent
+	Weight int `json:"weight"`
 }
+
+// ClusterQueryOptionalParam defines model for clusterQueryOptionalParam.
+type ClusterQueryOptionalParam string
+
+// EnvironmentPathParam defines model for environmentPathParam.
+type EnvironmentPathParam string
+
+// PageNumber defines model for pageNumber.
+type PageNumber int
+
+// PageSize defines model for pageSize.
+type PageSize int
+
+// BadRequest defines model for BadRequest.
+type BadRequest Error
 
 // InternalServerError defines model for InternalServerError.
 type InternalServerError Error
 
 // NotFound defines model for NotFound.
 type NotFound Error
+
+// TBD
+type ProxyConfigResponse ProxyConfig
 
 // Unauthenticated defines model for Unauthenticated.
 type Unauthenticated Error
@@ -202,10 +370,86 @@ type Unauthorized Error
 // AuthenticateJSONBody defines parameters for Authenticate.
 type AuthenticateJSONBody AuthenticationRequest
 
+// GetFeatureConfigParams defines parameters for GetFeatureConfig.
+type GetFeatureConfigParams struct {
+	// Unique identifier for the cluster for the account
+	Cluster *ClusterQueryOptionalParam `form:"cluster,omitempty" json:"cluster,omitempty"`
+}
+
+// GetFeatureConfigByIdentifierParams defines parameters for GetFeatureConfigByIdentifier.
+type GetFeatureConfigByIdentifierParams struct {
+	// Unique identifier for the cluster for the account
+	Cluster *ClusterQueryOptionalParam `form:"cluster,omitempty" json:"cluster,omitempty"`
+}
+
+// GetAllSegmentsParams defines parameters for GetAllSegments.
+type GetAllSegmentsParams struct {
+	// Unique identifier for the cluster for the account
+	Cluster *ClusterQueryOptionalParam `form:"cluster,omitempty" json:"cluster,omitempty"`
+}
+
+// GetSegmentByIdentifierParams defines parameters for GetSegmentByIdentifier.
+type GetSegmentByIdentifierParams struct {
+	// Unique identifier for the cluster for the account
+	Cluster *ClusterQueryOptionalParam `form:"cluster,omitempty" json:"cluster,omitempty"`
+}
+
+// GetEvaluationsParams defines parameters for GetEvaluations.
+type GetEvaluationsParams struct {
+	// Unique identifier for the cluster for the account
+	Cluster *ClusterQueryOptionalParam `form:"cluster,omitempty" json:"cluster,omitempty"`
+}
+
+// GetEvaluationByIdentifierParams defines parameters for GetEvaluationByIdentifier.
+type GetEvaluationByIdentifierParams struct {
+	// Unique identifier for the cluster for the account
+	Cluster *ClusterQueryOptionalParam `form:"cluster,omitempty" json:"cluster,omitempty"`
+}
+
+// PostMetricsJSONBody defines parameters for PostMetrics.
+type PostMetricsJSONBody Metrics
+
+// PostMetricsParams defines parameters for PostMetrics.
+type PostMetricsParams struct {
+	// Unique identifier for the cluster for the account
+	Cluster *ClusterQueryOptionalParam `form:"cluster,omitempty" json:"cluster,omitempty"`
+}
+
+// AuthenticateProxyKeyJSONBody defines parameters for AuthenticateProxyKey.
+type AuthenticateProxyKeyJSONBody struct {
+	ProxyKey string `json:"proxyKey"`
+}
+
+// GetProxyConfigParams defines parameters for GetProxyConfig.
+type GetProxyConfigParams struct {
+	// PageNumber
+	PageNumber *PageNumber `form:"pageNumber,omitempty" json:"pageNumber,omitempty"`
+
+	// PageSize
+	PageSize *PageSize `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+
+	// Unique identifier for the cluster for the account
+	Cluster *ClusterQueryOptionalParam `form:"cluster,omitempty" json:"cluster,omitempty"`
+
+	// Accepts an EnvironmentID. If this is provided then the endpoint will only return config for this environment. If this is left empty then the Proxy will return config for all environments associated with the Proxy Key.
+	Environment *string `form:"environment,omitempty" json:"environment,omitempty"`
+
+	// Accpets a Proxy Key.
+	Key string `form:"key" json:"key"`
+}
+
 // StreamParams defines parameters for Stream.
 type StreamParams struct {
-	APIKey string `json:"API-Key"`
+	// Unique identifier for the cluster for the account
+	Cluster *ClusterQueryOptionalParam `form:"cluster,omitempty" json:"cluster,omitempty"`
+	APIKey  string                     `json:"API-Key"`
 }
 
 // AuthenticateJSONRequestBody defines body for Authenticate for application/json ContentType.
 type AuthenticateJSONRequestBody AuthenticateJSONBody
+
+// PostMetricsJSONRequestBody defines body for PostMetrics for application/json ContentType.
+type PostMetricsJSONRequestBody PostMetricsJSONBody
+
+// AuthenticateProxyKeyJSONRequestBody defines body for AuthenticateProxyKey for application/json ContentType.
+type AuthenticateProxyKeyJSONRequestBody AuthenticateProxyKeyJSONBody
