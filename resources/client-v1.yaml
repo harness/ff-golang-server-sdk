@@ -461,6 +461,10 @@ components:
           description: >-
             An array of rules that can cause a user to be included in this
             segment.
+        servingRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServingRule'
         createdAt:
           type: integer
           format: int64
