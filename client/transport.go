@@ -3,7 +3,7 @@ package client
 import "net/http"
 
 // HeadersFn is a function type that provides headers dynamically.
-type HeadersFn func() (map[string]string, error)
+type HeadersFn func(r *http.Request) (map[string]string, error)
 
 // customTransport wraps an http.RoundTripper and allows adding headers dynamically. This means we can still use
 // the goretryable-http client's transport, or a user's transport if they've provided their own http client.
@@ -22,7 +22,7 @@ func NewCustomTransport(baseTransport http.RoundTripper, getHeaderFn HeadersFn) 
 
 func (t *customTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Retrieve the headers using the provided function.
-	headers, err := t.getHeaders()
+	headers, err := t.getHeaders(req)
 	if err != nil {
 		return nil, err
 	}
