@@ -5,15 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/cenkalti/backoff/v4"
-	"github.com/harness/ff-golang-server-sdk/sdk_codes"
-	"golang.org/x/sync/errgroup"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/cenkalti/backoff/v4"
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/logger"
@@ -393,14 +394,20 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	// Use a custom transport which adds headers for tracking usage
 	// The `WithRequestEditorFn` cannot be used for SSE requests, so we need to provide a custom transport to the
 	// http client so that these headers can be added to all requests.
-	getHeadersFn := func() (map[string]string, error) {
-		return map[string]string{
+	getHeadersFn := func(r *http.Request) (map[string]string, error) {
+		headers := map[string]string{
 			"User-Agent":            "GoSDK/" + analyticsservice.SdkVersion,
 			"Harness-SDK-Info":      fmt.Sprintf("Go %s Server", analyticsservice.SdkVersion),
 			"Harness-EnvironmentID": c.environmentID,
-		}, nil
+		}
+
+		if strings.Contains(r.URL.Path, "/metrics") && r.Method == http.MethodPost {
+			headers["Connection"] = "close"
+		}
+
+		return headers, nil
 	}
-	
+
 	// Wrap the httpClient's transport with our own custom transport, which currently just adds extra headers
 	// for analytics purposes.
 	// If the httpClient doesn't have a Transport we can honour, then just use a default transport.
