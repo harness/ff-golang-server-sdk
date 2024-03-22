@@ -36,7 +36,7 @@ pipeline:
                   identifier: Submodule_Init
                   spec:
                     connectorRef: DockerHub
-                    image: golang:1.18.6
+                    image: golang:1.19.9
                     shell: Sh
                     command: "mkdir -p ~/.ssh\nssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts\n\ncat <<EOF >> .gitmodules\n[submodule \"tests/ff-test-cases\"]\n\tpath = tests/ff-test-cases\n\turl = https://github.com/drone/ff-test-cases.git\nEOF\n\ngit submodule update --init --recursive"
               - parallel:
@@ -46,7 +46,7 @@ pipeline:
                       identifier: Build_and_Test
                       spec:
                         connectorRef: DockerHub
-                        image: golang:1.18.6
+                        image: golang:1.19.9
                         shell: Sh
                         command: |-
                           go install github.com/jstemmer/go-junit-report@latest
