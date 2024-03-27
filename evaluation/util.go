@@ -2,43 +2,35 @@ package evaluation
 
 import (
 	"fmt"
-	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 
 	"github.com/harness/ff-golang-server-sdk/log"
 	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/spaolacci/murmur3"
 )
 
-func getAttrValue(target *Target, attr string) reflect.Value {
-	var value reflect.Value
+func getAttrValue(target *Target, attr string) string {
 	if target == nil {
-		return value
+		return ""
 	}
 
-	attrs := make(map[string]interface{})
-	if target.Attributes != nil {
-		attrs = *target.Attributes
-	}
-
-	attrVal, ok := attrs[attr] // first check custom attributes
-	if ok {
-		value = reflect.ValueOf(attrVal)
-	} else {
-		// We only have two fields here, so we will access the fields directly, and use reflection if we start adding
-		// more in the future
-		switch strings.ToLower(attr) {
-		case "identifier":
-			value = reflect.ValueOf(target.Identifier)
-		case "name":
-			value = reflect.ValueOf(target.Name)
-		default:
-			value = reflect.ValueOf("")
+	switch strings.ToLower(attr) {
+	case "identifier":
+		return target.Identifier
+	case "name":
+		return target.Name
+	default:
+		if target.Attributes != nil {
+			if val, ok := (*target.Attributes)[attr]; ok {
+				return fmt.Sprint(val)
+			}
 		}
 	}
-	return value
+	return ""
 }
 
 func reflectValueToString(val reflect.Value) string {
@@ -85,12 +77,12 @@ func getNormalizedNumber(identifier, bucketBy string) int {
 
 func isEnabled(target *Target, bucketBy string, percentage int) bool {
 	value := getAttrValue(target, bucketBy)
-	identifier := value.String()
-	if identifier == "" {
+	identifier := value
+	if value == "" {
 		var oldBB = bucketBy
 		bucketBy = "identifier"
 		value = getAttrValue(target, bucketBy)
-		identifier = value.String()
+		identifier = value
 		if identifier == "" {
 			return false
 		}

@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 
 	"github.com/harness/ff-golang-server-sdk/logger"
 
@@ -84,56 +85,42 @@ func NewEvaluator(query Query, postEvalCallback PostEvaluateCallback, logger log
 }
 
 func (e Evaluator) evaluateClause(clause *rest.Clause, target *Target) bool {
-	if clause == nil {
+	if clause == nil || len(clause.Values) == 0 || clause.Op == "" {
 		return false
 	}
 
-	values := clause.Values
-	if len(values) == 0 {
-		return false
-	}
-	value := values[0]
-
-	operator := clause.Op
-	if operator == "" {
-		return false
-	}
-
+	value := clause.Values[0]
 	attrValue := getAttrValue(target, clause.Attribute)
-	if operator != segmentMatchOperator && !attrValue.IsValid() {
+
+	if clause.Op != segmentMatchOperator && attrValue == "" {
 		return false
 	}
 
-	object := reflectValueToString(attrValue)
-
-	switch operator {
+	switch clause.Op {
 	case startsWithOperator:
-		return strings.HasPrefix(object, value)
+		return strings.HasPrefix(attrValue, value)
 	case endsWithOperator:
-		return strings.HasSuffix(object, value)
+		return strings.HasSuffix(attrValue, value)
 	case matchOperator:
-		found, err := regexp.MatchString(value, object)
-		if err != nil || !found {
-			return false
-		}
-		return true
+		found, err := regexp.MatchString(value, attrValue)
+		return err == nil && found
 	case containsOperator:
-		return strings.Contains(object, value)
+		return strings.Contains(attrValue, value)
 	case equalOperator:
-		return strings.EqualFold(object, value)
+		return strings.EqualFold(attrValue, value)
 	case equalSensitiveOperator:
-		return object == value
+		return attrValue == value
 	case inOperator:
-		for _, val := range values {
-			if val == object {
+		for _, val := range clause.Values {
+			if val == attrValue {
 				return true
 			}
 		}
 		return false
 	case gtOperator:
-		return object > value
+		return attrValue > value
 	case segmentMatchOperator:
-		return e.isTargetIncludedOrExcludedInSegment(values, target)
+		return e.isTargetIncludedOrExcludedInSegment(clause.Values, target)
 	default:
 		return false
 	}
