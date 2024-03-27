@@ -1800,10 +1800,9 @@ func TestEvaluator_JSONVariation(t *testing.T) {
 	}
 }
 
-//BENCHMARK
-
+// BENCHMARK
 func BenchmarkEvaluateClause_NilClause(b *testing.B) {
-	evaluator := Evaluator{} // Assuming Evaluator setup does not require pre-initialization for this case
+	evaluator := Evaluator{}
 	var clause *rest.Clause = nil
 	target := &Target{
 		Identifier: "harness",
@@ -2039,9 +2038,8 @@ func BenchmarkEvaluateClause_ContainsOperator(b *testing.B) {
 	}
 }
 
-// Assuming `testRepo` is a variable you've set up elsewhere to mock or implement the `Query` interface.
 func BenchmarkEvaluateClause_SegmentMatchOperator(b *testing.B) {
-	evaluator := Evaluator{query: testRepo} // Make sure `testRepo` is appropriately mocked or set up.
+	evaluator := Evaluator{query: testRepo}
 	clause := &rest.Clause{
 		Op:     "segmentMatchOperator",
 		Values: []string{"beta"},
