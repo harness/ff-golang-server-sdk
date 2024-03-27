@@ -1799,3 +1799,257 @@ func TestEvaluator_JSONVariation(t *testing.T) {
 		})
 	}
 }
+
+//BENCHMARK
+
+func BenchmarkEvaluateClause_NilClause(b *testing.B) {
+	evaluator := Evaluator{} // Assuming Evaluator setup does not require pre-initialization for this case
+	var clause *rest.Clause = nil
+	target := &Target{
+		Identifier: "harness",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_EmptyOperator(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Op:     "",
+		Values: []string{"harness"},
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, nil)
+	}
+}
+
+func BenchmarkEvaluateClause_NilValues(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Values: nil,
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, nil)
+	}
+}
+
+func BenchmarkEvaluateClause_EmptyValues(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Values: []string{},
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, nil)
+	}
+}
+
+func BenchmarkEvaluateClause_WrongOperator(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "identifier",
+		Op:        "greaterthan",
+		Values:    []string{"harness"},
+	}
+	target := &Target{
+		Identifier: "harness",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_EmptyAttribute(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "",
+		Op:        "equalOperator",
+		Values:    []string{"harness"},
+	}
+	target := &Target{
+		Identifier: "harness",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_MatchOperator(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "identifier",
+		Op:        "matchOperator",
+		Values:    []string{"^harness$"},
+	}
+	target := &Target{
+		Identifier: "harness",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_MatchOperatorError(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "identifier",
+		Op:        "matchOperator",
+		Values:    []string{"^harness(wings$"},
+	}
+	target := &Target{
+		Identifier: "harness",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_InOperator(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "identifier",
+		Op:        "inOperator",
+		Values:    []string{"harness", "wings-software"},
+	}
+	target := &Target{
+		Identifier: "harness",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_InOperatorNotFound(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "identifier",
+		Op:        "inOperator",
+		Values:    []string{"harness1", "wings-software"},
+	}
+	target := &Target{
+		Identifier: "harness",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_EqualOperator(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "identifier",
+		Op:        "equalOperator",
+		Values:    []string{"harness"},
+	}
+	target := &Target{
+		Identifier: "harness",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_EqualSensitiveOperator(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "identifier",
+		Op:        "equalSensitiveOperator",
+		Values:    []string{"harness"},
+	}
+	target := &Target{
+		Identifier: "Harness",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_GTOperator(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "identifier",
+		Op:        "gtOperator",
+		Values:    []string{"A"},
+	}
+	target := &Target{
+		Identifier: "B",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_GTOperatorNegative(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "identifier",
+		Op:        "gtOperator",
+		Values:    []string{"B"},
+	}
+	target := &Target{
+		Identifier: "A",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_StartsWithOperator(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "identifier",
+		Op:        "startsWithOperator",
+		Values:    []string{"harness"},
+	}
+	target := &Target{
+		Identifier: "harness - wings software",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_EndsWithOperator(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "identifier",
+		Op:        "endsWithOperator",
+		Values:    []string{"harness"},
+	}
+	target := &Target{
+		Identifier: "wings software - harness",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+func BenchmarkEvaluateClause_ContainsOperator(b *testing.B) {
+	evaluator := Evaluator{}
+	clause := &rest.Clause{
+		Attribute: "identifier",
+		Op:        "containsOperator",
+		Values:    []string{"harness"},
+	}
+	target := &Target{
+		Identifier: "wings harness software",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
+
+// Assuming `testRepo` is a variable you've set up elsewhere to mock or implement the `Query` interface.
+func BenchmarkEvaluateClause_SegmentMatchOperator(b *testing.B) {
+	evaluator := Evaluator{query: testRepo} // Make sure `testRepo` is appropriately mocked or set up.
+	clause := &rest.Clause{
+		Op:     "segmentMatchOperator",
+		Values: []string{"beta"},
+	}
+	target := &Target{
+		Identifier: "harness",
+	}
+	for i := 0; i < b.N; i++ {
+		evaluator.evaluateClause(clause, target)
+	}
+}
