@@ -181,7 +181,7 @@ func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target
 
 		// rule matched, here must be variation if distribution is undefined or null
 		if rule.Serve.Variation != nil {
-			e.logger.Debugf("Rule Matched for Target(%v), Variation returned (%v)", target, rule.Serve.Variation)
+			e.logger.Debugf("Rule Matched for Target(%v), Variation returned (%v)", target, *rule.Serve.Variation)
 			return *rule.Serve.Variation
 		} else {
 			e.logger.Warnf("No Variation on Serve for Rule (%v), Target (%v)", rule, target)
@@ -211,7 +211,7 @@ func (e Evaluator) evaluateVariationMap(variationsMap []rest.VariationMap, targe
 		if variationMap.Targets != nil {
 			for _, t := range *variationMap.Targets {
 				if *t.Identifier != "" && *t.Identifier == target.Identifier {
-					e.logger.Debugf("Specific targeting matched in Variation Map: Variation Map (%v) Target(%v), Variation returned (%s)", t.Identifier, target, variationMap.Variation)
+					e.logger.Debugf("Specific targeting matched in Variation Map: Variation Map (%v) Target(%v), Variation returned (%s)", *t.Identifier, target, variationMap.Variation)
 					return variationMap.Variation
 				}
 			}
