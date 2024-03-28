@@ -384,7 +384,7 @@ func (e Evaluator) evaluate(identifier string, target *Target) (FlagVariation, e
 
 	variation, err := e.getVariationForTheFlag(&flag, target)
 	if err != nil {
-		e.logger.Warnf("Error Getting Variation for Flag: Flag (%f), Target(%v), Err: %s", identifier, target, err)
+		e.logger.Warnf("Error Getting Variation for Flag: Flag (%s), Target(%v), Err: %s", identifier, target, err)
 		return FlagVariation{}, err
 	}
 	return FlagVariation{flag.Feature, flag.Kind, variation}, nil
