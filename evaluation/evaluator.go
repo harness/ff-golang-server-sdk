@@ -211,7 +211,7 @@ func (e Evaluator) evaluateVariationMap(variationsMap []rest.VariationMap, targe
 		if variationMap.Targets != nil {
 			for _, t := range *variationMap.Targets {
 				if *t.Identifier != "" && *t.Identifier == target.Identifier {
-					e.logger.Debugf("Specific targeting matched in Variation Map: Variation Map (%s) Target(%s), Variation returned (%s)", t.Identifier, target.Identifier, variationMap.Variation)
+					e.logger.Debugf("Specific targeting matched in Variation Map: Variation Map (%v) Target(%v), Variation returned (%s)", t.Identifier, target, variationMap.Variation)
 					return variationMap.Variation
 				}
 			}
@@ -258,11 +258,12 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 	for _, segmentIdentifier := range segmentList {
 		segment, err := e.query.GetSegment(segmentIdentifier)
 		if err != nil {
+			e.logger.Errorf("Error on GetSegment returning false. Target (%v), Segment (%s)", target, segmentIdentifier)
 			return false
 		}
 		// Should Target be excluded - if in excluded list we return false
 		if segment.Excluded != nil && isTargetInList(target, *segment.Excluded) {
-			e.logger.Debugf("Target %s excluded from segment %s via exclude list", target.Name, segment.Name)
+			e.logger.Debugf("Target (%v) excluded from segment %s via exclude list", target, segmentIdentifier)
 			return false
 		}
 
