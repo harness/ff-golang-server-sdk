@@ -357,7 +357,7 @@ func (e Evaluator) evaluateAll(target *Target) ([]FlagVariation, error) {
 	for _, f := range flags {
 		v, err := e.getVariationForTheFlag(f, target)
 		if err != nil {
-			e.logger.Warnf("Error Getting Variation for Flag: Flag (%f), Target (%v), Err: %s", f.Feature, target, err)
+			e.logger.Warnf("Error Getting Variation for Flag: Flag (%s), Target (%v), Err: %s", f.Feature, target, err)
 		}
 		variations = append(variations, FlagVariation{f.Feature, f.Kind, v})
 	}
