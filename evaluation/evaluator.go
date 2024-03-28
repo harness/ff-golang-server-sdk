@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 
 	"github.com/harness/ff-golang-server-sdk/logger"
 
@@ -96,11 +97,13 @@ func (e Evaluator) evaluateClause(clause *rest.Clause, target *Target) bool {
 
 	operator := clause.Op
 	if operator == "" {
+		e.logger.Warnf("Clause has no valid operator: Clause (%v)", clause)
 		return false
 	}
 
 	attrValue := getAttrValue(target, clause.Attribute)
 	if operator != segmentMatchOperator && !attrValue.IsValid() {
+		e.logger.Debugf("Operator is not a segment match and attribute value is not valid: Operator (%s), attributeVal (%s)", operator, attrValue.String())
 		return false
 	}
 
@@ -154,6 +157,7 @@ func (e Evaluator) evaluateRule(servingRule *rest.ServingRule, target *Target) b
 
 func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target) string {
 	if target == nil || servingRules == nil {
+		e.logger.Debugf("Serving Rules or Target are Nil")
 		return ""
 	}
 
@@ -162,6 +166,9 @@ func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target
 	})
 	for i := range servingRules {
 		rule := servingRules[i]
+		if len(rule.Clauses) == 0 {
+			e.logger.Warnf("Serving Rule has no Clauses: Rule (%v)", rule)
+		}
 		// if evaluation is false just continue to next rule
 		if !e.evaluateRule(&rule, target) {
 			continue
@@ -174,7 +181,10 @@ func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target
 
 		// rule matched, here must be variation if distribution is undefined or null
 		if rule.Serve.Variation != nil {
+			e.logger.Debugf("Rule Matched for Target(%v), Variation returned (%v)", target, rule.Serve.Variation)
 			return *rule.Serve.Variation
+		} else {
+			e.logger.Warnf("No Variation on Serve for Rule (%v), Target (%v)", rule, target)
 		}
 	}
 	return ""
@@ -201,6 +211,7 @@ func (e Evaluator) evaluateVariationMap(variationsMap []rest.VariationMap, targe
 		if variationMap.Targets != nil {
 			for _, t := range *variationMap.Targets {
 				if *t.Identifier != "" && *t.Identifier == target.Identifier {
+					e.logger.Debugf("Specific targeting matched in Variation Map: Variation Map (%v) Target(%v), Variation returned (%s)", t.Identifier, target, variationMap.Variation)
 					return variationMap.Variation
 				}
 			}
@@ -230,6 +241,8 @@ func (e Evaluator) evaluateFlag(fc rest.FeatureConfig, target *Target) (rest.Var
 		if variation == "" && fc.DefaultServe.Variation != nil {
 			variation = *fc.DefaultServe.Variation
 		}
+	} else {
+		e.logger.Debugf("Flag is off: Flag(%s)", fc.Feature)
 	}
 
 	if variation != "" {
@@ -245,11 +258,12 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 	for _, segmentIdentifier := range segmentList {
 		segment, err := e.query.GetSegment(segmentIdentifier)
 		if err != nil {
+			e.logger.Errorf("Error on GetSegment returning false. Target (%v), Segment (%s)", target, segmentIdentifier)
 			return false
 		}
 		// Should Target be excluded - if in excluded list we return false
 		if segment.Excluded != nil && isTargetInList(target, *segment.Excluded) {
-			e.logger.Debugf("Target %s excluded from segment %s via exclude list", target.Name, segment.Name)
+			e.logger.Debugf("Target (%v) excluded from segment %s via exclude list", target, segmentIdentifier)
 			return false
 		}
 
@@ -341,7 +355,10 @@ func (e Evaluator) evaluateAll(target *Target) ([]FlagVariation, error) {
 		return variations, err
 	}
 	for _, f := range flags {
-		v, _ := e.getVariationForTheFlag(f, target)
+		v, err := e.getVariationForTheFlag(f, target)
+		if err != nil {
+			e.logger.Warnf("Error Getting Variation for Flag: Flag (%s), Target (%v), Err: %s", f.Feature, target, err)
+		}
 		variations = append(variations, FlagVariation{f.Feature, f.Kind, v})
 	}
 
@@ -355,18 +372,20 @@ func (e Evaluator) Evaluate(identifier string, target *Target) (FlagVariation, e
 
 // this is evaluating flag.
 func (e Evaluator) evaluate(identifier string, target *Target) (FlagVariation, error) {
-
+	e.logger.Debugf("Evaluating: Flag(%s) Target(%v)", identifier, target)
 	if e.query == nil {
 		e.logger.Errorf(ErrQueryProviderMissing.Error())
 		return FlagVariation{}, ErrQueryProviderMissing
 	}
 	flag, err := e.query.GetFlag(identifier)
 	if err != nil {
+		e.logger.Warnf("Error Getting Flag: Flag (%s), Target(%v), Err: %s", identifier, target, err)
 		return FlagVariation{}, err
 	}
 
 	variation, err := e.getVariationForTheFlag(&flag, target)
 	if err != nil {
+		e.logger.Warnf("Error Getting Variation for Flag: Flag (%s), Target(%v), Err: %s", identifier, target, err)
 		return FlagVariation{}, err
 	}
 	return FlagVariation{flag.Feature, flag.Kind, variation}, nil
