@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 
 	"github.com/harness/ff-golang-server-sdk/rest"
 
@@ -25,7 +26,7 @@ const (
 	variationValueAttribute      string = "featureValue"
 	targetAttribute              string = "target"
 	sdkVersionAttribute          string = "SDK_VERSION"
-	SdkVersion                   string = "0.1.18"
+	SdkVersion                   string = "0.1.19"
 	sdkTypeAttribute             string = "SDK_TYPE"
 	sdkType                      string = "server"
 	sdkLanguageAttribute         string = "SDK_LANGUAGE"
