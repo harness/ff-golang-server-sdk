@@ -320,7 +320,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 	defer c.mux.RUnlock()
 
 	// dont check err just retry
-	httpClient, err := rest.NewClientWithResponses(c.config.url, rest.WithHTTPClient(c.config.authHttpClient))
+	httpClient, err := rest.NewClientWithResponses(c.config.url, c.config.Logger, rest.WithHTTPClient(c.config.authHttpClient))
 	if err != nil {
 		return err
 	}
@@ -421,7 +421,7 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 
 	c.config.httpClient.Transport = customTrans
 
-	restClient, err := rest.NewClientWithResponses(c.config.url,
+	restClient, err := rest.NewClientWithResponses(c.config.url, c.config.Logger,
 		rest.WithRequestEditorFn(bearerTokenProvider.Intercept),
 		rest.WithRequestEditorFn(c.InterceptAddCluster),
 		rest.WithHTTPClient(c.config.httpClient),

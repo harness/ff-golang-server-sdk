@@ -19,6 +19,7 @@ import (
 
 	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/harness/ff-golang-server-sdk/logger"
 )
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
@@ -46,6 +47,9 @@ type Client struct {
 	// A list of callbacks for modifying requests which are generated before sending over
 	// the network.
 	RequestEditors []RequestEditorFn
+
+	Logger logger.Logger // Add this line
+
 }
 
 // ClientOption allows setting custom parameters during construction
@@ -561,16 +565,17 @@ func (c *Client) applyEditors(ctx context.Context, req *http.Request, additional
 // ClientWithResponses builds on ClientInterface to offer response payloads
 type ClientWithResponses struct {
 	ClientInterface
+	logger.Logger
 }
 
 // NewClientWithResponses creates a new ClientWithResponses, which wraps
 // Client with return type handling
-func NewClientWithResponses(server string, opts ...ClientOption) (*ClientWithResponses, error) {
+func NewClientWithResponses(server string, logger logger.Logger, opts ...ClientOption,) (*ClientWithResponses, error) {
 	client, err := NewClient(server, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return &ClientWithResponses{client}, nil
+	return &ClientWithResponses{client, logger}, nil
 }
 
 // WithBaseURL overrides the baseURL.
@@ -829,6 +834,12 @@ func (c *ClientWithResponses) GetFeatureConfigWithResponse(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
+
+	responseBodyBytes, _ := ioutil.ReadAll(rsp.Body)
+	c.Logger.Infof("Raw FlagJSON: %s", string(responseBodyBytes))
+	// Important: Reset the response body so it can be read again later
+	rsp.Body = ioutil.NopCloser(bytes.NewBuffer(responseBodyBytes))
+
 	return ParseGetFeatureConfigResponse(rsp)
 }
 
@@ -847,6 +858,9 @@ func (c *ClientWithResponses) GetAllSegmentsWithResponse(ctx context.Context, en
 	if err != nil {
 		return nil, err
 	}
+	responseBodyBytes, _ := ioutil.ReadAll(rsp.Body)
+	c.Logger.Infof("Raw GroupJSON: %s", string(responseBodyBytes))
+	rsp.Body = ioutil.NopCloser(bytes.NewBuffer(responseBodyBytes))
 	return ParseGetAllSegmentsResponse(rsp)
 }
 
