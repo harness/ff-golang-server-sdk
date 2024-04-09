@@ -121,6 +121,7 @@ type Segment struct {
 	Name string `json:"name"`
 
 	// An array of rules that can cause a user to be included in this segment.
+	ServingRules *[]ServingRule `json:"servingRules,omitempty"`
 	Rules   *[]Clause `json:"rules,omitempty"`
 	Tags    *[]Tag    `json:"tags,omitempty"`
 	Version *int64    `json:"version,omitempty"`
