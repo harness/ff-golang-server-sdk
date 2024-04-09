@@ -2,7 +2,6 @@ package evaluation
 
 import (
 	"reflect"
-	"strconv"
 	"testing"
 
 	"github.com/harness/ff-golang-server-sdk/rest"
@@ -14,119 +13,35 @@ func Test_getAttrValueIsNil(t *testing.T) {
 		attr   string
 	}
 	tests := []struct {
-		name string
-		args args
-		want reflect.Value
+		name    string
+		args    args
+		wantStr string
 	}{
 		{
-			name: "when target is nil should return Value{}",
+			name: "when target is nil should return empty string",
 			args: args{
-				attr: identifier,
+				attr: "identifier",
 			},
-			want: reflect.Value{},
+			wantStr: "",
 		},
 		{
-			name: "wrong attribute should return ValueOf('')",
+			name: "wrong attribute should return empty string",
 			args: args{
 				target: &Target{
-					Identifier: harness,
+					Identifier: "harness",
 					Attributes: &map[string]interface{}{
 						"email": "enver.bisevac@harness.io",
 					},
 				},
 				attr: "no_identifier",
 			},
-			want: reflect.ValueOf(""),
+			wantStr: "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getAttrValue(tt.args.target, tt.args.attr); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getAttrValue() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_reflectValueToString(t *testing.T) {
-	type args struct {
-		attr interface{}
-	}
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		{
-			name: "string value",
-			args: args{
-				attr: "email@harness.io",
-			},
-			want: "email@harness.io",
-		},
-		{
-			name: "int value",
-			args: args{
-				attr: 20,
-			},
-			want: "20",
-		},
-		{
-			name: "int64 value",
-			args: args{
-				attr: int64(20),
-			},
-			want: "20",
-		},
-		{
-			name: "float32 value",
-			args: args{
-				attr: float32(20),
-			},
-			want: "20",
-		},
-		{
-			name: "float32 digit value",
-			args: args{
-				attr: float32(20.5678),
-			},
-			want: "20.5678",
-		},
-		{
-			name: "float64 value",
-			args: args{
-				attr: float64(20),
-			},
-			want: "20",
-		},
-		{
-			name: "float64 digit value",
-			args: args{
-				attr: float64(20.5678),
-			},
-			want: "20.5678",
-		},
-		{
-			name: "bool true value",
-			args: args{
-				attr: true,
-			},
-			want: "true",
-		},
-		{
-			name: "bool false value",
-			args: args{
-				attr: false,
-			},
-			want: "false",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			value := reflect.ValueOf(tt.args.attr)
-			got := reflectValueToString(value)
-			if got != tt.want {
-				t.Errorf("valueToString() = %v, want %v", got, tt.want)
+			if got := getAttrValue(tt.args.target, tt.args.attr); got != tt.wantStr {
+				t.Errorf("getAttrValue() = %v, want %v", got, tt.wantStr)
 			}
 		})
 	}
@@ -141,108 +56,86 @@ func Test_getAttrValue(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    reflect.Value
 		wantStr string
 	}{
 		{
 			name: "check identifier",
 			args: args{
 				target: &Target{
-					Identifier: harness,
+					Identifier: "harness",
 				},
-				attr: identifier,
+				attr: "identifier",
 			},
-			want:    reflect.ValueOf(harness),
 			wantStr: "harness",
 		},
 		{
 			name: "check name",
 			args: args{
 				target: &Target{
-					Name: harness,
+					Name: "harness",
 				},
 				attr: "name",
 			},
-			want:    reflect.ValueOf(harness),
 			wantStr: "harness",
 		},
 		{
 			name: "check attributes",
 			args: args{
 				target: &Target{
-					Identifier: identifier,
+					Identifier: "identifier",
 					Attributes: &map[string]interface{}{
 						"email": email,
 					},
 				},
 				attr: "email",
 			},
-			want:    reflect.ValueOf(email),
 			wantStr: email,
 		},
 		{
 			name: "check integer attributes",
 			args: args{
 				target: &Target{
-					Identifier: identifier,
+					Identifier: "identifier",
 					Attributes: &map[string]interface{}{
 						"age": 123,
 					},
 				},
 				attr: "age",
 			},
-			want:    reflect.ValueOf(123),
 			wantStr: "123",
 		},
 		{
 			name: "check int64 attributes",
 			args: args{
 				target: &Target{
-					Identifier: identifier,
+					Identifier: "identifier",
 					Attributes: &map[string]interface{}{
 						"age": int64(123),
 					},
 				},
 				attr: "age",
 			},
-			want:    reflect.ValueOf(int64(123)),
 			wantStr: "123",
 		},
 		{
 			name: "check boolean attributes",
 			args: args{
 				target: &Target{
-					Identifier: identifier,
+					Identifier: "identifier",
 					Attributes: &map[string]interface{}{
 						"active": true,
 					},
 				},
 				attr: "active",
 			},
-			want:    reflect.ValueOf(true),
 			wantStr: "true",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getAttrValue(tt.args.target, tt.args.attr)
-			if !reflect.DeepEqual(got.Interface(), tt.want.Interface()) {
-				t.Errorf("getAttrValue() = %v, want %v", got, tt.want)
-			}
-
-			expObjString := ""
-			//nolint
-			switch got.Kind() {
-			case reflect.Int, reflect.Int64:
-				expObjString = strconv.FormatInt(got.Int(), 10)
-			case reflect.Bool:
-				expObjString = strconv.FormatBool(got.Bool())
-			case reflect.String:
-				expObjString = got.String()
-			}
-
-			if expObjString != tt.wantStr {
-				t.Errorf("getAttrValue() expObjString= %v, want %v", got.String(), tt.wantStr)
+			gotStr := getAttrValue(tt.args.target, tt.args.attr)
+			if gotStr != tt.wantStr {
+				t.Errorf("getAttrValue() = %v, want %v", gotStr, tt.wantStr)
 			}
 		})
 	}

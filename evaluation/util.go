@@ -2,64 +2,33 @@ package evaluation
 
 import (
 	"fmt"
-	"github.com/harness/ff-golang-server-sdk/sdk_codes"
-	"reflect"
-	"strconv"
 	"strings"
+
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 
 	"github.com/harness/ff-golang-server-sdk/log"
 	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/spaolacci/murmur3"
 )
 
-func getAttrValue(target *Target, attr string) reflect.Value {
-	var value reflect.Value
+func getAttrValue(target *Target, attr string) string {
 	if target == nil {
-		return value
+		return ""
 	}
 
-	attrs := make(map[string]interface{})
-	if target.Attributes != nil {
-		attrs = *target.Attributes
-	}
-
-	attrVal, ok := attrs[attr] // first check custom attributes
-	if ok {
-		value = reflect.ValueOf(attrVal)
-	} else {
-		// We only have two fields here, so we will access the fields directly, and use reflection if we start adding
-		// more in the future
-		switch strings.ToLower(attr) {
-		case "identifier":
-			value = reflect.ValueOf(target.Identifier)
-		case "name":
-			value = reflect.ValueOf(target.Name)
-		default:
-			value = reflect.ValueOf("")
+	switch strings.ToLower(attr) {
+	case "identifier":
+		return target.Identifier
+	case "name":
+		return target.Name
+	default:
+		if target.Attributes != nil {
+			if val, ok := (*target.Attributes)[attr]; ok {
+				return fmt.Sprint(val)
+			}
 		}
 	}
-	return value
-}
-
-func reflectValueToString(val reflect.Value) string {
-	stringValue := ""
-	switch val.Kind() {
-	case reflect.Int, reflect.Int64:
-		stringValue = strconv.FormatInt(val.Int(), 10)
-	case reflect.Bool:
-		stringValue = strconv.FormatBool(val.Bool())
-	case reflect.String:
-		stringValue = val.String()
-	case reflect.Array, reflect.Chan, reflect.Complex128, reflect.Complex64, reflect.Func, reflect.Interface,
-		reflect.Invalid, reflect.Ptr, reflect.Slice, reflect.Struct, reflect.Uintptr, reflect.UnsafePointer,
-		reflect.Float32, reflect.Float64, reflect.Int16, reflect.Int32, reflect.Int8, reflect.Map, reflect.Uint,
-		reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint8:
-		stringValue = fmt.Sprintf("%v", val)
-	default:
-		// Use string formatting as last ditch effort for any unexpected values
-		stringValue = fmt.Sprintf("%v", val)
-	}
-	return stringValue
+	return ""
 }
 
 func findVariation(variations []rest.Variation, identifier string) (rest.Variation, error) {
@@ -85,20 +54,20 @@ func getNormalizedNumber(identifier, bucketBy string) int {
 
 func isEnabled(target *Target, bucketBy string, percentage int) bool {
 	value := getAttrValue(target, bucketBy)
-	identifier := value.String()
-	if identifier == "" {
-		var oldBB = bucketBy
-		bucketBy = "identifier"
-		value = getAttrValue(target, bucketBy)
-		identifier = value.String()
-		if identifier == "" {
+	if value == "" {
+		// If the original bucketBy attribute is not found, fallback to "identifier".
+		value = getAttrValue(target, "identifier")
+		if value == "" {
 			return false
 		}
-		log.Warnf("%s BucketBy attribute not found in target attributes, falling back to 'identifier': missing=%s, using value=%s", sdk_codes.MissingBucketBy, oldBB, identifier)
+		log.Warnf("%s BucketBy attribute not found in target attributes, falling back to 'identifier': missing=%s, using value=%s", sdk_codes.MissingBucketBy, bucketBy, value)
+		bucketBy = "identifier"
 	}
 
-	bucketID := getNormalizedNumber(identifier, bucketBy)
-	log.Debugf("MM3 percentage_check=%d bucket_by=%s value=%s bucket=%d", percentage, bucketBy, identifier, bucketID)
+	// Calculate bucketID once with the resolved value and bucketBy.
+	bucketID := getNormalizedNumber(value, bucketBy)
+	log.Debugf("MM3 percentage_check=%d bucket_by=%s value=%s bucket=%d", percentage, bucketBy, value, bucketID)
+
 	return percentage > 0 && bucketID <= percentage
 }
 
