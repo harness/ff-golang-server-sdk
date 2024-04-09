@@ -1,0 +1,14 @@
+inputSet:
+  name: Build_harness_ff_golang_server_sdk_1712632635758-pr-trigger-input-set
+  identifier: Build_harness_ff_golang_server_sdk_1712632635758prtriggerinputset
+  orgIdentifier: defaultorg
+  projectIdentifier: default_project
+  pipeline:
+    identifier: Build_harness_ff_golang_server_sdk_1712632635758
+    properties:
+      ci:
+        codebase:
+          build:
+            type: PR
+            spec:
+              number: <+trigger.prNumber>
