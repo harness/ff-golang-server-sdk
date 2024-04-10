@@ -751,7 +751,10 @@ func getLogger(options ...ConfigOption) logger.Logger {
 // processAuthResponse checks the authentication response for errors and categorizes them as retryable or non-retryable.
 func processAuthResponse(response *rest.AuthenticateResponse) error {
 	if response == nil {
-		return nil // No response to process.
+		return RetryableAuthError{
+			StatusCode: "No error status code returned from server",
+			Message:    "No error message returned from server ",
+		}
 	}
 
 	if response.JSON200 != nil {
