@@ -98,7 +98,7 @@ $(GOPATH)/bin/gosec:
 
 $(GOPATH)/bin/oapi-codegen:
 	@echo "🔘 Installing oapicodegen ... (`date '+%H:%M:%S'`)"
-	@go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@v1.11.0
+	@go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@latest
 
 PHONY+= tools
 tools: $(GOPATH)/bin/golangci-lint $(GOPATH)/bin/golint $(GOPATH)/bin/gosec $(GOPATH)/bin/goimports $(GOPATH)/bin/oapi-codegen

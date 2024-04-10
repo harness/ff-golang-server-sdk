@@ -333,30 +333,9 @@ func (c *CfClient) authenticate(ctx context.Context) error {
 		return err
 	}
 
-	responseError := findErrorInResponse(response)
-
-	// Indicate that we should retry
-	if responseError != nil && responseError.Code == "500" {
-		return RetryableAuthError{
-			StatusCode: responseError.Code,
-			Message:    responseError.Message,
-		}
-	}
-
-	// Indicate that we shouldn't retry on non-500 errors
-	if responseError != nil {
-		return NonRetryableAuthError{
-			StatusCode: responseError.Code,
-			Message:    responseError.Message,
-		}
-	}
-
-	// Defensive check to handle the case that all responses are nil
-	if response.JSON200 == nil {
-		return RetryableAuthError{
-			StatusCode: "No error status code returned from server",
-			Message:    "No error message returned from server ",
-		}
+	// Use processAuthResponse to handle any errors based on the HTTP response
+	if processedError := processAuthResponse(response); processedError != nil {
+		return processedError
 	}
 
 	c.token = response.JSON200.AuthToken
@@ -769,13 +748,49 @@ func getLogger(options ...ConfigOption) logger.Logger {
 	return dummyConfig.Logger
 }
 
-// findErrorInResponse parses an auth response and returns the response error if it exists
-func findErrorInResponse(resp *rest.AuthenticateResponse) *rest.Error {
-	responseErrors := []*rest.Error{resp.JSON401, resp.JSON403, resp.JSON404, resp.JSON500}
-	for _, responseError := range responseErrors {
-		if responseError != nil {
-			return responseError
+// processAuthResponse checks the authentication response for errors and categorizes them as retryable or non-retryable.
+func processAuthResponse(response *rest.AuthenticateResponse) error {
+	if response == nil {
+		return nil // No response to process.
+	}
+
+	if response.JSON200 != nil {
+		return nil
+	}
+
+	// Handle retryable error
+	if response.JSON500 != nil {
+		return RetryableAuthError{
+			StatusCode: response.JSON500.Code,
+			Message:    response.JSON500.Message,
 		}
 	}
+
+	// Handle non-retryable errors.
+	var nonRetryableError *rest.Error
+	switch {
+	case response.JSON401 != nil:
+		nonRetryableError = &rest.Error{Code: response.JSON401.Code, Message: response.JSON401.Message}
+	case response.JSON403 != nil:
+		nonRetryableError = &rest.Error{Code: response.JSON403.Code, Message: response.JSON403.Message}
+	case response.JSON404 != nil:
+		nonRetryableError = &rest.Error{Code: response.JSON404.Code, Message: response.JSON404.Message}
+	}
+
+	if nonRetryableError != nil {
+		return NonRetryableAuthError{
+			StatusCode: nonRetryableError.Code,
+			Message:    nonRetryableError.Message,
+		}
+	}
+
+	// Defensive check to handle the case that all responses are nil
+	if response.JSON200 == nil {
+		return RetryableAuthError{
+			StatusCode: "No error status code returned from server",
+			Message:    "No error message returned from server ",
+		}
+	}
+
 	return nil
 }
