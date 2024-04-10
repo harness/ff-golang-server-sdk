@@ -11,20 +11,26 @@ servers:
     description: no host specified
   - url: 'http://localhost:3000/api/1.0'
     description: CfClient description
+tags:
+  - name: metrics
 paths:
-  '/metrics/{environment}':
+  '/metrics/{environmentUUID}':
     post:
       summary: Send metrics to the Analytics server.
       description: Send metrics to Analytics server
       operationId: postMetrics
+      tags:
+        - metrics
       parameters:
         - $ref: '#/components/parameters/environmentPathParam'
+        - $ref: '#/components/parameters/clusterQueryOptionalParam'
       requestBody:
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/Metrics'
       security:
+        - ApiKeyAuth: []
         - BearerAuth: []
       responses:
         '200':
@@ -102,22 +108,40 @@ components:
       properties:
         code:
           type: string
+          description: The http error code
+          example: 404
         message:
           type: string
+          description: The reason the request failed
+          example: 'Error retrieving projects, organization ''default_org'' does not exist'
+        details:
+          type: object
+          description: Additional details about the error
       required:
         - code
         - message
   securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: api-key
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
   parameters:
     environmentPathParam:
-      name: environment
+      name: environmentUUID
       in: path
       required: true
       description: environment parameter in query.
+      schema:
+        type: string
+    clusterQueryOptionalParam:
+      name: cluster
+      in: query
+      required: false
+      description: Unique identifier for the cluster for the account
       schema:
         type: string
   responses:
