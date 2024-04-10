@@ -90,13 +90,13 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 // The interface specification for the client above.
 type ClientInterface interface {
 	// PostMetricsWithBody request with any body
-	PostMetricsWithBody(ctx context.Context, environment EnvironmentPathParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PostMetricsWithBody(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PostMetrics(ctx context.Context, environment EnvironmentPathParam, body PostMetricsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PostMetrics(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, body PostMetricsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) PostMetricsWithBody(ctx context.Context, environment EnvironmentPathParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostMetricsRequestWithBody(c.Server, environment, contentType, body)
+func (c *Client) PostMetricsWithBody(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostMetricsRequestWithBody(c.Server, environmentUUID, params, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -107,8 +107,8 @@ func (c *Client) PostMetricsWithBody(ctx context.Context, environment Environmen
 	return c.Client.Do(req)
 }
 
-func (c *Client) PostMetrics(ctx context.Context, environment EnvironmentPathParam, body PostMetricsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPostMetricsRequest(c.Server, environment, body)
+func (c *Client) PostMetrics(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, body PostMetricsJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPostMetricsRequest(c.Server, environmentUUID, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -120,23 +120,23 @@ func (c *Client) PostMetrics(ctx context.Context, environment EnvironmentPathPar
 }
 
 // NewPostMetricsRequest calls the generic PostMetrics builder with application/json body
-func NewPostMetricsRequest(server string, environment EnvironmentPathParam, body PostMetricsJSONRequestBody) (*http.Request, error) {
+func NewPostMetricsRequest(server string, environmentUUID EnvironmentPathParam, params *PostMetricsParams, body PostMetricsJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewPostMetricsRequestWithBody(server, environment, "application/json", bodyReader)
+	return NewPostMetricsRequestWithBody(server, environmentUUID, params, "application/json", bodyReader)
 }
 
 // NewPostMetricsRequestWithBody generates requests for PostMetrics with any type of body
-func NewPostMetricsRequestWithBody(server string, environment EnvironmentPathParam, contentType string, body io.Reader) (*http.Request, error) {
+func NewPostMetricsRequestWithBody(server string, environmentUUID EnvironmentPathParam, params *PostMetricsParams, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "environment", runtime.ParamLocationPath, environment)
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "environmentUUID", runtime.ParamLocationPath, environmentUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -154,6 +154,28 @@ func NewPostMetricsRequestWithBody(server string, environment EnvironmentPathPar
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Cluster != nil {
+
+			if queryFrag, err := runtime.StyleParamWithLocation("form", true, "cluster", runtime.ParamLocationQuery, *params.Cluster); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("POST", queryURL.String(), body)
@@ -210,9 +232,9 @@ func WithBaseURL(baseURL string) ClientOption {
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
 	// PostMetricsWithBodyWithResponse request with any body
-	PostMetricsWithBodyWithResponse(ctx context.Context, environment EnvironmentPathParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostMetricsResponse, error)
+	PostMetricsWithBodyWithResponse(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostMetricsResponse, error)
 
-	PostMetricsWithResponse(ctx context.Context, environment EnvironmentPathParam, body PostMetricsJSONRequestBody, reqEditors ...RequestEditorFn) (*PostMetricsResponse, error)
+	PostMetricsWithResponse(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, body PostMetricsJSONRequestBody, reqEditors ...RequestEditorFn) (*PostMetricsResponse, error)
 }
 
 type PostMetricsResponse struct {
@@ -240,16 +262,16 @@ func (r PostMetricsResponse) StatusCode() int {
 }
 
 // PostMetricsWithBodyWithResponse request with arbitrary body returning *PostMetricsResponse
-func (c *ClientWithResponses) PostMetricsWithBodyWithResponse(ctx context.Context, environment EnvironmentPathParam, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostMetricsResponse, error) {
-	rsp, err := c.PostMetricsWithBody(ctx, environment, contentType, body, reqEditors...)
+func (c *ClientWithResponses) PostMetricsWithBodyWithResponse(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostMetricsResponse, error) {
+	rsp, err := c.PostMetricsWithBody(ctx, environmentUUID, params, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParsePostMetricsResponse(rsp)
 }
 
-func (c *ClientWithResponses) PostMetricsWithResponse(ctx context.Context, environment EnvironmentPathParam, body PostMetricsJSONRequestBody, reqEditors ...RequestEditorFn) (*PostMetricsResponse, error) {
-	rsp, err := c.PostMetrics(ctx, environment, body, reqEditors...)
+func (c *ClientWithResponses) PostMetricsWithResponse(ctx context.Context, environmentUUID EnvironmentPathParam, params *PostMetricsParams, body PostMetricsJSONRequestBody, reqEditors ...RequestEditorFn) (*PostMetricsResponse, error) {
+	rsp, err := c.PostMetrics(ctx, environmentUUID, params, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@
 package metricsclient
 
 const (
+	ApiKeyAuthScopes = "ApiKeyAuth.Scopes"
 	BearerAuthScopes = "BearerAuth.Scopes"
 )
 
@@ -14,7 +15,13 @@ const (
 
 // Error defines model for Error.
 type Error struct {
-	Code    string `json:"code"`
+	// Code The http error code
+	Code string `json:"code"`
+
+	// Details Additional details about the error
+	Details *map[string]interface{} `json:"details,omitempty"`
+
+	// Message The reason the request failed
 	Message string `json:"message"`
 }
 
@@ -52,6 +59,9 @@ type TargetData struct {
 	Name       string     `json:"name"`
 }
 
+// ClusterQueryOptionalParam defines model for clusterQueryOptionalParam.
+type ClusterQueryOptionalParam string
+
 // EnvironmentPathParam defines model for environmentPathParam.
 type EnvironmentPathParam string
 
@@ -63,6 +73,12 @@ type Unauthenticated Error
 
 // Unauthorized defines model for Unauthorized.
 type Unauthorized Error
+
+// PostMetricsParams defines parameters for PostMetrics.
+type PostMetricsParams struct {
+	// Cluster Unique identifier for the cluster for the account
+	Cluster *ClusterQueryOptionalParam `form:"cluster,omitempty" json:"cluster,omitempty"`
+}
 
 // PostMetricsJSONRequestBody defines body for PostMetrics for application/json ContentType.
 type PostMetricsJSONRequestBody Metrics

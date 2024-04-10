@@ -533,7 +533,7 @@ func (c *CfClient) retrieveFlags(ctx context.Context) error {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 	c.config.Logger.Info("Retrieving flags started")
-	flags, err := c.api.GetFeatureConfigWithResponse(ctx, c.environmentID)
+	flags, err := c.api.GetFeatureConfigWithResponse(ctx, c.environmentID, nil)
 	if err != nil {
 		// log
 		return err
@@ -558,7 +558,7 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 	c.config.Logger.Info("Retrieving segments started")
-	segments, err := c.api.GetAllSegmentsWithResponse(ctx, c.environmentID)
+	segments, err := c.api.GetAllSegmentsWithResponse(ctx, c.environmentID, nil)
 	if err != nil {
 		// log
 		return err
