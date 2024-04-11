@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 	"time"
+
+	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 
 	"github.com/harness/ff-golang-server-sdk/pkg/repository"
 
@@ -186,7 +187,7 @@ func (c *SSEClient) handleEvent(event Event) {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 				defer cancel()
 
-				response, err := c.api.GetFeatureConfigByIdentifierWithResponse(ctx, event.Environment, cfMsg.Identifier)
+				response, err := c.api.GetFeatureConfigByIdentifierWithResponse(ctx, event.Environment, cfMsg.Identifier, nil)
 				if err != nil {
 					c.logger.Errorf("error while pulling flag, err: %s", err.Error())
 					return
@@ -203,7 +204,7 @@ func (c *SSEClient) handleEvent(event Event) {
 					ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 					defer cancel()
 
-					response, err := c.api.GetFeatureConfigWithResponse(ctx, event.Environment)
+					response, err := c.api.GetFeatureConfigWithResponse(ctx, event.Environment, nil)
 					if err != nil {
 						c.logger.Errorf("error while pulling flags, err: %s", err.Error())
 						return
@@ -230,7 +231,7 @@ func (c *SSEClient) handleEvent(event Event) {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 				defer cancel()
 
-				response, err := c.api.GetSegmentByIdentifierWithResponse(ctx, event.Environment, cfMsg.Identifier)
+				response, err := c.api.GetSegmentByIdentifierWithResponse(ctx, event.Environment, cfMsg.Identifier, nil)
 				if err != nil {
 					c.logger.Errorf("error while pulling segment, err: %s", err.Error())
 					return
@@ -246,7 +247,7 @@ func (c *SSEClient) handleEvent(event Event) {
 					ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 					defer cancel()
 
-					response, err := c.api.GetAllSegmentsWithResponse(ctx, event.Environment)
+					response, err := c.api.GetAllSegmentsWithResponse(ctx, event.Environment, nil)
 					if err != nil {
 						c.logger.Errorf("error while pulling segment, err: %s", err.Error())
 						return

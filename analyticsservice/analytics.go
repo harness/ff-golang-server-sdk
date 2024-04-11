@@ -267,7 +267,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 		}
 		as.logger.Debug(string(jsonData))
 
-		resp, err := mClient.PostMetricsWithResponse(ctx, metricsclient.EnvironmentPathParam(as.environmentID), analyticsPayload)
+		resp, err := mClient.PostMetricsWithResponse(ctx, metricsclient.EnvironmentPathParam(as.environmentID), nil, analyticsPayload)
 		if err != nil {
 			as.logger.Warn(err)
 			return

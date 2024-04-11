@@ -196,8 +196,8 @@ func (e Evaluator) evaluateVariationMap(variationsMap []rest.VariationMap, targe
 	for _, variationMap := range variationsMap {
 		if variationMap.Targets != nil {
 			for _, t := range *variationMap.Targets {
-				if *t.Identifier != "" && *t.Identifier == target.Identifier {
-					e.logger.Debugf("Specific targeting matched in Variation Map: Variation Map (%v) Target(%v), Variation returned (%s)", *t.Identifier, target, variationMap.Variation)
+				if t.Identifier != "" && t.Identifier == target.Identifier {
+					e.logger.Debugf("Specific targeting matched in Variation Map: Variation Map (%v) Target(%v), Variation returned (%s)", t.Identifier, target, variationMap.Variation)
 					return variationMap.Variation
 				}
 			}

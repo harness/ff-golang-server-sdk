@@ -865,7 +865,7 @@ func TestEvaluator_evaluateVariationMap(t *testing.T) {
 						Variation: identifierTrue,
 						Targets: &[]rest.TargetMap{
 							{
-								Identifier: &targetIdentifier,
+								Identifier: targetIdentifier,
 							},
 						},
 					},
@@ -1074,7 +1074,7 @@ func TestEvaluator_evaluateFlag(t *testing.T) {
 							Variation: identifierTrue,
 							Targets: &[]rest.TargetMap{
 								{
-									Identifier: &targetIdentifier,
+									Identifier: targetIdentifier,
 								},
 							},
 						},
