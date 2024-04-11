@@ -20,8 +20,9 @@ For a sample FF Golang SDK project, see our [test Golang project](examples/getti
 ![FeatureFlags](./docs/images/ff-gui.png)
 
 ## Requirements
-[Golang 1.6](https://go.dev/doc/install) or newer (go version)<br>
-
+- Starting with SDK version v0.1.21, Golang version 1.20 or later is required.
+- Earlier versions of the SDK require Golang versions newer than 1.6 but older than 1.19. 
+- For installation details, please refer to [Golang's official installation guide](https://go.dev/doc/install).
 ## Quickstart
 To follow along with our test code sample, make sure you’ve:
 
