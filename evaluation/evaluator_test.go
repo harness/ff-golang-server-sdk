@@ -285,23 +285,11 @@ var (
 								Op:        endsWithOperator,
 								Values:    []string{"@harness.io"},
 							},
-						},
-					},
-					{
-						Priority: 2,
-						RuleId:   "rule2",
-						Clauses: []rest.Clause{
 							{
 								Attribute: "role",
 								Op:        equalOperator,
 								Values:    []string{"sre"},
 							},
-						},
-					},
-					{
-						Priority: 3,
-						RuleId:   "rule3",
-						Clauses: []rest.Clause{
 							{
 								Attribute: "active",
 								Op:        equalOperator,
@@ -1343,7 +1331,7 @@ func TestEvaluator_isTargetIncludedOrExcludedInSegment(t *testing.T) {
 					Attributes: &map[string]interface{}{
 						"email":  "hello@harness.io",
 						"role":   "sre",
-						"active": false,
+						"active": true,
 					},
 				},
 			},
