@@ -312,6 +312,12 @@ var (
 								Op:        endsWithOperator,
 								Values:    []string{"@harness.io"},
 							},
+						},
+					},
+					{
+						Priority: 2,
+						RuleId:   "rule2",
+						Clauses: []rest.Clause{
 							{
 								Attribute: "role",
 								Op:        equalOperator,
@@ -1347,7 +1353,7 @@ func TestEvaluator_isTargetIncludedOrExcludedInSegment(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "evaluate rule in v2 group rules should return true",
+			name: "one AND rule",
 			fields: fields{
 				query: testRepo,
 			},
@@ -1357,6 +1363,24 @@ func TestEvaluator_isTargetIncludedOrExcludedInSegment(t *testing.T) {
 					Identifier: "no_identifier",
 					Attributes: &map[string]interface{}{
 						"email":  "hello@harness.io",
+						"role":   "sre",
+						"active": true,
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "one AND with one OR",
+			fields: fields{
+				query: testRepo,
+			},
+			args: args{
+				segmentList: []string{v2GroupRulesANDWithOr},
+				target: &Target{
+					Identifier: "no_identifier",
+					Attributes: &map[string]interface{}{
+						"email":  "hello@contractor.io",
 						"role":   "sre",
 						"active": true,
 					},
