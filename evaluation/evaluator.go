@@ -286,6 +286,8 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 			})
 			for _, v2rule := range v2Rules {
 				if e.evaluateGroupRulesV2(v2rule.Clauses, target) {
+					e.logger.Debugf(
+						"Target [%s] included in group [%s] via rules %+v", target.Name, segment.Name, v2Rules)
 					return true
 				}
 			}
