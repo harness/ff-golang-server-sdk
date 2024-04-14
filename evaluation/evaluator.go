@@ -289,6 +289,8 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 					e.logger.Debugf(
 						"Target [%s] included in group [%s] via rules %+v", target.Name, segment.Name, v2Rules)
 					return true
+				} else {
+					return false
 				}
 			}
 			return false

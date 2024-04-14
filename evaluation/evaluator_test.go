@@ -15,6 +15,7 @@ const (
 	harness           = "harness"
 	beta              = "beta"
 	alpha             = "alpha"
+	v2GroupRules      = "v2GroupRules"
 	excluded          = "excluded"
 	offVariation      = "false"
 	simple            = "simple"
@@ -269,6 +270,44 @@ var (
 						Attribute: identifier,
 						Op:        equalOperator,
 						Values:    []string{harness},
+					},
+				},
+			},
+			v2GroupRules: {
+				Identifier: v2GroupRules,
+				ServingRules: &[]rest.GroupServingRule{
+					{
+						Priority: 1,
+						RuleId:   "rule1",
+						Clauses: []rest.Clause{
+							{
+								Attribute: "email",
+								Op:        endsWithOperator,
+								Values:    []string{"@harness.io"},
+							},
+						},
+					},
+					{
+						Priority: 2,
+						RuleId:   "rule2",
+						Clauses: []rest.Clause{
+							{
+								Attribute: "role",
+								Op:        equalOperator,
+								Values:    []string{"sre"},
+							},
+						},
+					},
+					{
+						Priority: 3,
+						RuleId:   "rule3",
+						Clauses: []rest.Clause{
+							{
+								Attribute: "active",
+								Op:        equalOperator,
+								Values:    []string{"true"},
+							},
+						},
 					},
 				},
 			},
@@ -1291,6 +1330,24 @@ func TestEvaluator_isTargetIncludedOrExcludedInSegment(t *testing.T) {
 				},
 			},
 			want: false,
+		},
+		{
+			name: "evaluate rule in v2 group rules should return true",
+			fields: fields{
+				query: testRepo,
+			},
+			args: args{
+				segmentList: []string{v2GroupRules},
+				target: &Target{
+					Identifier: "no_identifier",
+					Attributes: &map[string]interface{}{
+						"email":  "hello@harness.io",
+						"role":   "sre",
+						"active": false,
+					},
+				},
+			},
+			want: true,
 		},
 	}
 	for _, tt := range tests {
