@@ -11,25 +11,26 @@ import (
 )
 
 const (
-	identifier        = "identifier"
-	harness           = "harness"
-	beta              = "beta"
-	alpha             = "alpha"
-	v2GroupRules      = "v2GroupRules"
-	excluded          = "excluded"
-	offVariation      = "false"
-	simple            = "simple"
-	simpleWithPrereq  = "simplePrereq"
-	notValidFlag      = "notValidFlag"
-	theme             = "theme"
-	size              = "size"
-	weight            = "weight"
-	org               = "org"
-	invalidInt        = "invalidInt"
-	invalidNumber     = "invalidNumber"
-	invalidJSON       = "invalidJSON"
-	prereqNotFound    = "prereqNotFound"
-	prereqVarNotFound = "prereqVarNotFound"
+	identifier            = "identifier"
+	harness               = "harness"
+	beta                  = "beta"
+	alpha                 = "alpha"
+	v2GroupRulesAllAnd    = "v2GroupRulesAllAnd"
+	v2GroupRulesANDWithOr = "v2GroupRulesAndWithOr"
+	excluded              = "excluded"
+	offVariation          = "false"
+	simple                = "simple"
+	simpleWithPrereq      = "simplePrereq"
+	notValidFlag          = "notValidFlag"
+	theme                 = "theme"
+	size                  = "size"
+	weight                = "weight"
+	org                   = "org"
+	invalidInt            = "invalidInt"
+	invalidNumber         = "invalidNumber"
+	invalidJSON           = "invalidJSON"
+	prereqNotFound        = "prereqNotFound"
+	prereqVarNotFound     = "prereqVarNotFound"
 )
 
 var (
@@ -273,8 +274,34 @@ var (
 					},
 				},
 			},
-			v2GroupRules: {
-				Identifier: v2GroupRules,
+			v2GroupRulesAllAnd: {
+				Identifier: v2GroupRulesAllAnd,
+				ServingRules: &[]rest.GroupServingRule{
+					{
+						Priority: 1,
+						RuleId:   "rule1",
+						Clauses: []rest.Clause{
+							{
+								Attribute: "email",
+								Op:        endsWithOperator,
+								Values:    []string{"@harness.io"},
+							},
+							{
+								Attribute: "role",
+								Op:        equalOperator,
+								Values:    []string{"sre"},
+							},
+							{
+								Attribute: "active",
+								Op:        equalOperator,
+								Values:    []string{"true"},
+							},
+						},
+					},
+				},
+			},
+			v2GroupRulesANDWithOr: {
+				Identifier: v2GroupRulesAllAnd,
 				ServingRules: &[]rest.GroupServingRule{
 					{
 						Priority: 1,
@@ -1325,7 +1352,7 @@ func TestEvaluator_isTargetIncludedOrExcludedInSegment(t *testing.T) {
 				query: testRepo,
 			},
 			args: args{
-				segmentList: []string{v2GroupRules},
+				segmentList: []string{v2GroupRulesAllAnd},
 				target: &Target{
 					Identifier: "no_identifier",
 					Attributes: &map[string]interface{}{
