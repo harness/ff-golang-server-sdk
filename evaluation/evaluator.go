@@ -278,11 +278,25 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 			return true
 		}
 
-		// Should Target be included via segment rules
-		rules := segment.Rules
-		// if rules is nil pointer or points to the empty slice
-		if rules != nil && len(*rules) > 0 {
-			if included, clause := e.evaluateGroupRules(*rules, target); included {
+		// `ServingRules` replaces `Rules, so if sent by the backend then we evaluate them instead
+		if segment.ServingRules != nil && len(*segment.ServingRules) > 0 {
+			v2Rules := *segment.ServingRules
+			sort.SliceStable(v2Rules, func(i, j int) bool {
+				return v2Rules[i].Priority < v2Rules[j].Priority
+			})
+			if included, clause := e.evaluateGroupRules(v2Rules, target); included {
+				e.logger.Debugf(
+					"Target [%s] included in group [%s] via rule %+v", target.Name, segment.Name, clause)
+				return true
+			}
+			return false
+		}
+
+		// Fall back to legacy `Rules`
+		if segment.Rules != nil && len(*segment.Rules) > 0 {
+			// Should Target be included via segment rules
+			legacyRules := *segment.Rules
+			if included, clause := e.evaluateGroupRules(legacyRules, target); included {
 				e.logger.Debugf(
 					"Target [%s] included in group [%s] via rule %+v", target.Name, segment.Name, clause)
 				return true
