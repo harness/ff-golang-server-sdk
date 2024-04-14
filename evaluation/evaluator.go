@@ -176,6 +176,22 @@ func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target
 	return ""
 }
 
+// evaluateGroupRulesV2 evaluates the group rules using AND logic instead of OR.
+func (e Evaluator) evaluateGroupRulesV2(rules []rest.Clause, target *Target) bool {
+	if len(rules) == 0 {
+		e.logger.Debugf("'AND' rules are empty, returning false")
+		return false
+	}
+	for _, rule := range rules {
+		if !e.evaluateClause(&rule, target) {
+			e.logger.Debugf("'AND' rule did not match, returning false: %+v", rule)
+			return false
+		}
+	}
+	e.logger.Debugf("All 'AND' rules matched: %+v", rules)
+	return true
+}
+
 // evaluateGroupRules evaluates the groups rules.  Note Group rule are represented by a rest.Clause, instead
 // of a rest.Rule.   Unlike feature clauses which are AND'd, in a case of  a group these must be OR'd.
 func (e Evaluator) evaluateGroupRules(rules []rest.Clause, target *Target) (bool, rest.Clause) {
