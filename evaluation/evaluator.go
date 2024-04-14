@@ -179,16 +179,16 @@ func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target
 // evaluateGroupRulesV2 evaluates the group rules using AND logic instead of OR.
 func (e Evaluator) evaluateGroupRulesV2(rules []rest.Clause, target *Target) bool {
 	if len(rules) == 0 {
-		e.logger.Debugf("'AND' rules are empty, returning false")
+		e.logger.Debugf("No 'AND' rules provided, returning false")
 		return false
 	}
 	for _, rule := range rules {
 		if !e.evaluateClause(&rule, target) {
-			e.logger.Debugf("'AND' rule did not match, returning false: %+v", rule)
+			e.logger.Debugf("'AND' rule did not match: %+v, returning false", rule)
 			return false
 		}
 	}
-	e.logger.Debugf("All 'AND' rules matched: %+v", rules)
+	e.logger.Debugf("All 'AND' rules successfully matched for target: %+v", target)
 	return true
 }
 
