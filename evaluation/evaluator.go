@@ -284,10 +284,10 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 			sort.SliceStable(v2Rules, func(i, j int) bool {
 				return v2Rules[i].Priority < v2Rules[j].Priority
 			})
-			if included, clause := e.evaluateGroupRules(v2Rules, target); included {
-				e.logger.Debugf(
-					"Target [%s] included in group [%s] via rule %+v", target.Name, segment.Name, clause)
-				return true
+			for _, v2rule := range v2Rules {
+				if e.evaluateGroupRulesV2(v2rule.Clauses, target) {
+					return true
+				}
 			}
 			return false
 		}
