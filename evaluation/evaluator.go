@@ -176,6 +176,22 @@ func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target
 	return ""
 }
 
+// evaluateGroupRulesV2 evaluates the group rules using AND logic instead of OR.
+func (e Evaluator) evaluateGroupRulesV2(rules []rest.Clause, target *Target) bool {
+	if len(rules) == 0 {
+		e.logger.Debugf("No 'AND' rules provided, returning false")
+		return false
+	}
+	for _, rule := range rules {
+		if !e.evaluateClause(&rule, target) {
+			e.logger.Debugf("'AND' rule did not match: %+v, returning false", rule)
+			return false
+		}
+	}
+	e.logger.Debugf("All 'AND' rules successfully matched for target: %+v", target)
+	return true
+}
+
 // evaluateGroupRules evaluates the groups rules.  Note Group rule are represented by a rest.Clause, instead
 // of a rest.Rule.   Unlike feature clauses which are AND'd, in a case of  a group these must be OR'd.
 func (e Evaluator) evaluateGroupRules(rules []rest.Clause, target *Target) (bool, rest.Clause) {
@@ -262,11 +278,27 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 			return true
 		}
 
-		// Should Target be included via segment rules
-		rules := segment.Rules
-		// if rules is nil pointer or points to the empty slice
-		if rules != nil && len(*rules) > 0 {
-			if included, clause := e.evaluateGroupRules(*rules, target); included {
+		// `ServingRules` replaces `Rules, so if sent by the backend then we evaluate them instead
+		if segment.ServingRules != nil && len(*segment.ServingRules) > 0 {
+			v2Rules := *segment.ServingRules
+			sort.SliceStable(v2Rules, func(i, j int) bool {
+				return v2Rules[i].Priority < v2Rules[j].Priority
+			})
+			for _, v2rule := range v2Rules {
+				if e.evaluateGroupRulesV2(v2rule.Clauses, target) {
+					e.logger.Debugf(
+						"Target [%s] included in group [%s] via rules %+v", target.Name, segment.Name, v2Rules)
+					return true
+				}
+			}
+			return false
+		}
+
+		// Fall back to legacy `Rules`
+		if segment.Rules != nil && len(*segment.Rules) > 0 {
+			// Should Target be included via segment rules
+			legacyRules := *segment.Rules
+			if included, clause := e.evaluateGroupRules(legacyRules, target); included {
 				e.logger.Debugf(
 					"Target [%s] included in group [%s] via rule %+v", target.Name, segment.Name, clause)
 				return true

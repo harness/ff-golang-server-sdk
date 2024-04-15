@@ -11,24 +11,26 @@ import (
 )
 
 const (
-	identifier        = "identifier"
-	harness           = "harness"
-	beta              = "beta"
-	alpha             = "alpha"
-	excluded          = "excluded"
-	offVariation      = "false"
-	simple            = "simple"
-	simpleWithPrereq  = "simplePrereq"
-	notValidFlag      = "notValidFlag"
-	theme             = "theme"
-	size              = "size"
-	weight            = "weight"
-	org               = "org"
-	invalidInt        = "invalidInt"
-	invalidNumber     = "invalidNumber"
-	invalidJSON       = "invalidJSON"
-	prereqNotFound    = "prereqNotFound"
-	prereqVarNotFound = "prereqVarNotFound"
+	identifier            = "identifier"
+	harness               = "harness"
+	beta                  = "beta"
+	alpha                 = "alpha"
+	v2GroupRulesAllAnd    = "v2GroupRulesAllAnd"
+	v2GroupRulesANDWithOr = "v2GroupRulesAndWithOr"
+	excluded              = "excluded"
+	offVariation          = "false"
+	simple                = "simple"
+	simpleWithPrereq      = "simplePrereq"
+	notValidFlag          = "notValidFlag"
+	theme                 = "theme"
+	size                  = "size"
+	weight                = "weight"
+	org                   = "org"
+	invalidInt            = "invalidInt"
+	invalidNumber         = "invalidNumber"
+	invalidJSON           = "invalidJSON"
+	prereqNotFound        = "prereqNotFound"
+	prereqVarNotFound     = "prereqVarNotFound"
 )
 
 var (
@@ -272,6 +274,64 @@ var (
 					},
 				},
 			},
+			v2GroupRulesAllAnd: {
+				Identifier: v2GroupRulesAllAnd,
+				ServingRules: &[]rest.GroupServingRule{
+					{
+						Priority: 1,
+						RuleId:   "rule1",
+						Clauses: []rest.Clause{
+							{
+								Attribute: "email",
+								Op:        endsWithOperator,
+								Values:    []string{"@harness.io"},
+							},
+							{
+								Attribute: "role",
+								Op:        equalOperator,
+								Values:    []string{"sre"},
+							},
+							{
+								Attribute: "active",
+								Op:        equalOperator,
+								Values:    []string{"true"},
+							},
+						},
+					},
+				},
+			},
+			v2GroupRulesANDWithOr: {
+				Identifier: v2GroupRulesAllAnd,
+				ServingRules: &[]rest.GroupServingRule{
+					{
+						Priority: 1,
+						RuleId:   "rule1",
+						Clauses: []rest.Clause{
+							{
+								Attribute: "email",
+								Op:        endsWithOperator,
+								Values:    []string{"@harness.io"},
+							},
+						},
+					},
+					{
+						Priority: 2,
+						RuleId:   "rule2",
+						Clauses: []rest.Clause{
+							{
+								Attribute: "role",
+								Op:        equalOperator,
+								Values:    []string{"sre"},
+							},
+							{
+								Attribute: "active",
+								Op:        equalOperator,
+								Values:    []string{"true"},
+							},
+						},
+					},
+				},
+			},
 		},
 	)
 )
@@ -358,6 +418,96 @@ func TestNewEvaluator(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewEvaluator() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEvaluateGroupRulesV2(t *testing.T) {
+	e := &Evaluator{
+		logger: logger.NewNoOpLogger(),
+	}
+
+	// Define test cases
+	tests := []struct {
+		name     string
+		clauses  []rest.Clause
+		target   *Target
+		expected bool
+	}{
+		{
+			name: "All conditions met",
+			clauses: []rest.Clause{
+				{
+					Attribute: "email",
+					Op:        endsWithOperator,
+					Values:    []string{"@harness.io"},
+				},
+				{
+					Attribute: "role",
+					Op:        equalOperator,
+					Values:    []string{"developer"},
+				},
+			},
+			target: &Target{
+				Attributes: &map[string]interface{}{
+					"email": "user@harness.io",
+					"role":  "developer",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "One condition not met",
+			clauses: []rest.Clause{
+				{
+					Attribute: "email",
+					Op:        endsWithOperator,
+					Values:    []string{"@harness.io"},
+				},
+				{
+					Attribute: "role",
+					Op:        equalOperator,
+					Values:    []string{"developer"},
+				},
+			},
+			target: &Target{
+				Attributes: &map[string]interface{}{
+					"email": "user@harness.io",
+					"role":  "manager",
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "No conditions met",
+			clauses: []rest.Clause{
+				{
+					Attribute: "email",
+					Op:        endsWithOperator,
+					Values:    []string{"@harness.io"},
+				},
+				{
+					Attribute: "role",
+					Op:        equalOperator,
+					Values:    []string{"developer"},
+				},
+			},
+			target: &Target{
+				Attributes: &map[string]interface{}{
+					"email": "user@otherdomain.com",
+					"role":  "manager",
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := e.evaluateGroupRulesV2(tc.clauses, tc.target)
+			if result != tc.expected {
+				t.Errorf("TestEvaluateGroupRulesV2(%s) got %v, want %v", tc.name, result, tc.expected)
 			}
 		})
 	}
@@ -1201,6 +1351,42 @@ func TestEvaluator_isTargetIncludedOrExcludedInSegment(t *testing.T) {
 				},
 			},
 			want: false,
+		},
+		{
+			name: "one AND rule",
+			fields: fields{
+				query: testRepo,
+			},
+			args: args{
+				segmentList: []string{v2GroupRulesAllAnd},
+				target: &Target{
+					Identifier: "no_identifier",
+					Attributes: &map[string]interface{}{
+						"email":  "hello@harness.io",
+						"role":   "sre",
+						"active": true,
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "one AND with one OR",
+			fields: fields{
+				query: testRepo,
+			},
+			args: args{
+				segmentList: []string{v2GroupRulesANDWithOr},
+				target: &Target{
+					Identifier: "no_identifier",
+					Attributes: &map[string]interface{}{
+						"email":  "hello@contractor.io",
+						"role":   "sre",
+						"active": true,
+					},
+				},
+			},
+			want: true,
 		},
 	}
 	for _, tt := range tests {
