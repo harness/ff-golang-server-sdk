@@ -64,18 +64,20 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 	noOpLogger := logger.NewNoOpLogger() // Assume a constructor exists for the noOpLogger
 
 	testCases := []struct {
-		name           string
-		events         []analyticsEvent
-		expectedCounts map[string]int // Key by "feature-var-value-target"
-		expectedSeen   map[string]bool
+		name                string
+		events              []analyticsEvent
+		expectedEvaluations map[string]int // Key by "feature-var-value-target"
+		expectedSeen        map[string]bool
+		expectedTargets     map[string]evaluation.Target
 	}{
 		{
 			name: "Single evaluation",
 			events: []analyticsEvent{
 				{target: &evaluation.Target{Identifier: "target1"}, featureConfig: &rest.FeatureConfig{Feature: "feature1"}, variation: &rest.Variation{Identifier: "var1", Value: "value1"}},
 			},
-			expectedCounts: map[string]int{"feature1-var1-value1-global": 1},
-			expectedSeen:   map[string]bool{"target1": true},
+			expectedEvaluations: map[string]int{"feature1-var1-value1-global": 1},
+			expectedSeen:        map[string]bool{"target1": true},
+			expectedTargets:     map[string]evaluation.Target{"target1": {Identifier: "target1"}},
 		},
 		{
 			name: "Two identical evaluations with the same target",
@@ -83,8 +85,9 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 				{target: &evaluation.Target{Identifier: "target1"}, featureConfig: &rest.FeatureConfig{Feature: "feature1"}, variation: &rest.Variation{Identifier: "var1", Value: "value1"}},
 				{target: &evaluation.Target{Identifier: "target1"}, featureConfig: &rest.FeatureConfig{Feature: "feature1"}, variation: &rest.Variation{Identifier: "var1", Value: "value1"}},
 			},
-			expectedCounts: map[string]int{"feature1-var1-value1-global": 2},
-			expectedSeen:   map[string]bool{"target1": true},
+			expectedEvaluations: map[string]int{"feature1-var1-value1-global": 2},
+			expectedSeen:        map[string]bool{"target1": true},
+			expectedTargets:     map[string]evaluation.Target{"target1": {Identifier: "target1"}},
 		},
 		{
 			name: "Two identical evaluations with different targets",
@@ -92,8 +95,9 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 				{target: &evaluation.Target{Identifier: "target1"}, featureConfig: &rest.FeatureConfig{Feature: "feature1"}, variation: &rest.Variation{Identifier: "var1", Value: "value1"}},
 				{target: &evaluation.Target{Identifier: "target2"}, featureConfig: &rest.FeatureConfig{Feature: "feature1"}, variation: &rest.Variation{Identifier: "var1", Value: "value1"}},
 			},
-			expectedCounts: map[string]int{"feature1-var1-value1-global": 2},
-			expectedSeen:   map[string]bool{"target1": true, "target2": true},
+			expectedEvaluations: map[string]int{"feature1-var1-value1-global": 2},
+			expectedSeen:        map[string]bool{"target1": true, "target2": true},
+			expectedTargets:     map[string]evaluation.Target{"target1": {Identifier: "target1"}, "target2": {Identifier: "target2"}},
 		},
 	}
 
@@ -113,9 +117,9 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 			// Allow some time for the events to be processed
 			time.Sleep(100 * time.Millisecond)
 
-			// Check evaluation analytics counts
+			// Check evaluation metrics counts
 			service.evaluationsAnalyticsMx.Lock()
-			for key, expectedCount := range tc.expectedCounts {
+			for key, expectedCount := range tc.expectedEvaluations {
 				analytic, exists := service.evaluationAnalytics[key]
 				if !exists || analytic.count != expectedCount {
 					t.Errorf("Test %s failed: expected count for key %s is %d, got %d", tc.name, key, expectedCount, analytic.count)
@@ -123,7 +127,7 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 			}
 			service.evaluationsAnalyticsMx.Unlock()
 
-			// Check seen targets
+			// Check target metrics
 			service.seenTargetsMx.RLock()
 			for targetID, expectedSeen := range tc.expectedSeen {
 				if seen := service.seenTargets[targetID]; seen != expectedSeen {
@@ -131,6 +135,16 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 				}
 			}
 			service.seenTargetsMx.RUnlock()
+
+			// Check target analytics
+			service.targetAnalyticsMx.Lock()
+			for targetID, expectedTarget := range tc.expectedTargets {
+				target, exists := service.targetAnalytics[targetID]
+				if !exists || target.Identifier != expectedTarget.Identifier || target.Name != expectedTarget.Name {
+					t.Errorf("Test %s failed: expected target details for %s, got %v", tc.name, targetID, target)
+				}
+			}
+			service.targetAnalyticsMx.Unlock()
 		})
 	}
 }
