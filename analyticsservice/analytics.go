@@ -116,7 +116,7 @@ func (as *AnalyticsService) PushToQueue(featureConfig *rest.FeatureConfig, targe
 func (as *AnalyticsService) listener() {
 	as.logger.Info("Analytics cache successfully initialized")
 	for ad := range as.analyticsChan {
-		analyticsKey := getEventSummaryKey(ad)
+		analyticsKey := getEvaluationAnalyticKey(ad)
 
 		// Update evaluation metrics
 		as.evaluationsAnalyticsMx.Lock()
@@ -278,15 +278,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	}
 }
 
-//func getEventKey(event analyticsEvent) string {
-//	targetIdentifier := ""
-//	if event.target != nil {
-//		targetIdentifier = event.target.Identifier
-//	}
-//	return fmt.Sprintf("%s-%s-%s-%s", event.featureConfig.Feature, event.variation.Identifier, event.variation.Value, targetIdentifier)
-//}
-
-func getEventSummaryKey(event analyticsEvent) string {
+func getEvaluationAnalyticKey(event analyticsEvent) string {
 	return fmt.Sprintf("%s-%s-%s-%s", event.featureConfig.Feature, event.variation.Identifier, event.variation.Value, globalTarget)
 }
 
