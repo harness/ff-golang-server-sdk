@@ -46,6 +46,8 @@ type AnalyticsService struct {
 	mx            *sync.Mutex
 	analyticsChan chan analyticsEvent
 	analyticsData map[string]analyticsEvent
+	targetMetrics map[string]evaluation.Target
+	seenTargets   map[string]bool
 	timeout       time.Duration
 	logger        logger.Logger
 	metricsClient *metricsclient.ClientWithResponsesInterface
@@ -64,6 +66,8 @@ func NewAnalyticsService(timeout time.Duration, logger logger.Logger) *Analytics
 		mx:            &sync.Mutex{},
 		analyticsChan: make(chan analyticsEvent),
 		analyticsData: map[string]analyticsEvent{},
+		targetMetrics: map[string]evaluation.Target{},
+		seenTargets:   map[string]bool{},
 		timeout:       serviceTimeout,
 		logger:        logger,
 	}
