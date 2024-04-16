@@ -68,6 +68,8 @@ func NewAnalyticsService(timeout time.Duration, logger logger.Logger) *Analytics
 	}
 	as := AnalyticsService{
 		analyticsMx:   &sync.Mutex{},
+		targetsMx:     &sync.Mutex{},
+		seenTargetsMx: &sync.RWMutex{},
 		analyticsChan: make(chan analyticsEvent),
 		analyticsData: map[string]analyticsEvent{},
 		targetMetrics: map[string]evaluation.Target{},
