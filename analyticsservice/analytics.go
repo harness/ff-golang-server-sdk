@@ -181,15 +181,15 @@ func convertInterfaceToString(i interface{}) string {
 
 func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 
-	// Clone and reset evaluation analytics cache. As metrics is secondary to the flags, we do it this way
-	// so it doesn't affect the performance of our users code. Even if it means
-	// we lose metrics the odd time.
+	// Clone and reset the evaluation analytics cache. This strategy is employed to minimize the duration
+	// for which locks are held so that metrics processing does not affect flag evaluations performance
+	// as metrics are considered secondary,
 	as.evaluationsAnalyticsMx.Lock()
 	evaluationAnalyticsClone := as.evaluationAnalytics
 	as.evaluationAnalytics = map[string]analyticsEvent{}
 	as.evaluationsAnalyticsMx.Unlock()
 
-	// Clone and reset target analytics cache
+	// Clone and reset target analytics cache for same reason.
 	as.targetAnalyticsMx.Lock()
 	targetAnalyticsClone := as.targetAnalytics
 	as.targetAnalytics = make(map[string]evaluation.Target)
