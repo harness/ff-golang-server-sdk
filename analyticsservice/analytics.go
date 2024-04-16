@@ -281,11 +281,3 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 func getEvaluationAnalyticKey(event analyticsEvent) string {
 	return fmt.Sprintf("%s-%s-%s-%s", event.featureConfig.Feature, event.variation.Identifier, event.variation.Value, globalTarget)
 }
-
-func targetDataMapToArray(targetMap map[string]metricsclient.TargetData) *[]metricsclient.TargetData {
-	targetDataArray := make([]metricsclient.TargetData, 0, len(targetMap))
-	for _, targetData := range targetMap {
-		targetDataArray = append(targetDataArray, targetData)
-	}
-	return &targetDataArray
-}
