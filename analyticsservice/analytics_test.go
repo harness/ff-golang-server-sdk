@@ -10,12 +10,12 @@ import (
 )
 
 func TestListenerHandlesEventsCorrectly(t *testing.T) {
-	noOpLogger := logger.NewNoOpLogger() // Assume a constructor exists for the noOpLogger
+	noOpLogger := logger.NewNoOpLogger()
 
 	testCases := []struct {
 		name                string
 		events              []analyticsEvent
-		expectedEvaluations map[string]int // Key by "feature-var-value-target"
+		expectedEvaluations map[string]int
 		expectedSeen        map[string]bool
 		expectedTargets     map[string]evaluation.Target
 	}{
