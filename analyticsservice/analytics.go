@@ -134,7 +134,7 @@ func (as *AnalyticsService) listener() {
 		as.seenTargetsMx.RUnlock()
 
 		if seen {
-			return
+			continue
 		}
 
 		// Update seen targets
