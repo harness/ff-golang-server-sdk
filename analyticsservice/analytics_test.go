@@ -99,6 +99,16 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 			expectedSeen:        map[string]bool{"target1": true, "target2": true},
 			expectedTargets:     map[string]evaluation.Target{"target1": {Identifier: "target1"}, "target2": {Identifier: "target2"}},
 		},
+		{
+			name: "Two different evaluations with two different targets",
+			events: []analyticsEvent{
+				{target: &evaluation.Target{Identifier: "target1"}, featureConfig: &rest.FeatureConfig{Feature: "feature1"}, variation: &rest.Variation{Identifier: "var1", Value: "value1"}},
+				{target: &evaluation.Target{Identifier: "target2"}, featureConfig: &rest.FeatureConfig{Feature: "feature2"}, variation: &rest.Variation{Identifier: "var2", Value: "value2"}},
+			},
+			expectedEvaluations: map[string]int{"feature1-var1-value1-global": 1, "feature2-var2-value2-global": 1},
+			expectedSeen:        map[string]bool{"target1": true, "target2": true},
+			expectedTargets:     map[string]evaluation.Target{"target1": {Identifier: "target1"}, "target2": {Identifier: "target2"}},
+		},
 	}
 
 	for _, tc := range testCases {
