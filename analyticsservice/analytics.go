@@ -133,17 +133,19 @@ func (as *AnalyticsService) listener() {
 		_, seen := as.seenTargets[ad.target.Identifier]
 		as.seenTargetsMx.RUnlock()
 
-		if !seen {
-			// Update seen targets
-			as.seenTargetsMx.Lock()
-			as.seenTargets[ad.target.Identifier] = true
-			as.seenTargetsMx.Unlock()
-
-			// Update target metrics
-			as.targetsMx.Lock()
-			as.targetMetrics[ad.target.Identifier] = *ad.target
-			as.targetsMx.Unlock()
+		if seen {
+			return
 		}
+
+		// Update seen targets
+		as.seenTargetsMx.Lock()
+		as.seenTargets[ad.target.Identifier] = true
+		as.seenTargetsMx.Unlock()
+
+		// Update target metrics
+		as.targetsMx.Lock()
+		as.targetMetrics[ad.target.Identifier] = *ad.target
+		as.targetsMx.Unlock()
 	}
 }
 
