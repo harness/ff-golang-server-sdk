@@ -181,89 +181,35 @@ func convertInterfaceToString(i interface{}) string {
 
 func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 
-	// Copy and reset evaluation analytics cache. As metrics is secondary to the flags, we do it this way
+	// Clone and reset evaluation analytics cache. As metrics is secondary to the flags, we do it this way
 	// so it doesn't affect the performance of our users code. Even if it means
 	// we lose metrics the odd time.
 	as.evaluationsAnalyticsMx.Lock()
-	evaluationAnalytics := as.evaluationAnalytics
+	evaluationAnalyticsClone := as.evaluationAnalytics
 	as.evaluationAnalytics = map[string]analyticsEvent{}
 	as.evaluationsAnalyticsMx.Unlock()
 
-	// Copy and reset target analytics cache
+	// Clone and reset target analytics cache
 	as.targetAnalyticsMx.Lock()
-	targetAnalytics := as.targetAnalytics
+	targetAnalyticsClone := as.targetAnalytics
 	as.targetAnalytics = make(map[string]evaluation.Target)
 	as.targetAnalyticsMx.Unlock()
 
-	metricData := make([]metricsclient.MetricsData, 0, len(as.evaluationAnalytics))
-	targetData := map[string]metricsclient.TargetData{}
+	metricData := make([]metricsclient.MetricsData, 0, len(evaluationAnalyticsClone))
+	targetData := make([]metricsclient.TargetData, 0, len(targetAnalyticsClone))
 
-	for _, analytic := range evaluationAnalytics {
-		if analytic.target != nil {
-			if analytic.target.Anonymous == nil || !*analytic.target.Anonymous {
-				targetAttributes := make([]metricsclient.KeyValue, 0)
-				if analytic.target.Attributes != nil {
-					targetAttributes = make([]metricsclient.KeyValue, 0, len(*analytic.target.Attributes))
-					for key, value := range *analytic.target.Attributes {
-						v := convertInterfaceToString(value)
-						kv := metricsclient.KeyValue{
-							Key:   key,
-							Value: v,
-						}
-						targetAttributes = append(targetAttributes, kv)
-					}
-
-				}
-
-				targetName := analytic.target.Identifier
-				if analytic.target.Name != "" {
-					targetName = analytic.target.Name
-				}
-
-				td := metricsclient.TargetData{
-					Name:       targetName,
-					Identifier: analytic.target.Identifier,
-					Attributes: targetAttributes,
-				}
-				targetData[analytic.target.Identifier] = td
-			}
-		}
-
+	// Process evaluation metrics
+	for _, analytic := range evaluationAnalyticsClone {
 		metricAttributes := []metricsclient.KeyValue{
-			{
-				Key:   featureIdentifierAttribute,
-				Value: analytic.featureConfig.Feature,
-			},
-			{
-				Key:   featureNameAttribute,
-				Value: analytic.featureConfig.Feature,
-			},
-			{
-				Key:   variationIdentifierAttribute,
-				Value: analytic.variation.Identifier,
-			},
-			{
-				Key:   variationValueAttribute,
-				Value: analytic.variation.Value,
-			},
-			{
-				Key:   sdkTypeAttribute,
-				Value: sdkType,
-			},
-			{
-				Key:   sdkLanguageAttribute,
-				Value: sdkLanguage,
-			},
-			{
-				Key:   sdkVersionAttribute,
-				Value: SdkVersion,
-			},
+			{Key: featureIdentifierAttribute, Value: analytic.featureConfig.Feature},
+			{Key: featureNameAttribute, Value: analytic.featureConfig.Feature},
+			{Key: variationIdentifierAttribute, Value: analytic.variation.Identifier},
+			{Key: variationValueAttribute, Value: analytic.variation.Value},
+			{Key: sdkTypeAttribute, Value: sdkType},
+			{Key: sdkLanguageAttribute, Value: sdkLanguage},
+			{Key: sdkVersionAttribute, Value: SdkVersion},
+			{Key: targetAttribute, Value: globalTarget},
 		}
-
-		metricAttributes = append(metricAttributes, metricsclient.KeyValue{
-			Key:   targetAttribute,
-			Value: globalTarget,
-		})
 
 		md := metricsclient.MetricsData{
 			Timestamp:   time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)),
@@ -274,20 +220,29 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 		metricData = append(metricData, md)
 	}
 
-	// if targets data is empty we just send nil
-	var targetDataPayload *[]metricsclient.TargetData = nil
-	if len(targetData) > 0 {
-		targetDataPayload = targetDataMapToArray(targetData)
+	// Process target metrics
+	for _, target := range targetAnalyticsClone {
+		targetAttributes := make([]metricsclient.KeyValue, 0)
+		for key, value := range *target.Attributes {
+			targetAttributes = append(targetAttributes, metricsclient.KeyValue{Key: key, Value: convertInterfaceToString(value)})
+		}
+
+		td := metricsclient.TargetData{
+			Identifier: target.Identifier,
+			Name:       target.Name,
+			Attributes: targetAttributes,
+		}
+		targetData = append(targetData, td)
 	}
 
 	analyticsPayload := metricsclient.PostMetricsJSONRequestBody{
 		MetricsData: &metricData,
-		TargetData:  targetDataPayload,
+		TargetData:  &targetData,
 	}
 
 	if as.metricsClient != nil {
-		emptyMetricsData := analyticsPayload.MetricsData == nil || len(*analyticsPayload.MetricsData) == 0
-		emptyTargetData := analyticsPayload.TargetData == nil || len(*analyticsPayload.TargetData) == 0
+		emptyMetricsData := len(metricData) == 0
+		emptyTargetData := len(targetData) == 0
 
 		// if we have no metrics to send skip the post request
 		if emptyMetricsData && emptyTargetData {
