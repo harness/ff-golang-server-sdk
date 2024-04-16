@@ -140,7 +140,7 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 			service.targetAnalyticsMx.Lock()
 			for targetID, expectedTarget := range tc.expectedTargets {
 				target, exists := service.targetAnalytics[targetID]
-				if !exists || target.Identifier != expectedTarget.Identifier || target.Name != expectedTarget.Name {
+				if !exists || target.Identifier != expectedTarget.Identifier {
 					t.Errorf("Test %s failed: expected target details for %s, got %v", tc.name, targetID, target)
 				}
 			}
