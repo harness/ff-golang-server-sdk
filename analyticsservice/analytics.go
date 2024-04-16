@@ -114,15 +114,8 @@ func (as *AnalyticsService) PushToQueue(featureConfig *rest.FeatureConfig, targe
 func (as *AnalyticsService) listener() {
 	as.logger.Info("Analytics cache successfully initialized")
 	for ad := range as.analyticsChan {
-		//as.analyticsMx.Lock()
-		as.targetsMx.Lock()
-		if !as.seenTargets[ad.target.Identifier] {
-			as.seenTargets[ad.target.Identifier] = true
-			as.targetMetrics[ad.target.Identifier] = *ad.target
-		}
-		as.targetsMx.Unlock()
-
 		key := getEventSummaryKey(ad)
+
 		as.analyticsMx.Lock()
 		analytic, ok := as.analyticsData[key]
 		if !ok {
@@ -133,6 +126,21 @@ func (as *AnalyticsService) listener() {
 			as.analyticsData[key] = ad
 		}
 		as.analyticsMx.Unlock()
+
+		as.seenTargetsMx.RLock()
+		_, seen := as.seenTargets[ad.target.Identifier]
+		as.seenTargetsMx.RUnlock()
+
+		if !seen {
+			// Write to seenTargets
+			as.seenTargetsMx.Lock()
+			as.seenTargets[ad.target.Identifier] = true
+			as.seenTargetsMx.Unlock()
+
+			as.targetsMx.Lock()
+			as.targetMetrics[ad.target.Identifier] = *ad.target
+			as.targetsMx.Unlock()
+		}
 	}
 }
 
