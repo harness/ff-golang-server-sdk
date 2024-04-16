@@ -180,19 +180,25 @@ func convertInterfaceToString(i interface{}) string {
 }
 
 func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
-	as.evaluationsAnalyticsMx.Lock()
-	// Copy a
-	analyticsData := as.evaluationAnalytics
-	// clear cache. As metrics is secondary to the flags, we do it this way
-	// so it doesn't effect the performance of our users code. Even if it means
+
+	// Copy and reset evaluation analytics cache. As metrics is secondary to the flags, we do it this way
+	// so it doesn't affect the performance of our users code. Even if it means
 	// we lose metrics the odd time.
+	as.evaluationsAnalyticsMx.Lock()
+	evaluationAnalytics := as.evaluationAnalytics
 	as.evaluationAnalytics = map[string]analyticsEvent{}
 	as.evaluationsAnalyticsMx.Unlock()
+
+	// Copy and reset target analytics cache
+	as.targetAnalyticsMx.Lock()
+	targetAnalytics := as.targetAnalytics
+	as.targetAnalytics = make(map[string]evaluation.Target)
+	as.targetAnalyticsMx.Unlock()
 
 	metricData := make([]metricsclient.MetricsData, 0, len(as.evaluationAnalytics))
 	targetData := map[string]metricsclient.TargetData{}
 
-	for _, analytic := range analyticsData {
+	for _, analytic := range evaluationAnalytics {
 		if analytic.target != nil {
 			if analytic.target.Anonymous == nil || !*analytic.target.Anonymous {
 				targetAttributes := make([]metricsclient.KeyValue, 0)
