@@ -45,7 +45,9 @@ type analyticsEvent struct {
 
 // AnalyticsService provides a way to cache and send analytics to the server
 type AnalyticsService struct {
-	mx            *sync.Mutex
+	analyticsMx   *sync.Mutex
+	targetsMx     *sync.Mutex
+	seenTargetsMx *sync.RWMutex
 	analyticsChan chan analyticsEvent
 	analyticsData map[string]analyticsEvent
 	targetMetrics map[string]evaluation.Target
@@ -65,7 +67,7 @@ func NewAnalyticsService(timeout time.Duration, logger logger.Logger) *Analytics
 		serviceTimeout = 1 * time.Hour
 	}
 	as := AnalyticsService{
-		mx:            &sync.Mutex{},
+		analyticsMx:   &sync.Mutex{},
 		analyticsChan: make(chan analyticsEvent),
 		analyticsData: map[string]analyticsEvent{},
 		targetMetrics: map[string]evaluation.Target{},
@@ -112,15 +114,16 @@ func (as *AnalyticsService) PushToQueue(featureConfig *rest.FeatureConfig, targe
 func (as *AnalyticsService) listener() {
 	as.logger.Info("Analytics cache successfully initialized")
 	for ad := range as.analyticsChan {
-		key := getEventSummaryKey(ad)
-
-		as.mx.Lock()
-
+		//as.analyticsMx.Lock()
+		as.targetsMx.Lock()
 		if !as.seenTargets[ad.target.Identifier] {
 			as.seenTargets[ad.target.Identifier] = true
 			as.targetMetrics[ad.target.Identifier] = *ad.target
 		}
+		as.targetsMx.Unlock()
 
+		key := getEventSummaryKey(ad)
+		as.analyticsMx.Lock()
 		analytic, ok := as.analyticsData[key]
 		if !ok {
 			ad.count = 1
@@ -129,7 +132,7 @@ func (as *AnalyticsService) listener() {
 			ad.count = (analytic.count + 1)
 			as.analyticsData[key] = ad
 		}
-		as.mx.Unlock()
+		as.analyticsMx.Unlock()
 	}
 }
 
@@ -162,14 +165,14 @@ func convertInterfaceToString(i interface{}) string {
 }
 
 func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
-	as.mx.Lock()
+	as.analyticsMx.Lock()
 	// copy cache to send to server
 	analyticsData := as.analyticsData
 	// clear cache. As metrics is secondary to the flags, we do it this way
 	// so it doesn't effect the performance of our users code. Even if it means
 	// we lose metrics the odd time.
 	as.analyticsData = map[string]analyticsEvent{}
-	as.mx.Unlock()
+	as.analyticsMx.Unlock()
 
 	metricData := make([]metricsclient.MetricsData, 0, len(as.analyticsData))
 	targetData := map[string]metricsclient.TargetData{}
