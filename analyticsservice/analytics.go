@@ -45,17 +45,17 @@ type analyticsEvent struct {
 
 // AnalyticsService provides a way to cache and send analytics to the server
 type AnalyticsService struct {
-	analyticsMx   *sync.Mutex
-	targetsMx     *sync.Mutex
-	seenTargetsMx *sync.RWMutex
-	analyticsChan chan analyticsEvent
-	analyticsData map[string]analyticsEvent
-	targetMetrics map[string]evaluation.Target
-	seenTargets   map[string]bool
-	timeout       time.Duration
-	logger        logger.Logger
-	metricsClient *metricsclient.ClientWithResponsesInterface
-	environmentID string
+	analyticsChan          chan analyticsEvent
+	evaluationsAnalyticsMx *sync.Mutex
+	targetAnalyticsMx      *sync.Mutex
+	seenTargetsMx          *sync.RWMutex
+	evaluationAnalytics    map[string]analyticsEvent
+	targetAnalytics        map[string]evaluation.Target
+	seenTargets            map[string]bool
+	timeout                time.Duration
+	logger                 logger.Logger
+	metricsClient          *metricsclient.ClientWithResponsesInterface
+	environmentID          string
 }
 
 // NewAnalyticsService creates and starts a analytics service to send data to the client
@@ -67,15 +67,15 @@ func NewAnalyticsService(timeout time.Duration, logger logger.Logger) *Analytics
 		serviceTimeout = 1 * time.Hour
 	}
 	as := AnalyticsService{
-		analyticsMx:   &sync.Mutex{},
-		targetsMx:     &sync.Mutex{},
-		seenTargetsMx: &sync.RWMutex{},
-		analyticsChan: make(chan analyticsEvent),
-		analyticsData: map[string]analyticsEvent{},
-		targetMetrics: map[string]evaluation.Target{},
-		seenTargets:   map[string]bool{},
-		timeout:       serviceTimeout,
-		logger:        logger,
+		evaluationsAnalyticsMx: &sync.Mutex{},
+		targetAnalyticsMx:      &sync.Mutex{},
+		seenTargetsMx:          &sync.RWMutex{},
+		analyticsChan:          make(chan analyticsEvent),
+		evaluationAnalytics:    map[string]analyticsEvent{},
+		targetAnalytics:        map[string]evaluation.Target{},
+		seenTargets:            map[string]bool{},
+		timeout:                serviceTimeout,
+		logger:                 logger,
 	}
 	go as.listener()
 
@@ -119,16 +119,16 @@ func (as *AnalyticsService) listener() {
 		analyticsKey := getEventSummaryKey(ad)
 
 		// Update evaluation metrics
-		as.analyticsMx.Lock()
-		analytic, ok := as.analyticsData[analyticsKey]
+		as.evaluationsAnalyticsMx.Lock()
+		analytic, ok := as.evaluationAnalytics[analyticsKey]
 		if !ok {
 			ad.count = 1
-			as.analyticsData[analyticsKey] = ad
+			as.evaluationAnalytics[analyticsKey] = ad
 		} else {
 			ad.count = (analytic.count + 1)
-			as.analyticsData[analyticsKey] = ad
+			as.evaluationAnalytics[analyticsKey] = ad
 		}
-		as.analyticsMx.Unlock()
+		as.evaluationsAnalyticsMx.Unlock()
 
 		// Check if target has been seen
 		as.seenTargetsMx.RLock()
@@ -145,9 +145,9 @@ func (as *AnalyticsService) listener() {
 		as.seenTargetsMx.Unlock()
 
 		// Update target metrics
-		as.targetsMx.Lock()
-		as.targetMetrics[ad.target.Identifier] = *ad.target
-		as.targetsMx.Unlock()
+		as.targetAnalyticsMx.Lock()
+		as.targetAnalytics[ad.target.Identifier] = *ad.target
+		as.targetAnalyticsMx.Unlock()
 	}
 }
 
@@ -180,16 +180,16 @@ func convertInterfaceToString(i interface{}) string {
 }
 
 func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
-	as.analyticsMx.Lock()
-	// copy cache to send to server
-	analyticsData := as.analyticsData
+	as.evaluationsAnalyticsMx.Lock()
+	// Copy a
+	analyticsData := as.evaluationAnalytics
 	// clear cache. As metrics is secondary to the flags, we do it this way
 	// so it doesn't effect the performance of our users code. Even if it means
 	// we lose metrics the odd time.
-	as.analyticsData = map[string]analyticsEvent{}
-	as.analyticsMx.Unlock()
+	as.evaluationAnalytics = map[string]analyticsEvent{}
+	as.evaluationsAnalyticsMx.Unlock()
 
-	metricData := make([]metricsclient.MetricsData, 0, len(as.analyticsData))
+	metricData := make([]metricsclient.MetricsData, 0, len(as.evaluationAnalytics))
 	targetData := map[string]metricsclient.TargetData{}
 
 	for _, analytic := range analyticsData {
