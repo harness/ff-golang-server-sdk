@@ -32,6 +32,8 @@ const (
 	sdkLanguageAttribute         string = "SDK_LANGUAGE"
 	sdkLanguage                  string = "go"
 	globalTarget                 string = "global"
+	maxAnalyticsEntries          int    = 10000
+	maxTargetEntries             int    = 100000
 )
 
 type analyticsEvent struct {
@@ -113,6 +115,12 @@ func (as *AnalyticsService) listener() {
 		key := getEventSummaryKey(ad)
 
 		as.mx.Lock()
+
+		if !as.seenTargets[ad.target.Identifier] {
+			as.seenTargets[ad.target.Identifier] = true
+			as.targetMetrics[ad.target.Identifier] = *ad.target
+		}
+
 		analytic, ok := as.analyticsData[key]
 		if !ok {
 			ad.count = 1
