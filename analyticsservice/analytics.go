@@ -181,9 +181,10 @@ func convertInterfaceToString(i interface{}) string {
 
 func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 
-	// Clone and reset the evaluation analytics cache. This strategy is employed to minimize the duration
-	// for which locks are held so that metrics processing does not affect flag evaluations performance
-	// as metrics are considered secondary,
+	// Clone and reset the evaluation analytics cache to minimise the duration
+	// for which locks are held, so that metrics processing does not affect flag evaluations performance.
+	// Although this might occasionally result in the loss of some metrics during periods of high load,
+	// it is an acceptable tradeoff to prevent extended lock periods that could degrade user code.
 	as.evaluationsAnalyticsMx.Lock()
 	evaluationAnalyticsClone := as.evaluationAnalytics
 	as.evaluationAnalytics = map[string]analyticsEvent{}
