@@ -131,7 +131,7 @@ func (as *AnalyticsService) listener() {
 		as.evaluationsAnalyticsMx.Unlock()
 
 		// Check if target is nil or anonymous
-		if ad.target == nil || (ad.target != nil && *ad.target.Anonymous) {
+		if ad.target == nil || (ad.target.Anonymous != nil && *ad.target.Anonymous) {
 			continue
 		}
 

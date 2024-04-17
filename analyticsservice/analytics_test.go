@@ -119,6 +119,17 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 			expectedSeen:        map[string]bool{"target1": true, "target2": true, "target3": true},
 			expectedTargets:     map[string]evaluation.Target{"target1": {Identifier: "target1"}, "target2": {Identifier: "target2"}, "target3": {Identifier: "target3"}},
 		},
+		{
+			name: "Three different evaluations with two anonymous targets",
+			events: []analyticsEvent{
+				{target: &evaluation.Target{Identifier: "target1"}, featureConfig: &rest.FeatureConfig{Feature: "feature1"}, variation: &rest.Variation{Identifier: "var1", Value: "value1"}},
+				{target: &evaluation.Target{Identifier: "target2", Anonymous: boolPtr(true)}, featureConfig: &rest.FeatureConfig{Feature: "feature2"}, variation: &rest.Variation{Identifier: "var2", Value: "value2"}},
+				{target: &evaluation.Target{Identifier: "target3"}, featureConfig: &rest.FeatureConfig{Feature: "feature3"}, variation: &rest.Variation{Identifier: "var3", Value: "value3"}},
+			},
+			expectedEvaluations: map[string]int{"feature1-var1-value1-global": 1, "feature2-var2-value2-global": 1, "feature3-var3-value3-global": 1},
+			expectedSeen:        map[string]bool{"target1": true, "target3": true},
+			expectedTargets:     map[string]evaluation.Target{"target1": {Identifier: "target1"}, "target3": {Identifier: "target3"}},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -218,4 +229,8 @@ func Test_convertInterfaceToString(t *testing.T) {
 			}
 		})
 	}
+}
+
+func boolPtr(b bool) *bool {
+	return &b
 }
