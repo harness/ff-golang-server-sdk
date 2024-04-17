@@ -130,6 +130,11 @@ func (as *AnalyticsService) listener() {
 		}
 		as.evaluationsAnalyticsMx.Unlock()
 
+		// Check if target is nil or anonymous
+		if ad.target == nil || (ad.target != nil && *ad.target.Anonymous) {
+			continue
+		}
+
 		// Check if target has been seen
 		as.seenTargetsMx.RLock()
 		_, seen := as.seenTargets[ad.target.Identifier]
