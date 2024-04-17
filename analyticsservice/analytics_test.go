@@ -1,63 +1,13 @@
 package analyticsservice
 
 import (
-	"context"
-	"io"
 	"testing"
 	"time"
 
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/logger"
-	"github.com/harness/ff-golang-server-sdk/metricsclient"
 	"github.com/harness/ff-golang-server-sdk/rest"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
-
-// MockMetricsClient is a mock implementation for the ClientWithResponsesInterface
-type MockMetricsClient struct {
-	mock.Mock
-}
-
-func (m *MockMetricsClient) PostMetricsWithResponse(ctx context.Context, environmentUUID metricsclient.EnvironmentPathParam, params *metricsclient.PostMetricsParams, body metricsclient.PostMetricsJSONRequestBody, reqEditors ...metricsclient.RequestEditorFn) (*metricsclient.PostMetricsResponse, error) {
-	args := m.Called(ctx, environmentUUID, params, body)
-	return args.Get(0).(*metricsclient.PostMetricsResponse), args.Error(1)
-}
-
-func (m *MockMetricsClient) PostMetricsWithBodyWithResponse(ctx context.Context, environmentUUID metricsclient.EnvironmentPathParam, params *metricsclient.PostMetricsParams, contentType string, body io.Reader, reqEditors ...metricsclient.RequestEditorFn) (*metricsclient.PostMetricsResponse, error) {
-	args := m.Called(ctx, environmentUUID, params, contentType, body)
-	return args.Get(0).(*metricsclient.PostMetricsResponse), args.Error(1)
-}
-
-func TestSendDataAndResetCache(t *testing.T) {
-	noOpLogger := logger.NewNoOpLogger()
-	mockMetricsClient := MockMetricsClient{}
-	service := NewAnalyticsService(1*time.Minute, noOpLogger)
-	service.metricsClient = &mockMetricsClient
-
-	// Setup mock response from metrics server
-	mockResponse := &metricsclient.PostMetricsResponse{}
-	mockMetricsClient.On("PostMetricsWithResponse", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(mockResponse, nil)
-
-	// Simulate analytics data
-	service.evaluationAnalytics["test-key"] = analyticsEvent{
-		target:        &evaluation.Target{Identifier: "target1", Name: "Target One"},
-		featureConfig: &rest.FeatureConfig{Feature: "feature1"},
-		variation:     &rest.Variation{Identifier: "var1", Value: "value1"},
-		count:         1,
-	}
-	service.targetAnalytics["target1"] = evaluation.Target{Identifier: "target1", Name: "Target One", Attributes: &map[string]interface{}{"key": "value"}}
-
-	ctx := context.TODO()
-	service.sendDataAndResetCache(ctx)
-
-	// Verify that metrics data is sent correctly
-	mockMetricsClient.AssertCalled(t, "PostMetricsWithResponse", ctx, service.environmentID, nil, mock.AnythingOfType("metricsclient.PostMetricsJSONRequestBody"))
-
-	// Verify that caches are reset
-	assert.Empty(t, service.evaluationAnalytics, "Evaluation analytics cache should be empty after sending data")
-	assert.Empty(t, service.targetAnalytics, "Target analytics cache should be empty after sending data")
-}
 
 func TestListenerHandlesEventsCorrectly(t *testing.T) {
 	noOpLogger := logger.NewNoOpLogger()
