@@ -125,7 +125,7 @@ func (as *AnalyticsService) listener() {
 			ad.count = 1
 			as.evaluationAnalytics[analyticsKey] = ad
 		} else {
-			ad.count = (analytic.count + 1)
+			ad.count = analytic.count + 1
 			as.evaluationAnalytics[analyticsKey] = ad
 		}
 		as.evaluationsAnalyticsMx.Unlock()
