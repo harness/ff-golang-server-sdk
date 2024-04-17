@@ -586,7 +586,7 @@ func (c *CfClient) setAnalyticsServiceClient(ctx context.Context) {
 		return
 	}
 	c.config.Logger.Info("Posting analytics data enabled")
-	c.analyticsService.Start(ctx, &c.metricsApi, c.environmentID)
+	c.analyticsService.Start(ctx, c.metricsApi, c.environmentID)
 }
 
 // BoolVariation returns the value of a boolean feature flag for a given target.

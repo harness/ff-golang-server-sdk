@@ -54,7 +54,7 @@ type AnalyticsService struct {
 	seenTargets            map[string]bool
 	timeout                time.Duration
 	logger                 logger.Logger
-	metricsClient          *metricsclient.ClientWithResponsesInterface
+	metricsClient          metricsclient.ClientWithResponsesInterface
 	environmentID          string
 }
 
@@ -83,7 +83,7 @@ func NewAnalyticsService(timeout time.Duration, logger logger.Logger) *Analytics
 }
 
 // Start starts the client and timer to send analytics
-func (as *AnalyticsService) Start(ctx context.Context, client *metricsclient.ClientWithResponsesInterface, environmentID string) {
+func (as *AnalyticsService) Start(ctx context.Context, client metricsclient.ClientWithResponsesInterface, environmentID string) {
 	as.logger.Infof("%s Metrics started", sdk_codes.MetricsStarted)
 	as.metricsClient = client
 	as.environmentID = environmentID
@@ -251,7 +251,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 			return
 		}
 
-		mClient := *as.metricsClient
+		mClient := as.metricsClient
 
 		jsonData, err := json.Marshal(analyticsPayload)
 		if err != nil {
