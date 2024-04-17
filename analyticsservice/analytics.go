@@ -120,15 +120,23 @@ func (as *AnalyticsService) listener() {
 
 		// Update evaluation metrics
 		as.evaluationsAnalyticsMx.Lock()
-		analytic, ok := as.evaluationAnalytics[analyticsKey]
-		if !ok {
-			ad.count = 1
-			as.evaluationAnalytics[analyticsKey] = ad
+		if len(as.evaluationAnalytics) >= maxAnalyticsEntries {
+			as.logger.Warnf("%s Evaluation analytic cache reached max size, remaining evaluation metrics for this analytics interval will not be sent", sdk_codes.EvaluationMetricsMaxSizeReached)
 		} else {
-			ad.count = analytic.count + 1
-			as.evaluationAnalytics[analyticsKey] = ad
+			analytic, ok := as.evaluationAnalytics[analyticsKey]
+			if !ok {
+				ad.count = 1
+				as.evaluationAnalytics[analyticsKey] = ad
+			} else {
+				ad.count = analytic.count + 1
+				as.evaluationAnalytics[analyticsKey] = ad
+			}
+			as.evaluationsAnalyticsMx.Unlock()
 		}
-		as.evaluationsAnalyticsMx.Unlock()
+
+		if len(as.targetAnalytics) >= maxTargetEntries {
+			as.logger.Warnf("%s Target analytics cache reached max size, remaining target metrics for this analytics interval will not be sent", sdk_codes.TargetMetricsMaxSizeReached)
+		}
 
 		// Check if target is nil or anonymous
 		if ad.target == nil || (ad.target.Anonymous != nil && *ad.target.Anonymous) {
