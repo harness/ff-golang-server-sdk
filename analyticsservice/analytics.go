@@ -118,11 +118,10 @@ func (as *AnalyticsService) listener() {
 	for ad := range as.analyticsChan {
 		analyticsKey := getEvaluationAnalyticKey(ad)
 
-		// Update evaluation metrics
 		as.evaluationsAnalyticsMx.Lock()
-		if len(as.evaluationAnalytics) >= maxAnalyticsEntries {
-			as.logger.Warnf("%s Evaluation analytic cache reached max size, remaining evaluation metrics for this analytics interval will not be sent", sdk_codes.EvaluationMetricsMaxSizeReached)
-		} else {
+		// Check if we've hit capacity for evaluations
+		if len(as.evaluationAnalytics) < maxAnalyticsEntries {
+			// Update evaluation metrics
 			analytic, ok := as.evaluationAnalytics[analyticsKey]
 			if !ok {
 				ad.count = 1
@@ -131,12 +130,10 @@ func (as *AnalyticsService) listener() {
 				ad.count = analytic.count + 1
 				as.evaluationAnalytics[analyticsKey] = ad
 			}
-			as.evaluationsAnalyticsMx.Unlock()
+		} else {
+			as.logger.Warnf("%s Evaluation analytic cache reached max size, remaining evaluation metrics for this analytics interval will not be sent", sdk_codes.EvaluationMetricsMaxSizeReached)
 		}
-
-		if len(as.targetAnalytics) >= maxTargetEntries {
-			as.logger.Warnf("%s Target analytics cache reached max size, remaining target metrics for this analytics interval will not be sent", sdk_codes.TargetMetricsMaxSizeReached)
-		}
+		as.evaluationsAnalyticsMx.Unlock()
 
 		// Check if target is nil or anonymous
 		if ad.target == nil || (ad.target.Anonymous != nil && *ad.target.Anonymous) {
@@ -159,7 +156,11 @@ func (as *AnalyticsService) listener() {
 
 		// Update target metrics
 		as.targetAnalyticsMx.Lock()
-		as.targetAnalytics[ad.target.Identifier] = *ad.target
+		if len(as.targetAnalytics) < maxTargetEntries {
+			as.targetAnalytics[ad.target.Identifier] = *ad.target
+		} else {
+			as.logger.Warnf("%s Target analytics cache reached max size, remaining target metrics for this analytics interval will not be sent", sdk_codes.TargetMetricsMaxSizeReached)
+		}
 		as.targetAnalyticsMx.Unlock()
 	}
 }
