@@ -74,7 +74,7 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			service := NewAnalyticsService(1*time.Minute, noOpLogger)
-			defer close(service.analyticsChan) // Ensure the channel is closed after test
+			defer close(service.analyticsChan)
 
 			// Start the listener in a goroutine
 			go service.listener()
@@ -101,7 +101,7 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 			service.seenTargetsMx.RLock()
 			for targetID, expectedSeen := range tc.expectedSeen {
 				if seen := service.seenTargets[targetID]; seen != expectedSeen {
-					t.Errorf("Test %s failed: expected seen status for target %s is %v, got %v", tc.name, targetID, expectedSeen, seen)
+					t.Errorf("Test %s failed: expected target to be in seen targets cache %s is %v", tc.name, targetID, expectedSeen)
 				}
 			}
 			service.seenTargetsMx.RUnlock()
@@ -111,7 +111,7 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 			for targetID, expectedTarget := range tc.expectedTargets {
 				target, exists := service.targetAnalytics[targetID]
 				if !exists || target.Identifier != expectedTarget.Identifier {
-					t.Errorf("Test %s failed: expected target details for %s, got %v", tc.name, targetID, target)
+					t.Errorf("Test %s failed: expected target to be in target cache %s", tc.name, targetID)
 				}
 			}
 			service.targetAnalyticsMx.Unlock()
