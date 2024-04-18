@@ -24,6 +24,21 @@ func testMapOperations[K comparable, V any](t *testing.T, mapInstance SafeAnalyt
 	}
 	wg.Wait()
 
+	// Test concurrent iteration and size
+	for key := range testData {
+		wg.Add(1)
+		go func(k K) {
+			defer wg.Done()
+			mapInstance.size()
+			mapInstance.iterate(func(k K, v V) {
+				if expected, exists := testData[k]; !exists || !reflect.DeepEqual(v, expected) {
+					t.Errorf("Iterate failed for key %v, expected %v, got %v", k, expected, v)
+				}
+			})
+		}(key)
+	}
+	wg.Wait()
+
 	// Test concurrent deletes
 	for key := range testData {
 		wg.Add(1)
@@ -35,7 +50,7 @@ func testMapOperations[K comparable, V any](t *testing.T, mapInstance SafeAnalyt
 			}
 		}(key)
 	}
-	wg.Wait() // Wait for all delete operations to complete
+	wg.Wait()
 }
 
 func TestSafeEvaluationAnalytics(t *testing.T) {
