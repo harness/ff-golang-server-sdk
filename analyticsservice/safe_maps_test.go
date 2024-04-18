@@ -8,100 +8,73 @@ import (
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 )
 
-// SafeMap is a generic thread-safe map
-type SafeMap[K comparable, V any] struct {
-	sync.RWMutex
-	data map[K]V
-}
-
-// NewSafeMap creates a new SafeMap
-func NewSafeMap[K comparable, V any]() *SafeMap[K, V] {
-	return &SafeMap[K, V]{
-		data: make(map[K]V),
-	}
-}
-
-// Set sets a value in the map
-func (s *SafeMap[K, V]) Set(key K, value V) {
-	s.Lock()
-	defer s.Unlock()
-	s.data[key] = value
-}
-
-// Get retrieves a value from the map
-func (s *SafeMap[K, V]) Get(key K) (V, bool) {
-	s.RLock()
-	defer s.RUnlock()
-	val, exists := s.data[key]
-	return val, exists
-}
-
-// Delete removes a value from the map
-func (s *SafeMap[K, V]) Delete(key K) {
-	s.Lock()
-	defer s.Unlock()
-	delete(s.data, key)
-}
-
-func testSafeMapOperations[K comparable, V any](t *testing.T, mapInstance *SafeMap[K, V], testData map[K]V) {
-	// Test set and get
+func testSafeMapOperations[K comparable, V any](t *testing.T, testData map[K]V, setFunc func(K, V), getFunc func(K) (V, bool), deleteFunc func(K)) {
 	for key, value := range testData {
-		mapInstance.Set(key, value)
-		if got, exists := mapInstance.Get(key); !exists || !reflect.DeepEqual(got, value) {
+		setFunc(key, value)
+		if got, exists := getFunc(key); !exists || !reflect.DeepEqual(got, value) {
 			t.Errorf("set or get method failed for key %v, expected %v, got %v", key, value, got)
 		}
 	}
 
-	// Test concurrent access
 	var wg sync.WaitGroup
 	for key, value := range testData {
 		wg.Add(1)
 		go func(k K, v V) {
 			defer wg.Done()
-			mapInstance.Set(k, v)
-			if got, exists := mapInstance.Get(k); !exists || !reflect.DeepEqual(got, v) {
-				t.Errorf("concurrent set or get failed for key %v, expected %v, got %v", k, v, got)
+			setFunc(k, v)
+			if got, exists := getFunc(k); !exists || !reflect.DeepEqual(got, v) {
+				t.Errorf("Concurrent set or get failed for key %v, expected %v, got %v", k, v, got)
 			}
 		}(key, value)
 	}
 	wg.Wait()
 
-	// Test delete
 	for key := range testData {
-		mapInstance.Delete(key)
-		if _, exists := mapInstance.Get(key); exists {
+		deleteFunc(key)
+		if _, exists := getFunc(key); exists {
 			t.Errorf("delete method failed, %v should have been deleted", key)
 		}
 	}
 }
 
-func TestSafeEvaluationAnalytics(t *testing.T) {
-	EvaluationAnalytics := NewSafeMap[string, analyticsEvent]()
-	testData := map[string]analyticsEvent{
-		"test-key": {count: 1},
-		"key-1":    {count: 10},
-		"key-2":    {count: 20},
+func TestSafeTargetAnalytics(t *testing.T) {
+	s := newSafeTargetAnalytics()
+	testData := map[string]evaluation.Target{
+		"target1": {Identifier: "id1"},
+		"target2": {Identifier: "id2"},
 	}
-	testSafeMapOperations(t, EvaluationAnalytics, testData)
+
+	testSafeMapOperations(t, testData,
+		func(key string, value evaluation.Target) { s.set(key, value) },
+		func(key string) (evaluation.Target, bool) { return s.get(key) },
+		func(key string) { s.delete(key) },
+	)
 }
 
-func TestSafeTargetAnalytics(t *testing.T) {
-	TargetAnalytics := NewSafeMap[string, evaluation.Target]()
-	testData := map[string]evaluation.Target{
-		"test-target": {Identifier: "test-identifier"},
-		"target-1":    {Identifier: "id-10"},
-		"target-2":    {Identifier: "id-20"},
+func TestSafeEvaluationAnalytics(t *testing.T) {
+	s := newSafeEvaluationAnalytics()
+	testData := map[string]analyticsEvent{
+		"event1": {count: 1},
+		"event2": {count: 2},
 	}
-	testSafeMapOperations(t, TargetAnalytics, testData)
+
+	testSafeMapOperations(t, testData,
+		func(key string, value analyticsEvent) { s.set(key, value) },
+		func(key string) (analyticsEvent, bool) { return s.get(key) },
+		func(key string) { s.delete(key) },
+	)
 }
 
 func TestSafeSeenTargets(t *testing.T) {
-	SeenTargets := NewSafeMap[string, bool]()
-
+	s := newSafeSeenTargets()
 	testData := map[string]bool{
-		"test-seen": true,
-		"seen-1":    false,
-		"seen-2":    true,
+		"seen1": true,
+		"seen2": false,
 	}
-	testSafeMapOperations(t, SeenTargets, testData)
+
+	testSafeMapOperations(t, testData,
+		func(key string, value bool) { s.set(key, value) },
+		func(key string) (bool, bool) { return s.get(key) },
+		func(key string) { s.delete(key) },
+	)
 }
