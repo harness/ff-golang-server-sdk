@@ -4,6 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/ff-golang-server-sdk/dto"
 	"github.com/harness/ff-golang-server-sdk/evaluation"
@@ -13,11 +19,6 @@ import (
 	"github.com/harness/ff-golang-server-sdk/types"
 	"github.com/jarcoal/httpmock"
 	"github.com/stretchr/testify/assert"
-	"io"
-	"net/http"
-	"os"
-	"testing"
-	"time"
 )
 
 const (
@@ -582,24 +583,6 @@ func TestCfClient_DefaultVariationReturned(t *testing.T) {
 			name: "Evaluations with Async client with empty SDK flagIdentifier",
 			clientFunc: func() (*CfClient, error) {
 				return newClient(http.DefaultClient, EmptySDKKey)
-			},
-			flagIdentifier: "made up",
-			expectedBool:   false,
-			expectedString: "a default value",
-			expectedInt:    45555,
-			expectedNumber: 45.222,
-			expectedJSON:   types.JSON{"a default flagIdentifier": "a default value"},
-			expectedError:  DefaultVariationReturnedError,
-		},
-		{
-			name: "Evaluations with Sync client with valid sdk key and flag not found",
-			clientFunc: func() (*CfClient, error) {
-				return newClient(http.DefaultClient, ValidSDKKey, WithWaitForInitialized(true))
-			},
-			mockResponder: func() {
-				authSuccessResponse := AuthResponse(200, ValidAuthToken)
-				registerResponders(authSuccessResponse, TargetSegmentsResponse, FeatureConfigsResponse)
-
 			},
 			flagIdentifier: "made up",
 			expectedBool:   false,

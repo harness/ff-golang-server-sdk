@@ -11,7 +11,7 @@ type safeTargetAnalytics struct {
 	data map[string]evaluation.Target
 }
 
-func newSafeTargetAnalytics() SafeCache[string, evaluation.Target] {
+func newSafeTargetAnalytics() SafeAnalyticsCache[string, evaluation.Target] {
 	return &safeTargetAnalytics{
 		data: make(map[string]evaluation.Target),
 	}

@@ -9,7 +9,7 @@ type safeSeenTargets struct {
 	data map[string]bool
 }
 
-func newSafeSeenTargets() SafeCache[string, bool] {
+func newSafeSeenTargets() SafeAnalyticsCache[string, bool] {
 	return &safeSeenTargets{
 		data: make(map[string]bool),
 	}

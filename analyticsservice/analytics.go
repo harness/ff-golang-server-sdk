@@ -35,8 +35,8 @@ const (
 	maxTargetEntries             int    = 100000
 )
 
-// SafeCache is a type that provides thread safe access to maps
-type SafeCache[K comparable, V any] interface {
+// SafeAnalyticsCache is a type that provides thread safe access to maps used by analytics
+type SafeAnalyticsCache[K comparable, V any] interface {
 	set(key K, value V)
 	get(key K) (V, bool)
 	delete(key K)
@@ -55,9 +55,9 @@ type analyticsEvent struct {
 // AnalyticsService provides a way to cache and send analytics to the server
 type AnalyticsService struct {
 	analyticsChan       chan analyticsEvent
-	evaluationAnalytics SafeCache[string, analyticsEvent]
-	targetAnalytics     SafeCache[string, evaluation.Target]
-	seenTargets         SafeCache[string, bool]
+	evaluationAnalytics SafeAnalyticsCache[string, analyticsEvent]
+	targetAnalytics     SafeAnalyticsCache[string, evaluation.Target]
+	seenTargets         SafeAnalyticsCache[string, bool]
 	timeout             time.Duration
 	logger              logger.Logger
 	metricsClient       metricsclient.ClientWithResponsesInterface
