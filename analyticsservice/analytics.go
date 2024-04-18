@@ -41,6 +41,7 @@ type SafeCache[K comparable, V any] interface {
 	get(key K) (V, bool)
 	delete(key K)
 	size() int
+	copy() SafeCache[K, V]
 	clear()
 }
 

@@ -1,6 +1,7 @@
 package analyticsservice
 
 import (
+	"maps"
 	"sync"
 )
 
@@ -38,6 +39,16 @@ func (s *safeEvaluationAnalytics) delete(key string) {
 	s.Lock()
 	defer s.Unlock()
 	delete(s.data, key)
+}
+
+func (s *safeEvaluationAnalytics) copy() SafeCache[string, analyticsEvent] {
+	s.RLock()
+	defer s.RUnlock()
+	deepCopy := make(map[string]analyticsEvent)
+	maps.Copy(s.data, deepCopy)
+	return &safeEvaluationAnalytics{
+		data: deepCopy,
+	}
 }
 
 func (s *safeEvaluationAnalytics) clear() {

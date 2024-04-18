@@ -1,6 +1,7 @@
 package analyticsservice
 
 import (
+	"maps"
 	"sync"
 )
 
@@ -38,6 +39,16 @@ func (s *safeSeenTargets) size() int {
 	s.RLock()
 	defer s.RUnlock()
 	return len(s.data)
+}
+
+func (s *safeSeenTargets) copy() SafeCache[string, bool] {
+	s.RLock()
+	defer s.RUnlock()
+	deepCopy := make(map[string]bool)
+	maps.Copy(s.data, deepCopy)
+	return &safeSeenTargets{
+		data: deepCopy,
+	}
 }
 
 func (s *safeSeenTargets) clear() {
