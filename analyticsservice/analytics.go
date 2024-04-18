@@ -36,6 +36,12 @@ const (
 	maxTargetEntries             int    = 100000
 )
 
+type MapOperations[K comparable, V any] interface {
+	set(key K, value V)
+	get(key K) (V, bool)
+	delete(key K)
+}
+
 type analyticsEvent struct {
 	target        *evaluation.Target
 	featureConfig *rest.FeatureConfig

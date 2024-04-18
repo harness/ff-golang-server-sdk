@@ -7,7 +7,7 @@ type safeEvaluationAnalytics struct {
 	data map[string]analyticsEvent
 }
 
-func newSafeEvaluationAnalytics() *safeEvaluationAnalytics {
+func newSafeEvaluationAnalytics() MapOperations[string, analyticsEvent] {
 	return &safeEvaluationAnalytics{
 		data: make(map[string]analyticsEvent),
 	}

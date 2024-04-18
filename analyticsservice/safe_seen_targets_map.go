@@ -1,13 +1,15 @@
 package analyticsservice
 
-import "sync"
+import (
+	"sync"
+)
 
 type safeSeenTargets struct {
 	sync.RWMutex
 	data map[string]bool
 }
 
-func newSafeSeenTargets() *safeSeenTargets {
+func newSafeSeenTargets() MapOperations[string, bool] {
 	return &safeSeenTargets{
 		data: make(map[string]bool),
 	}
