@@ -110,33 +110,27 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 			time.Sleep(100 * time.Millisecond)
 
 			// Check evaluation metrics counts
-			service.evaluationsAnalyticsMx.Lock()
 			for key, expectedCount := range tc.expectedEvaluations {
-				analytic, exists := service.evaluationAnalytics[key]
+				analytic, exists := service.evaluationAnalytics.get(key)
 				if !exists || analytic.count != expectedCount {
 					t.Errorf("Test %s failed: expected count for key %s is %d, got %d", tc.name, key, expectedCount, analytic.count)
 				}
 			}
-			service.evaluationsAnalyticsMx.Unlock()
 
 			// Check target metrics
-			service.seenTargetsMx.RLock()
 			for targetID, expectedSeen := range tc.expectedSeen {
-				if seen := service.seenTargets[targetID]; seen != expectedSeen {
+				if _, seen := service.seenTargets.get(targetID); seen != expectedSeen {
 					t.Errorf("Test %s failed: expected target to be in seen targets cache %s is %v", tc.name, targetID, expectedSeen)
 				}
 			}
-			service.seenTargetsMx.RUnlock()
 
 			// Check target analytics
-			service.targetAnalyticsMx.Lock()
 			for targetID, expectedTarget := range tc.expectedTargets {
-				target, exists := service.targetAnalytics[targetID]
+				target, exists := service.targetAnalytics.get(targetID)
 				if !exists || target.Identifier != expectedTarget.Identifier {
 					t.Errorf("Test %s failed: expected target to be in target cache %s", tc.name, targetID)
 				}
 			}
-			service.targetAnalyticsMx.Unlock()
 		})
 	}
 }
