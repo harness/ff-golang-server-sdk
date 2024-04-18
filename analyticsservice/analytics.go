@@ -195,7 +195,9 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	// Although this might occasionally result in the loss of some metrics during periods of high load,
 	// it is an acceptable tradeoff to prevent extended lock periods that could degrade user code.
 	evaluationAnalyticsClone := as.evaluationAnalytics
+
 	as.evaluationAnalytics.clear()
+	as.evaluationAnalytics = newSafeEvaluationAnalytics()
 
 	// TODO revist cloning - do we need to? we're making a slice so just clear it after making the slice
 	// Clone and reset target analytics cache for same reason.
