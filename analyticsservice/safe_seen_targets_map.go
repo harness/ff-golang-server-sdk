@@ -9,7 +9,7 @@ type safeSeenTargets struct {
 	data map[string]bool
 }
 
-func newSafeSeenTargets() MapOperations[string, bool] {
+func newSafeSeenTargets() SafeCache[string, bool] {
 	return &safeSeenTargets{
 		data: make(map[string]bool),
 	}
@@ -32,4 +32,10 @@ func (s *safeSeenTargets) delete(key string) {
 	s.Lock()
 	defer s.Unlock()
 	delete(s.data, key)
+}
+
+func (s *safeSeenTargets) size() int {
+	s.RLock()
+	defer s.RUnlock()
+	return len(s.data)
 }

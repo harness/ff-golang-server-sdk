@@ -7,7 +7,7 @@ type safeEvaluationAnalytics struct {
 	data map[string]analyticsEvent
 }
 
-func newSafeEvaluationAnalytics() MapOperations[string, analyticsEvent] {
+func newSafeEvaluationAnalytics() SafeCache[string, analyticsEvent] {
 	return &safeEvaluationAnalytics{
 		data: make(map[string]analyticsEvent),
 	}
@@ -24,6 +24,12 @@ func (s *safeEvaluationAnalytics) get(key string) (analyticsEvent, bool) {
 	defer s.RUnlock()
 	val, exists := s.data[key]
 	return val, exists
+}
+
+func (s *safeEvaluationAnalytics) size() int {
+	s.RLock()
+	defer s.RUnlock()
+	return len(s.data)
 }
 
 func (s *safeEvaluationAnalytics) delete(key string) {

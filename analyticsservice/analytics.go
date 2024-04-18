@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/harness/ff-golang-server-sdk/sdk_codes"
@@ -36,10 +35,13 @@ const (
 	maxTargetEntries             int    = 100000
 )
 
-type MapOperations[K comparable, V any] interface {
+// SafeCache is a type that provides thread safe access to maps
+type SafeCache[K comparable, V any] interface {
 	set(key K, value V)
 	get(key K) (V, bool)
 	delete(key K)
+	size() int
+	clear()
 }
 
 type analyticsEvent struct {
@@ -51,17 +53,14 @@ type analyticsEvent struct {
 
 // AnalyticsService provides a way to cache and send analytics to the server
 type AnalyticsService struct {
-	analyticsChan          chan analyticsEvent
-	evaluationsAnalyticsMx *sync.Mutex
-	targetAnalyticsMx      *sync.Mutex
-	seenTargetsMx          *sync.RWMutex
-	evaluationAnalytics    map[string]analyticsEvent
-	targetAnalytics        map[string]evaluation.Target
-	seenTargets            map[string]bool
-	timeout                time.Duration
-	logger                 logger.Logger
-	metricsClient          metricsclient.ClientWithResponsesInterface
-	environmentID          string
+	analyticsChan       chan analyticsEvent
+	evaluationAnalytics SafeCache[string, analyticsEvent]
+	targetAnalytics     SafeCache[string, evaluation.Target]
+	seenTargets         SafeCache[string, bool]
+	timeout             time.Duration
+	logger              logger.Logger
+	metricsClient       metricsclient.ClientWithResponsesInterface
+	environmentID       string
 }
 
 // NewAnalyticsService creates and starts a analytics service to send data to the client
@@ -73,15 +72,12 @@ func NewAnalyticsService(timeout time.Duration, logger logger.Logger) *Analytics
 		serviceTimeout = 1 * time.Hour
 	}
 	as := AnalyticsService{
-		evaluationsAnalyticsMx: &sync.Mutex{},
-		targetAnalyticsMx:      &sync.Mutex{},
-		seenTargetsMx:          &sync.RWMutex{},
-		analyticsChan:          make(chan analyticsEvent),
-		evaluationAnalytics:    map[string]analyticsEvent{},
-		targetAnalytics:        map[string]evaluation.Target{},
-		seenTargets:            map[string]bool{},
-		timeout:                serviceTimeout,
-		logger:                 logger,
+		analyticsChan:       make(chan analyticsEvent),
+		evaluationAnalytics: newSafeEvaluationAnalytics(),
+		targetAnalytics:     newSafeTargetAnalytics(),
+		seenTargets:         newSafeSeenTargets(),
+		timeout:             serviceTimeout,
+		logger:              logger,
 	}
 	go as.listener()
 
@@ -124,22 +120,20 @@ func (as *AnalyticsService) listener() {
 	for ad := range as.analyticsChan {
 		analyticsKey := getEvaluationAnalyticKey(ad)
 
-		as.evaluationsAnalyticsMx.Lock()
 		// Check if we've hit capacity for evaluations
-		if len(as.evaluationAnalytics) < maxAnalyticsEntries {
+		if as.evaluationAnalytics.size() < maxAnalyticsEntries {
 			// Update evaluation metrics
-			analytic, ok := as.evaluationAnalytics[analyticsKey]
+			analytic, ok := as.evaluationAnalytics.get(analyticsKey)
 			if !ok {
 				ad.count = 1
-				as.evaluationAnalytics[analyticsKey] = ad
+				as.evaluationAnalytics.set(analyticsKey, ad)
 			} else {
 				ad.count = analytic.count + 1
-				as.evaluationAnalytics[analyticsKey] = ad
+				as.evaluationAnalytics.set(analyticsKey, ad)
 			}
 		} else {
 			as.logger.Warnf("%s Evaluation analytic cache reached max size, remaining evaluation metrics for this analytics interval will not be sent", sdk_codes.EvaluationMetricsMaxSizeReached)
 		}
-		as.evaluationsAnalyticsMx.Unlock()
 
 		// Check if target is nil or anonymous
 		if ad.target == nil || (ad.target.Anonymous != nil && *ad.target.Anonymous) {
@@ -147,27 +141,21 @@ func (as *AnalyticsService) listener() {
 		}
 
 		// Check if target has been seen
-		as.seenTargetsMx.RLock()
-		_, seen := as.seenTargets[ad.target.Identifier]
-		as.seenTargetsMx.RUnlock()
+		_, seen := as.seenTargets.get(ad.target.Identifier)
 
 		if seen {
 			continue
 		}
 
 		// Update seen targets
-		as.seenTargetsMx.Lock()
-		as.seenTargets[ad.target.Identifier] = true
-		as.seenTargetsMx.Unlock()
+		as.seenTargets.set(ad.target.Identifier, true)
 
 		// Update target metrics
-		as.targetAnalyticsMx.Lock()
-		if len(as.targetAnalytics) < maxTargetEntries {
-			as.targetAnalytics[ad.target.Identifier] = *ad.target
+		if as.targetAnalytics.size() < maxTargetEntries {
+			as.targetAnalytics.set(ad.target.Identifier, *ad.target)
 		} else {
 			as.logger.Warnf("%s Target analytics cache reached max size, remaining target metrics for this analytics interval will not be sent", sdk_codes.TargetMetricsMaxSizeReached)
 		}
-		as.targetAnalyticsMx.Unlock()
 	}
 }
 
@@ -205,16 +193,12 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	// for which locks are held, so that metrics processing does not affect flag evaluations performance.
 	// Although this might occasionally result in the loss of some metrics during periods of high load,
 	// it is an acceptable tradeoff to prevent extended lock periods that could degrade user code.
-	as.evaluationsAnalyticsMx.Lock()
 	evaluationAnalyticsClone := as.evaluationAnalytics
-	as.evaluationAnalytics = map[string]analyticsEvent{}
-	as.evaluationsAnalyticsMx.Unlock()
+	as.evaluationAnalytics.clear()
 
 	// Clone and reset target analytics cache for same reason.
-	as.targetAnalyticsMx.Lock()
 	targetAnalyticsClone := as.targetAnalytics
 	as.targetAnalytics = make(map[string]evaluation.Target)
-	as.targetAnalyticsMx.Unlock()
 
 	metricData := make([]metricsclient.MetricsData, 0, len(evaluationAnalyticsClone))
 	targetData := make([]metricsclient.TargetData, 0, len(targetAnalyticsClone))

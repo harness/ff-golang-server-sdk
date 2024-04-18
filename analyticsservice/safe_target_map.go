@@ -11,7 +11,7 @@ type safeTargetAnalytics struct {
 	data map[string]evaluation.Target
 }
 
-func newSafeTargetAnalytics() MapOperations[string, evaluation.Target] {
+func newSafeTargetAnalytics() SafeCache[string, evaluation.Target] {
 	return &safeTargetAnalytics{
 		data: make(map[string]evaluation.Target),
 	}
@@ -30,8 +30,20 @@ func (s *safeTargetAnalytics) get(key string) (evaluation.Target, bool) {
 	return val, exists
 }
 
+func (s *safeTargetAnalytics) size() int {
+	s.RLock()
+	defer s.RUnlock()
+	return len(s.data)
+}
+
 func (s *safeTargetAnalytics) delete(key string) {
 	s.Lock()
 	defer s.Unlock()
 	delete(s.data, key)
+}
+
+func (s *safeTargetAnalytics) clear() {
+	s.Lock()
+	defer s.Unlock()
+	s.data = make(map[string]evaluation.Target)
 }

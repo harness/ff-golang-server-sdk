@@ -8,7 +8,7 @@ import (
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 )
 
-func testMapOperations[K comparable, V any](t *testing.T, mapInstance MapOperations[K, V], testData map[K]V) {
+func testMapOperations[K comparable, V any](t *testing.T, mapInstance SafeCache[K, V], testData map[K]V) {
 	var wg sync.WaitGroup
 
 	// Test concurrent sets and gets
