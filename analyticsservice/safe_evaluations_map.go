@@ -1,6 +1,8 @@
 package analyticsservice
 
-import "sync"
+import (
+	"sync"
+)
 
 type safeEvaluationAnalytics struct {
 	sync.RWMutex
@@ -36,4 +38,10 @@ func (s *safeEvaluationAnalytics) delete(key string) {
 	s.Lock()
 	defer s.Unlock()
 	delete(s.data, key)
+}
+
+func (s *safeEvaluationAnalytics) clear() {
+	s.Lock()
+	defer s.Unlock()
+	s.data = make(map[string]analyticsEvent)
 }

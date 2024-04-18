@@ -39,3 +39,9 @@ func (s *safeSeenTargets) size() int {
 	defer s.RUnlock()
 	return len(s.data)
 }
+
+func (s *safeSeenTargets) clear() {
+	s.Lock()
+	defer s.Unlock()
+	s.data = make(map[string]bool)
+}

@@ -196,9 +196,10 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	evaluationAnalyticsClone := as.evaluationAnalytics
 	as.evaluationAnalytics.clear()
 
+	// TODO revist cloning - do we need to? we're making a slice so just clear it after making the slice
 	// Clone and reset target analytics cache for same reason.
 	targetAnalyticsClone := as.targetAnalytics
-	as.targetAnalytics = make(map[string]evaluation.Target)
+	as.targetAnalytics.clear()
 
 	metricData := make([]metricsclient.MetricsData, 0, len(evaluationAnalyticsClone))
 	targetData := make([]metricsclient.TargetData, 0, len(targetAnalyticsClone))
