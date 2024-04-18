@@ -1,7 +1,6 @@
 package analyticsservice
 
 import (
-	"maps"
 	"sync"
 
 	"github.com/harness/ff-golang-server-sdk/evaluation"
@@ -43,18 +42,22 @@ func (s *safeTargetAnalytics) delete(key string) {
 	delete(s.data, key)
 }
 
-func (s *safeTargetAnalytics) copy() SafeCache[string, evaluation.Target] {
-	s.RLock()
-	defer s.RUnlock()
-	deepCopy := make(map[string]evaluation.Target)
-	maps.Copy(s.data, deepCopy)
-	return &safeTargetAnalytics{
-		data: deepCopy,
-	}
-}
-
 func (s *safeTargetAnalytics) clear() {
 	s.Lock()
 	defer s.Unlock()
 	s.data = make(map[string]evaluation.Target)
+}
+
+func (s *safeTargetAnalytics) iterate(f func(string, evaluation.Target)) {
+	s.RLock()
+	defer s.RUnlock()
+	for key, value := range s.data {
+		f(key, value)
+	}
+}
+
+func (s *safeTargetAnalytics) iterateUnsafe(f func(string, evaluation.Target)) {
+	for key, value := range s.data {
+		f(key, value)
+	}
 }

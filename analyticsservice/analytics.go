@@ -41,8 +41,8 @@ type SafeCache[K comparable, V any] interface {
 	get(key K) (V, bool)
 	delete(key K)
 	size() int
-	copy() SafeCache[K, V]
 	clear()
+	iterate(func(K, V))
 }
 
 type analyticsEvent struct {
@@ -196,19 +196,17 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	// it is an acceptable tradeoff to prevent extended lock periods that could degrade user code.
 	evaluationAnalyticsClone := as.evaluationAnalytics
 
-	as.evaluationAnalytics.clear()
 	as.evaluationAnalytics = newSafeEvaluationAnalytics()
 
-	// TODO revist cloning - do we need to? we're making a slice so just clear it after making the slice
 	// Clone and reset target analytics cache for same reason.
 	targetAnalyticsClone := as.targetAnalytics
-	as.targetAnalytics.clear()
+	as.targetAnalytics = newSafeTargetAnalytics()
 
-	metricData := make([]metricsclient.MetricsData, 0, len(evaluationAnalyticsClone))
-	targetData := make([]metricsclient.TargetData, 0, len(targetAnalyticsClone))
+	metricData := make([]metricsclient.MetricsData, 0, evaluationAnalyticsClone.size())
+	targetData := make([]metricsclient.TargetData, 0, targetAnalyticsClone.size())
 
 	// Process evaluation metrics
-	for _, analytic := range evaluationAnalyticsClone {
+	evaluationAnalyticsClone.iterate(func(key string, analytic analyticsEvent) {
 		metricAttributes := []metricsclient.KeyValue{
 			{Key: featureIdentifierAttribute, Value: analytic.featureConfig.Feature},
 			{Key: featureNameAttribute, Value: analytic.featureConfig.Feature},
@@ -227,10 +225,10 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 			Attributes:  metricAttributes,
 		}
 		metricData = append(metricData, md)
-	}
+	})
 
 	// Process target metrics
-	for _, target := range targetAnalyticsClone {
+	targetAnalyticsClone.iterate(func(key string, target evaluation.Target) {
 		targetAttributes := make([]metricsclient.KeyValue, 0)
 		for key, value := range *target.Attributes {
 			targetAttributes = append(targetAttributes, metricsclient.KeyValue{Key: key, Value: convertInterfaceToString(value)})
@@ -242,7 +240,7 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 			Attributes: targetAttributes,
 		}
 		targetData = append(targetData, td)
-	}
+	})
 
 	analyticsPayload := metricsclient.PostMetricsJSONRequestBody{
 		MetricsData: &metricData,
