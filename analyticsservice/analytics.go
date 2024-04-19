@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/harness/ff-golang-server-sdk/sdk_codes"
@@ -54,14 +55,16 @@ type analyticsEvent struct {
 
 // AnalyticsService provides a way to cache and send analytics to the server
 type AnalyticsService struct {
-	analyticsChan       chan analyticsEvent
-	evaluationAnalytics SafeAnalyticsCache[string, analyticsEvent]
-	targetAnalytics     SafeAnalyticsCache[string, evaluation.Target]
-	seenTargets         SafeAnalyticsCache[string, bool]
-	timeout             time.Duration
-	logger              logger.Logger
-	metricsClient       metricsclient.ClientWithResponsesInterface
-	environmentID       string
+	analyticsChan             chan analyticsEvent
+	evaluationAnalytics       SafeAnalyticsCache[string, analyticsEvent]
+	targetAnalytics           SafeAnalyticsCache[string, evaluation.Target]
+	seenTargets               SafeAnalyticsCache[string, bool]
+	logEvaluationLimitReached int32
+	logTargetLimitReached     int32
+	timeout                   time.Duration
+	logger                    logger.Logger
+	metricsClient             metricsclient.ClientWithResponsesInterface
+	environmentID             string
 }
 
 // NewAnalyticsService creates and starts a analytics service to send data to the client
@@ -133,7 +136,10 @@ func (as *AnalyticsService) listener() {
 				as.evaluationAnalytics.set(analyticsKey, ad)
 			}
 		} else {
-			as.logger.Warnf("%s Evaluation analytic cache reached max size, remaining evaluation metrics for this analytics interval will not be sent", sdk_codes.EvaluationMetricsMaxSizeReached)
+			if atomic.LoadInt32(&as.logEvaluationLimitReached) == 0 {
+				as.logger.Warnf("%s Evaluation analytic cache reached max size, remaining evaluation metrics for this analytics interval will not be sent", sdk_codes.EvaluationMetricsMaxSizeReached)
+				atomic.StoreInt32(&as.logEvaluationLimitReached, 1)
+			}
 		}
 
 		// Check if target is nil or anonymous
@@ -155,7 +161,10 @@ func (as *AnalyticsService) listener() {
 		if as.targetAnalytics.size() < maxTargetEntries {
 			as.targetAnalytics.set(ad.target.Identifier, *ad.target)
 		} else {
-			as.logger.Warnf("%s Target analytics cache reached max size, remaining target metrics for this analytics interval will not be sent", sdk_codes.TargetMetricsMaxSizeReached)
+			if atomic.LoadInt32(&as.logTargetLimitReached) == 0 {
+				as.logger.Warnf("%s Target analytics cache reached max size, remaining target metrics for this analytics interval will not be sent", sdk_codes.TargetMetricsMaxSizeReached)
+				atomic.StoreInt32(&as.logTargetLimitReached, 1)
+			}
 		}
 	}
 }
@@ -201,6 +210,10 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	// Clone and reset target analytics cache for same reason.
 	targetAnalyticsClone := as.targetAnalytics
 	as.targetAnalytics = newSafeTargetAnalytics()
+
+	// Reset flags that keep track of cache limits being reached for logging purposes
+	atomic.StoreInt32(&as.logEvaluationLimitReached, 0)
+	atomic.StoreInt32(&as.logTargetLimitReached, 0)
 
 	metricData := make([]metricsclient.MetricsData, 0, evaluationAnalyticsClone.size())
 	targetData := make([]metricsclient.TargetData, 0, targetAnalyticsClone.size())
