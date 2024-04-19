@@ -291,20 +291,18 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 					return true
 				}
 			}
-			return false
-		}
-
-		// Fall back to legacy `Rules`
-		if segment.Rules != nil && len(*segment.Rules) > 0 {
-			// Should Target be included via segment rules
-			legacyRules := *segment.Rules
-			if included, clause := e.evaluateGroupRules(legacyRules, target); included {
-				e.logger.Debugf(
-					"Target [%s] included in group [%s] via rule %+v", target.Name, segment.Name, clause)
-				return true
+		} else {
+			// Fall back to legacy `Rules`
+			if segment.Rules != nil && len(*segment.Rules) > 0 {
+				// Should Target be included via segment rules
+				legacyRules := *segment.Rules
+				if included, clause := e.evaluateGroupRules(legacyRules, target); included {
+					e.logger.Debugf(
+						"Target [%s] included in group [%s] via rule %+v", target.Name, segment.Name, clause)
+					return true
+				}
 			}
 		}
-
 	}
 	return false
 }
