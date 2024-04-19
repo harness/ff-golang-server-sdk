@@ -1,0 +1,14 @@
+inputSet:
+  name: Build_ff_golang_server_sdk_1713530975185-pr-trigger-input-set
+  identifier: Build_ff_golang_server_sdk_1713530975185prtriggerinputset
+  orgIdentifier: default
+  projectIdentifier: TestProject2
+  pipeline:
+    identifier: Build_ff_golang_server_sdk_1713530975185
+    properties:
+      ci:
+        codebase:
+          build:
+            type: PR
+            spec:
+              number: <+trigger.prNumber>
