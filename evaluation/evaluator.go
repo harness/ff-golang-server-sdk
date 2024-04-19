@@ -291,7 +291,7 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 					return true
 				}
 			}
-			return false
+			continue
 		}
 
 		// Fall back to legacy `Rules`
