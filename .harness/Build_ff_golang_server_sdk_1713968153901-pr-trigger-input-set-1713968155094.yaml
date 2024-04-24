@@ -1,0 +1,14 @@
+inputSet:
+  name: Build_ff_golang_server_sdk_1713968153901-pr-trigger-input-set
+  identifier: Build_ff_golang_server_sdk_1713968153901prtriggerinputset
+  orgIdentifier: default
+  projectIdentifier: DavesProject1
+  pipeline:
+    identifier: Build_ff_golang_server_sdk_1713968153901
+    properties:
+      ci:
+        codebase:
+          build:
+            type: PR
+            spec:
+              number: <+trigger.prNumber>
