@@ -86,7 +86,6 @@ func NewEvaluator(query Query, postEvalCallback PostEvaluateCallback, logger log
 
 func (e Evaluator) evaluateClause(clause *rest.Clause, target *Target) bool {
 	if clause == nil || len(clause.Values) == 0 || clause.Op == "" {
-		e.logger.Debugf("Clause cannot be evaluated because operator is either nil, has no values or operation: Clause (%v)", clause)
 		return false
 	}
 
@@ -94,7 +93,6 @@ func (e Evaluator) evaluateClause(clause *rest.Clause, target *Target) bool {
 	attrValue := getAttrValue(target, clause.Attribute)
 
 	if clause.Op != segmentMatchOperator && attrValue == "" {
-		e.logger.Debugf("Operator is not a segment match and attribute value is not valid: Operator (%s), attributeVal (%s)", clause.Op, attrValue)
 		return false
 	}
 

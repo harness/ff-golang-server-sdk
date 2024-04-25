@@ -2,7 +2,10 @@ package evaluation
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+
+	jsoniter "github.com/json-iterator/go"
 
 	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 
@@ -12,11 +15,11 @@ import (
 )
 
 func getAttrValue(target *Target, attr string) string {
-	if target == nil {
+	if target == nil || attr == "" {
 		return ""
 	}
 
-	switch strings.ToLower(attr) {
+	switch attr {
 	case "identifier":
 		return target.Identifier
 	case "name":
@@ -24,7 +27,24 @@ func getAttrValue(target *Target, attr string) string {
 	default:
 		if target.Attributes != nil {
 			if val, ok := (*target.Attributes)[attr]; ok {
-				return fmt.Sprint(val)
+				switch v := val.(type) {
+				case string:
+					return v
+				case int:
+					return strconv.Itoa(v)
+				case float64:
+					return strconv.FormatFloat(v, 'f', -1, 64)
+				case bool:
+					return strconv.FormatBool(v)
+				case map[string]interface{}:
+					marshalledValue, err := jsoniter.MarshalToString(v)
+					if err != nil {
+						return fmt.Sprint(v)
+					}
+					return marshalledValue
+				default:
+					return fmt.Sprint(v)
+				}
 			}
 		}
 	}
