@@ -437,3 +437,95 @@ func Test_isTargetInList(t *testing.T) {
 		})
 	}
 }
+
+// Benchmark scenarios
+func BenchmarkGetAttrValueNilTarget(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		getAttrValue(nil, "identifier")
+	}
+}
+
+func BenchmarkGetAttrValueEmptyAttribute(b *testing.B) {
+	var target Target
+	for i := 0; i < b.N; i++ {
+		getAttrValue(&target, "")
+	}
+}
+
+func BenchmarkGetAttrValueIdentifier(b *testing.B) {
+	var target = Target{Identifier: "1234"}
+	for i := 0; i < b.N; i++ {
+		getAttrValue(&target, "identifier")
+	}
+}
+
+func BenchmarkGetAttrValueName(b *testing.B) {
+	var target = Target{Name: "targetName"}
+	for i := 0; i < b.N; i++ {
+		getAttrValue(&target, "name")
+	}
+}
+
+func BenchmarkGetAttrValueUnmatched(b *testing.B) {
+	var target = Target{}
+	for i := 0; i < b.N; i++ {
+		getAttrValue(&target, "unmatched")
+	}
+}
+
+func BenchmarkGetAttrValueStringAttr(b *testing.B) {
+	attributes := map[string]interface{}{"city": "New York"}
+	var target = Target{Attributes: &attributes}
+	for i := 0; i < b.N; i++ {
+		getAttrValue(&target, "city")
+	}
+}
+
+func BenchmarkGetAttrValueIntegerAttr(b *testing.B) {
+	attributes := map[string]interface{}{"age": 30}
+	var target = Target{Attributes: &attributes}
+	for i := 0; i < b.N; i++ {
+		getAttrValue(&target, "age")
+	}
+}
+
+func BenchmarkGetAttrValueFloatAttr(b *testing.B) {
+	attributes := map[string]interface{}{"temperature": 98.6}
+	var target = Target{Attributes: &attributes}
+	for i := 0; i < b.N; i++ {
+		getAttrValue(&target, "temperature")
+	}
+}
+
+func BenchmarkGetAttrValueBoolAttr(b *testing.B) {
+	attributes := map[string]interface{}{"active": true}
+	var target = Target{Attributes: &attributes}
+	for i := 0; i < b.N; i++ {
+		getAttrValue(&target, "active")
+	}
+}
+
+func BenchmarkGetAttrValueBasicJSON(b *testing.B) {
+	basicJSON := map[string]interface{}{
+		"myName": "Stephen",
+	}
+	attributes := map[string]interface{}{"basicJson": basicJSON}
+	var target = Target{Attributes: &attributes}
+	for i := 0; i < b.N; i++ {
+		getAttrValue(&target, "basicJson")
+	}
+}
+
+func BenchmarkGetAttrValueComplexJSON(b *testing.B) {
+	complexJSON := map[string]interface{}{
+		"config": map[string]interface{}{
+			"setting": "on",
+			"level":   5,
+		},
+	}
+	attributes := map[string]interface{}{"complexJSON": complexJSON}
+	var target = Target{Attributes: &attributes}
+	for i := 0; i < b.N; i++ {
+		getAttrValue(&target, "complexJSON")
+	}
+}

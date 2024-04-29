@@ -1988,7 +1988,7 @@ func TestEvaluator_JSONVariation(t *testing.T) {
 
 // BENCHMARK
 func BenchmarkEvaluateClause_NilClause(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	var clause *rest.Clause = nil
 	target := &Target{
 		Identifier: "harness",
@@ -1999,7 +1999,7 @@ func BenchmarkEvaluateClause_NilClause(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_EmptyOperator(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Op:     "",
 		Values: []string{"harness"},
@@ -2010,7 +2010,7 @@ func BenchmarkEvaluateClause_EmptyOperator(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_NilValues(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Values: nil,
 	}
@@ -2020,7 +2020,7 @@ func BenchmarkEvaluateClause_NilValues(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_EmptyValues(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Values: []string{},
 	}
@@ -2030,7 +2030,7 @@ func BenchmarkEvaluateClause_EmptyValues(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_WrongOperator(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "identifier",
 		Op:        "greaterthan",
@@ -2045,7 +2045,7 @@ func BenchmarkEvaluateClause_WrongOperator(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_EmptyAttribute(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "",
 		Op:        "equalOperator",
@@ -2060,7 +2060,7 @@ func BenchmarkEvaluateClause_EmptyAttribute(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_MatchOperator(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "identifier",
 		Op:        "matchOperator",
@@ -2075,7 +2075,7 @@ func BenchmarkEvaluateClause_MatchOperator(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_MatchOperatorError(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "identifier",
 		Op:        "matchOperator",
@@ -2090,7 +2090,7 @@ func BenchmarkEvaluateClause_MatchOperatorError(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_InOperator(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "identifier",
 		Op:        "inOperator",
@@ -2105,7 +2105,7 @@ func BenchmarkEvaluateClause_InOperator(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_InOperatorNotFound(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "identifier",
 		Op:        "inOperator",
@@ -2120,7 +2120,7 @@ func BenchmarkEvaluateClause_InOperatorNotFound(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_EqualOperator(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "identifier",
 		Op:        "equalOperator",
@@ -2135,7 +2135,7 @@ func BenchmarkEvaluateClause_EqualOperator(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_EqualSensitiveOperator(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "identifier",
 		Op:        "equalSensitiveOperator",
@@ -2150,7 +2150,7 @@ func BenchmarkEvaluateClause_EqualSensitiveOperator(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_GTOperator(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "identifier",
 		Op:        "gtOperator",
@@ -2165,7 +2165,7 @@ func BenchmarkEvaluateClause_GTOperator(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_GTOperatorNegative(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "identifier",
 		Op:        "gtOperator",
@@ -2180,7 +2180,7 @@ func BenchmarkEvaluateClause_GTOperatorNegative(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_StartsWithOperator(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "identifier",
 		Op:        "startsWithOperator",
@@ -2195,7 +2195,7 @@ func BenchmarkEvaluateClause_StartsWithOperator(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_EndsWithOperator(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "identifier",
 		Op:        "endsWithOperator",
@@ -2210,7 +2210,7 @@ func BenchmarkEvaluateClause_EndsWithOperator(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_ContainsOperator(b *testing.B) {
-	evaluator := Evaluator{}
+	evaluator := Evaluator{logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Attribute: "identifier",
 		Op:        "containsOperator",
@@ -2225,7 +2225,7 @@ func BenchmarkEvaluateClause_ContainsOperator(b *testing.B) {
 }
 
 func BenchmarkEvaluateClause_SegmentMatchOperator(b *testing.B) {
-	evaluator := Evaluator{query: testRepo}
+	evaluator := Evaluator{query: testRepo, logger: logger.NoOpLogger{}}
 	clause := &rest.Clause{
 		Op:     "segmentMatchOperator",
 		Values: []string{"beta"},
