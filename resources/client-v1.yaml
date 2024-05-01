@@ -87,6 +87,7 @@ paths:
           schema:
             type: string
         - $ref: '#/components/parameters/clusterQueryOptionalParam'
+        - $ref: '#/components/parameters/segmentRulesV2QueryParam'
       security:
         - BearerAuth: []
       responses:
@@ -127,6 +128,7 @@ paths:
           schema:
             type: string
         - $ref: '#/components/parameters/clusterQueryOptionalParam'
+        - $ref: '#/components/parameters/segmentRulesV2QueryParam'
       security:
         - BearerAuth: []
       responses:
@@ -950,6 +952,17 @@ components:
       in: query
       required: false
       description: Unique identifier for the cluster for the account
+      schema:
+        type: string
+    segmentRulesV2QueryParam:
+      name: rules
+      in: query
+      required: false
+      description: >-
+        When set to rules=v2 will return AND rule compatible serving_rules
+        field. When not set or set to any other value will return old rules
+        field only compatible with OR rules.
+      allowEmptyValue: true
       schema:
         type: string
     environmentPathParam:

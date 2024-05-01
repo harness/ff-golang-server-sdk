@@ -359,6 +359,9 @@ type PageNumber int
 // PageSize defines model for pageSize.
 type PageSize int
 
+// SegmentRulesV2QueryParam defines model for segmentRulesV2QueryParam.
+type SegmentRulesV2QueryParam string
+
 // BadRequest defines model for BadRequest.
 type BadRequest Error
 
@@ -393,12 +396,18 @@ type GetFeatureConfigByIdentifierParams struct {
 type GetAllSegmentsParams struct {
 	// Cluster Unique identifier for the cluster for the account
 	Cluster *ClusterQueryOptionalParam `form:"cluster,omitempty" json:"cluster,omitempty"`
+
+	// Rules When set to rules=v2 will return AND rule compatible serving_rules field. When not set or set to any other value will return old rules field only compatible with OR rules.
+	Rules *SegmentRulesV2QueryParam `form:"rules,omitempty" json:"rules,omitempty"`
 }
 
 // GetSegmentByIdentifierParams defines parameters for GetSegmentByIdentifier.
 type GetSegmentByIdentifierParams struct {
 	// Cluster Unique identifier for the cluster for the account
 	Cluster *ClusterQueryOptionalParam `form:"cluster,omitempty" json:"cluster,omitempty"`
+
+	// Rules When set to rules=v2 will return AND rule compatible serving_rules field. When not set or set to any other value will return old rules field only compatible with OR rules.
+	Rules *SegmentRulesV2QueryParam `form:"rules,omitempty" json:"rules,omitempty"`
 }
 
 // GetEvaluationsParams defines parameters for GetEvaluations.
