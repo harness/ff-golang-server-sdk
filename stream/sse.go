@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/harness/ff-golang-server-sdk/apiconfig"
 	"github.com/harness/ff-golang-server-sdk/sdk_codes"
 
 	"github.com/harness/ff-golang-server-sdk/pkg/repository"
@@ -28,8 +29,8 @@ type SSEClient struct {
 	eventStreamListener EventStreamListener
 	streamConnected     chan struct{}
 	streamDisconnected  chan error
-
-	proxyMode bool
+	apiConfig           apiconfig.ApiConfiguration
+	proxyMode           bool
 }
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -46,6 +47,7 @@ func NewSSEClient(
 	proxyMode bool,
 	streamConnected chan struct{},
 	streamDisconnected chan error,
+	apiConfig apiconfig.ApiConfiguration,
 
 ) *SSEClient {
 	client.Headers["Authorization"] = fmt.Sprintf("Bearer %s", token)
@@ -59,6 +61,7 @@ func NewSSEClient(
 		proxyMode:           proxyMode,
 		streamConnected:     streamConnected,
 		streamDisconnected:  streamDisconnected,
+		apiConfig:           apiConfig,
 	}
 	return sseClient
 }
@@ -230,8 +233,10 @@ func (c *SSEClient) handleEvent(event Event) {
 			updateWithTimeout := func() {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 				defer cancel()
-
-				response, err := c.api.GetSegmentByIdentifierWithResponse(ctx, event.Environment, cfMsg.Identifier, nil)
+				requestParams := &rest.GetSegmentByIdentifierParams{
+					Rules: c.apiConfig.GetSegmentRulesV2QueryParam(),
+				}
+				response, err := c.api.GetSegmentByIdentifierWithResponse(ctx, event.Environment, cfMsg.Identifier, requestParams)
 				if err != nil {
 					c.logger.Errorf("error while pulling segment, err: %s", err.Error())
 					return
@@ -246,8 +251,10 @@ func (c *SSEClient) handleEvent(event Event) {
 				updateSegmentsWithTimeout := func() {
 					ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 					defer cancel()
-
-					response, err := c.api.GetAllSegmentsWithResponse(ctx, event.Environment, nil)
+					requestParams := &rest.GetAllSegmentsParams{
+						Rules: c.apiConfig.GetSegmentRulesV2QueryParam(),
+					}
+					response, err := c.api.GetAllSegmentsWithResponse(ctx, event.Environment, requestParams)
 					if err != nil {
 						c.logger.Errorf("error while pulling segment, err: %s", err.Error())
 						return
