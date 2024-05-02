@@ -261,7 +261,7 @@ func (c *CfClient) streamConnect(ctx context.Context) {
 	sseClient.Connection = c.config.httpClient
 
 	conn := stream.NewSSEClient(c.sdkKey, c.token, sseClient, c.repository, c.api, c.config.Logger,
-		c.config.eventStreamListener, c.config.proxyMode, c.streamConnectedChan, c.streamDisconnectedChan)
+		c.config.eventStreamListener, c.config.proxyMode, c.streamConnectedChan, c.streamDisconnectedChan, c.config.apiConfig)
 
 	// Connect kicks off a goroutine that attempts to establish a stream connection
 	// while this is happening we set streamConnectedBool to true - if any errors happen
@@ -558,7 +558,10 @@ func (c *CfClient) retrieveSegments(ctx context.Context) error {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 	c.config.Logger.Info("Retrieving segments started")
-	segments, err := c.api.GetAllSegmentsWithResponse(ctx, c.environmentID, nil)
+	requestParams := &rest.GetAllSegmentsParams{
+		Rules: c.config.apiConfig.GetSegmentRulesV2QueryParam(),
+	}
+	segments, err := c.api.GetAllSegmentsWithResponse(ctx, c.environmentID, requestParams)
 	if err != nil {
 		// log
 		return err

@@ -2,17 +2,19 @@ package client
 
 import (
 	"fmt"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/ff-golang-server-sdk/cache"
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/logger"
+	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/harness/ff-golang-server-sdk/storage"
 	"github.com/harness/ff-golang-server-sdk/stream"
 	"github.com/harness/ff-golang-server-sdk/types"
 	"github.com/hashicorp/go-retryablehttp"
-	"net/http"
-	"os"
-	"time"
 )
 
 type config struct {
@@ -35,6 +37,15 @@ type config struct {
 	authRetryStrategy      *backoff.ExponentialBackOff
 	streamingRetryStrategy *backoff.ExponentialBackOff
 	sleeper                types.Sleeper
+	apiConfig              *apiConfiguration
+}
+
+type apiConfiguration struct {
+	segmentRulesV2QueryParam rest.SegmentRulesV2QueryParam
+}
+
+func (a *apiConfiguration) GetSegmentRulesV2QueryParam() *rest.SegmentRulesV2QueryParam {
+	return &a.segmentRulesV2QueryParam
 }
 
 func newDefaultConfig(log logger.Logger) *config {
@@ -71,6 +82,10 @@ func newDefaultConfig(log logger.Logger) *config {
 		return resp, fmt.Errorf(message)
 	}
 
+	apiConfig := &apiConfiguration{
+		segmentRulesV2QueryParam: "v2",
+	}
+
 	return &config{
 		url:             "https://config.ff.harness.io/api/1.0",
 		eventsURL:       "https://events.ff.harness.io/api/1.0",
@@ -89,6 +104,7 @@ func newDefaultConfig(log logger.Logger) *config {
 		authRetryStrategy:      getDefaultExpBackoff(),
 		streamingRetryStrategy: getDefaultExpBackoff(),
 		sleeper:                &types.RealClock{},
+		apiConfig:              apiConfig,
 	}
 }
 
