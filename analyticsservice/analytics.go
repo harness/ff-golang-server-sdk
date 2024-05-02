@@ -59,8 +59,8 @@ type AnalyticsService struct {
 	evaluationAnalytics       SafeAnalyticsCache[string, analyticsEvent]
 	targetAnalytics           SafeAnalyticsCache[string, evaluation.Target]
 	seenTargets               SafeAnalyticsCache[string, bool]
-	logEvaluationLimitReached int32
-	logTargetLimitReached     int32
+	logEvaluationLimitReached atomic.Bool
+	logTargetLimitReached     atomic.Bool
 	timeout                   time.Duration
 	logger                    logger.Logger
 	metricsClient             metricsclient.ClientWithResponsesInterface
@@ -136,9 +136,9 @@ func (as *AnalyticsService) listener() {
 				as.evaluationAnalytics.set(analyticsKey, ad)
 			}
 		} else {
-			if atomic.LoadInt32(&as.logEvaluationLimitReached) == 0 {
+			if !as.logEvaluationLimitReached.Load() {
 				as.logger.Warnf("%s Evaluation analytic cache reached max size, remaining evaluation metrics for this analytics interval will not be sent", sdk_codes.EvaluationMetricsMaxSizeReached)
-				atomic.StoreInt32(&as.logEvaluationLimitReached, 1)
+				as.logEvaluationLimitReached.Store(true)
 			}
 		}
 
@@ -161,9 +161,9 @@ func (as *AnalyticsService) listener() {
 		if as.targetAnalytics.size() < maxTargetEntries {
 			as.targetAnalytics.set(ad.target.Identifier, *ad.target)
 		} else {
-			if atomic.LoadInt32(&as.logTargetLimitReached) == 0 {
+			if !as.logTargetLimitReached.Load() {
 				as.logger.Warnf("%s Target analytics cache reached max size, remaining target metrics for this analytics interval will not be sent", sdk_codes.TargetMetricsMaxSizeReached)
-				atomic.StoreInt32(&as.logTargetLimitReached, 1)
+				as.logTargetLimitReached.Store(true)
 			}
 		}
 	}
@@ -212,8 +212,8 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	as.targetAnalytics = newSafeTargetAnalytics()
 
 	// Reset flags that keep track of cache limits being reached for logging purposes
-	atomic.StoreInt32(&as.logEvaluationLimitReached, 0)
-	atomic.StoreInt32(&as.logTargetLimitReached, 0)
+	as.logEvaluationLimitReached.Store(false)
+	as.logTargetLimitReached.Store(false)
 
 	metricData := make([]metricsclient.MetricsData, 0, evaluationAnalyticsClone.size())
 	targetData := make([]metricsclient.TargetData, 0, targetAnalyticsClone.size())
