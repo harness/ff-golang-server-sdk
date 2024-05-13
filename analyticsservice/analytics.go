@@ -243,8 +243,11 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	// Process target metrics
 	targetAnalyticsClone.iterate(func(key string, target evaluation.Target) {
 		targetAttributes := make([]metricsclient.KeyValue, 0)
-		for key, value := range *target.Attributes {
-			targetAttributes = append(targetAttributes, metricsclient.KeyValue{Key: key, Value: convertInterfaceToString(value)})
+		if target.Attributes != nil {
+			targetAttributes = make([]metricsclient.KeyValue, len(*target.Attributes))
+			for k, v := range *target.Attributes {
+				targetAttributes = append(targetAttributes, metricsclient.KeyValue{Key: k, Value: convertInterfaceToString(v)})
+			}
 		}
 
 		td := metricsclient.TargetData{
