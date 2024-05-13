@@ -43,3 +43,5 @@ require (
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+retract [v0.1.21, v0.1.22] // Panic in metrics code if target attributes are not provided (nil)
