@@ -215,48 +215,11 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	as.logEvaluationLimitReached.Store(false)
 	as.logTargetLimitReached.Store(false)
 
-	metricData := make([]metricsclient.MetricsData, 0, evaluationAnalyticsClone.size())
-	targetData := make([]metricsclient.TargetData, 0, targetAnalyticsClone.size())
-
 	// Process evaluation metrics
-	evaluationAnalyticsClone.iterate(func(key string, analytic analyticsEvent) {
-		metricAttributes := []metricsclient.KeyValue{
-			{Key: featureIdentifierAttribute, Value: analytic.featureConfig.Feature},
-			{Key: featureNameAttribute, Value: analytic.featureConfig.Feature},
-			{Key: variationIdentifierAttribute, Value: analytic.variation.Identifier},
-			{Key: variationValueAttribute, Value: analytic.variation.Value},
-			{Key: sdkTypeAttribute, Value: sdkType},
-			{Key: sdkLanguageAttribute, Value: sdkLanguage},
-			{Key: sdkVersionAttribute, Value: SdkVersion},
-			{Key: targetAttribute, Value: globalTarget},
-		}
-
-		md := metricsclient.MetricsData{
-			Timestamp:   time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)),
-			Count:       analytic.count,
-			MetricsType: metricsclient.MetricsDataMetricsType(ffMetricType),
-			Attributes:  metricAttributes,
-		}
-		metricData = append(metricData, md)
-	})
+	metricData := as.processEvaluationMetrics(evaluationAnalyticsClone)
 
 	// Process target metrics
-	targetAnalyticsClone.iterate(func(key string, target evaluation.Target) {
-		targetAttributes := make([]metricsclient.KeyValue, 0)
-		if target.Attributes != nil {
-			targetAttributes = make([]metricsclient.KeyValue, len(*target.Attributes))
-			for k, v := range *target.Attributes {
-				targetAttributes = append(targetAttributes, metricsclient.KeyValue{Key: k, Value: convertInterfaceToString(v)})
-			}
-		}
-
-		td := metricsclient.TargetData{
-			Identifier: target.Identifier,
-			Name:       target.Name,
-			Attributes: targetAttributes,
-		}
-		targetData = append(targetData, td)
-	})
+	targetData := as.processTargetMetrics(targetAnalyticsClone)
 
 	analyticsPayload := metricsclient.PostMetricsJSONRequestBody{
 		MetricsData: &metricData,
@@ -299,6 +262,55 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	} else {
 		as.logger.Warn("metrics client is not set")
 	}
+}
+
+func (as *AnalyticsService) processEvaluationMetrics(evaluationAnalyticsClone SafeAnalyticsCache[string, analyticsEvent]) []metricsclient.MetricsData {
+	metricData := make([]metricsclient.MetricsData, 0, evaluationAnalyticsClone.size())
+	evaluationAnalyticsClone.iterate(func(key string, analytic analyticsEvent) {
+		metricAttributes := []metricsclient.KeyValue{
+			{Key: featureIdentifierAttribute, Value: analytic.featureConfig.Feature},
+			{Key: featureNameAttribute, Value: analytic.featureConfig.Feature},
+			{Key: variationIdentifierAttribute, Value: analytic.variation.Identifier},
+			{Key: variationValueAttribute, Value: analytic.variation.Value},
+			{Key: sdkTypeAttribute, Value: sdkType},
+			{Key: sdkLanguageAttribute, Value: sdkLanguage},
+			{Key: sdkVersionAttribute, Value: SdkVersion},
+			{Key: targetAttribute, Value: globalTarget},
+		}
+
+		md := metricsclient.MetricsData{
+			Timestamp:   time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)),
+			Count:       analytic.count,
+			MetricsType: metricsclient.MetricsDataMetricsType(ffMetricType),
+			Attributes:  metricAttributes,
+		}
+		metricData = append(metricData, md)
+	})
+
+	return metricData
+}
+
+func (as *AnalyticsService) processTargetMetrics(targetAnalyticsClone SafeAnalyticsCache[string, evaluation.Target]) []metricsclient.TargetData {
+	targetData := make([]metricsclient.TargetData, 0, targetAnalyticsClone.size())
+
+	targetAnalyticsClone.iterate(func(key string, target evaluation.Target) {
+		targetAttributes := make([]metricsclient.KeyValue, 0)
+		if target.Attributes != nil {
+			targetAttributes = make([]metricsclient.KeyValue, len(*target.Attributes))
+			for k, v := range *target.Attributes {
+				targetAttributes = append(targetAttributes, metricsclient.KeyValue{Key: k, Value: convertInterfaceToString(v)})
+			}
+		}
+
+		td := metricsclient.TargetData{
+			Identifier: target.Identifier,
+			Name:       target.Name,
+			Attributes: targetAttributes,
+		}
+		targetData = append(targetData, td)
+	})
+
+	return targetData
 }
 
 func getEvaluationAnalyticKey(event analyticsEvent) string {
