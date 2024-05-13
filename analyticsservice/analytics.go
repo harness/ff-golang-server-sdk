@@ -100,7 +100,8 @@ func (as *AnalyticsService) startTimer(ctx context.Context) {
 	for {
 		select {
 		case <-time.After(as.timeout):
-			as.sendDataAndResetCache(ctx)
+			timeStamp := time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
+			as.sendDataAndResetCache(ctx, timeStamp)
 		case <-ctx.Done():
 			as.logger.Infof("%s Metrics stopped", sdk_codes.MetricsStopped)
 			return
@@ -197,7 +198,7 @@ func convertInterfaceToString(i interface{}) string {
 	}
 }
 
-func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
+func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context, timeStamp int64) {
 
 	// Clone and reset the evaluation analytics cache to minimise the duration
 	// for which locks are held, so that metrics processing does not affect flag evaluations performance.
@@ -215,45 +216,11 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	as.logEvaluationLimitReached.Store(false)
 	as.logTargetLimitReached.Store(false)
 
-	metricData := make([]metricsclient.MetricsData, 0, evaluationAnalyticsClone.size())
-	targetData := make([]metricsclient.TargetData, 0, targetAnalyticsClone.size())
-
 	// Process evaluation metrics
-	evaluationAnalyticsClone.iterate(func(key string, analytic analyticsEvent) {
-		metricAttributes := []metricsclient.KeyValue{
-			{Key: featureIdentifierAttribute, Value: analytic.featureConfig.Feature},
-			{Key: featureNameAttribute, Value: analytic.featureConfig.Feature},
-			{Key: variationIdentifierAttribute, Value: analytic.variation.Identifier},
-			{Key: variationValueAttribute, Value: analytic.variation.Value},
-			{Key: sdkTypeAttribute, Value: sdkType},
-			{Key: sdkLanguageAttribute, Value: sdkLanguage},
-			{Key: sdkVersionAttribute, Value: SdkVersion},
-			{Key: targetAttribute, Value: globalTarget},
-		}
-
-		md := metricsclient.MetricsData{
-			Timestamp:   time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)),
-			Count:       analytic.count,
-			MetricsType: metricsclient.MetricsDataMetricsType(ffMetricType),
-			Attributes:  metricAttributes,
-		}
-		metricData = append(metricData, md)
-	})
+	metricData := as.processEvaluationMetrics(evaluationAnalyticsClone, timeStamp)
 
 	// Process target metrics
-	targetAnalyticsClone.iterate(func(key string, target evaluation.Target) {
-		targetAttributes := make([]metricsclient.KeyValue, 0)
-		for key, value := range *target.Attributes {
-			targetAttributes = append(targetAttributes, metricsclient.KeyValue{Key: key, Value: convertInterfaceToString(value)})
-		}
-
-		td := metricsclient.TargetData{
-			Identifier: target.Identifier,
-			Name:       target.Name,
-			Attributes: targetAttributes,
-		}
-		targetData = append(targetData, td)
-	})
+	targetData := as.processTargetMetrics(targetAnalyticsClone)
 
 	analyticsPayload := metricsclient.PostMetricsJSONRequestBody{
 		MetricsData: &metricData,
@@ -296,6 +263,55 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	} else {
 		as.logger.Warn("metrics client is not set")
 	}
+}
+
+func (as *AnalyticsService) processEvaluationMetrics(evaluationAnalytics SafeAnalyticsCache[string, analyticsEvent], timeStamp int64) []metricsclient.MetricsData {
+	metricData := make([]metricsclient.MetricsData, 0, evaluationAnalytics.size())
+	evaluationAnalytics.iterate(func(key string, analytic analyticsEvent) {
+		metricAttributes := []metricsclient.KeyValue{
+			{Key: featureIdentifierAttribute, Value: analytic.featureConfig.Feature},
+			{Key: featureNameAttribute, Value: analytic.featureConfig.Feature},
+			{Key: variationIdentifierAttribute, Value: analytic.variation.Identifier},
+			{Key: variationValueAttribute, Value: analytic.variation.Value},
+			{Key: sdkTypeAttribute, Value: sdkType},
+			{Key: sdkLanguageAttribute, Value: sdkLanguage},
+			{Key: sdkVersionAttribute, Value: SdkVersion},
+			{Key: targetAttribute, Value: globalTarget},
+		}
+
+		md := metricsclient.MetricsData{
+			Timestamp:   timeStamp,
+			Count:       analytic.count,
+			MetricsType: metricsclient.MetricsDataMetricsType(ffMetricType),
+			Attributes:  metricAttributes,
+		}
+		metricData = append(metricData, md)
+	})
+
+	return metricData
+}
+
+func (as *AnalyticsService) processTargetMetrics(targetAnalytics SafeAnalyticsCache[string, evaluation.Target]) []metricsclient.TargetData {
+	targetData := make([]metricsclient.TargetData, 0, targetAnalytics.size())
+
+	targetAnalytics.iterate(func(key string, target evaluation.Target) {
+		targetAttributes := make([]metricsclient.KeyValue, 0)
+		if target.Attributes != nil {
+			targetAttributes = make([]metricsclient.KeyValue, 0, len(*target.Attributes))
+			for k, v := range *target.Attributes {
+				targetAttributes = append(targetAttributes, metricsclient.KeyValue{Key: k, Value: convertInterfaceToString(v)})
+			}
+		}
+
+		td := metricsclient.TargetData{
+			Identifier: target.Identifier,
+			Name:       target.Name,
+			Attributes: targetAttributes,
+		}
+		targetData = append(targetData, td)
+	})
+
+	return targetData
 }
 
 func getEvaluationAnalyticKey(event analyticsEvent) string {
