@@ -31,8 +31,7 @@ func (c *MockMetricsClient) PostMetricsWithResponse(ctx context.Context, environ
 }
 
 func (c *MockMetricsClient) PostMetricsWithBodyWithResponse(ctx context.Context, environmentUUID metricsclient.EnvironmentPathParam, params *metricsclient.PostMetricsParams, contentType string, body io.Reader, reqEditors ...metricsclient.RequestEditorFn) (*metricsclient.PostMetricsResponse, error) {
-
-	return nil, nil // default to returning no error and a nil response
+	return nil, nil
 }
 
 func TestListenerHandlesEventsCorrectly(t *testing.T) {
