@@ -100,7 +100,8 @@ func (as *AnalyticsService) startTimer(ctx context.Context) {
 	for {
 		select {
 		case <-time.After(as.timeout):
-			as.sendDataAndResetCache(ctx)
+			timeStamp := time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
+			as.sendDataAndResetCache(ctx, timeStamp)
 		case <-ctx.Done():
 			as.logger.Infof("%s Metrics stopped", sdk_codes.MetricsStopped)
 			return
@@ -197,7 +198,7 @@ func convertInterfaceToString(i interface{}) string {
 	}
 }
 
-func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
+func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context, timeStamp int64) {
 
 	// Clone and reset the evaluation analytics cache to minimise the duration
 	// for which locks are held, so that metrics processing does not affect flag evaluations performance.
@@ -216,7 +217,6 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	as.logTargetLimitReached.Store(false)
 
 	// Process evaluation metrics
-	timeStamp := time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 	metricData := as.processEvaluationMetrics(evaluationAnalyticsClone, timeStamp)
 
 	// Process target metrics

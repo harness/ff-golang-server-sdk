@@ -1,6 +1,9 @@
 package analyticsservice
 
 import (
+	"context"
+	"io"
+	"net/http"
 	"testing"
 	"time"
 
@@ -10,6 +13,27 @@ import (
 	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/stretchr/testify/assert"
 )
+
+type MockMetricsClient struct {
+	LastBody  metricsclient.PostMetricsJSONRequestBody
+	CallCount int
+}
+
+func (c *MockMetricsClient) PostMetricsWithResponse(ctx context.Context, environmentUUID metricsclient.EnvironmentPathParam, params *metricsclient.PostMetricsParams, body metricsclient.PostMetricsJSONRequestBody, reqEditors ...metricsclient.RequestEditorFn) (*metricsclient.PostMetricsResponse, error) {
+	c.LastBody = body
+	c.CallCount++
+
+	return &metricsclient.PostMetricsResponse{
+		HTTPResponse: &http.Response{
+			StatusCode: 200,
+		},
+	}, nil
+}
+
+func (c *MockMetricsClient) PostMetricsWithBodyWithResponse(ctx context.Context, environmentUUID metricsclient.EnvironmentPathParam, params *metricsclient.PostMetricsParams, contentType string, body io.Reader, reqEditors ...metricsclient.RequestEditorFn) (*metricsclient.PostMetricsResponse, error) {
+
+	return nil, nil // default to returning no error and a nil response
+}
 
 func TestListenerHandlesEventsCorrectly(t *testing.T) {
 	noOpLogger := logger.NewNoOpLogger()
@@ -398,6 +422,114 @@ func Test_ProcessTargetMetrics(t *testing.T) {
 
 			assert.ElementsMatch(t, tc.expected, targetMetrics)
 		})
+	}
+}
+
+func TestSendDataAndResetCache(t *testing.T) {
+	noOpLogger := logger.NewNoOpLogger()
+
+	evaluationAnalytics := newSafeEvaluationAnalytics()
+	evaluationAnalytics.set("key1", analyticsEvent{
+		featureConfig: &rest.FeatureConfig{Feature: "feature1"},
+		variation:     &rest.Variation{Identifier: "var1", Value: "value1"},
+		count:         3,
+	})
+	evaluationAnalytics.set("key2", analyticsEvent{
+		featureConfig: &rest.FeatureConfig{Feature: "feature2"},
+		variation:     &rest.Variation{Identifier: "var2", Value: "value2"},
+		count:         1,
+	})
+
+	targetAnalytics := newSafeTargetAnalytics()
+
+	// Use anonymous and attributes
+	targetAnalytics.set("target1", evaluation.Target{
+		Identifier: "target1",
+		Name:       "Target One",
+		Anonymous:  boolPtr(false),
+		Attributes: &map[string]interface{}{"key1": "value1"},
+	})
+
+	// No attributes or anonymous set
+	targetAnalytics.set("target2", evaluation.Target{
+		Identifier: "target2",
+		Name:       "Target Two",
+	})
+
+	mClient := &MockMetricsClient{}
+
+	service := AnalyticsService{
+		evaluationAnalytics: evaluationAnalytics,
+		targetAnalytics:     targetAnalytics,
+		logger:              noOpLogger,
+		metricsClient:       mClient,
+		environmentID:       "test-env",
+	}
+
+	ctx := context.Background()
+
+	var timeStamp int64 = 1715600410545
+	service.sendDataAndResetCache(ctx, timeStamp)
+
+	expectedAnalyticsPayload := metricsclient.PostMetricsJSONRequestBody{
+		MetricsData: &[]metricsclient.MetricsData{
+			{
+				Count: 3,
+				Attributes: []metricsclient.KeyValue{
+					{Key: featureIdentifierAttribute, Value: "feature1"},
+					{Key: featureNameAttribute, Value: "feature1"},
+					{Key: variationIdentifierAttribute, Value: "var1"},
+					{Key: variationValueAttribute, Value: "value1"},
+					{Key: sdkTypeAttribute, Value: sdkType},
+					{Key: sdkLanguageAttribute, Value: sdkLanguage},
+					{Key: sdkVersionAttribute, Value: SdkVersion},
+					{Key: targetAttribute, Value: globalTarget},
+				},
+				MetricsType: metricsclient.MetricsDataMetricsType(ffMetricType),
+				Timestamp:   timeStamp,
+			},
+			{
+				Count: 1,
+				Attributes: []metricsclient.KeyValue{
+					{Key: featureIdentifierAttribute, Value: "feature2"},
+					{Key: featureNameAttribute, Value: "feature2"},
+					{Key: variationIdentifierAttribute, Value: "var2"},
+					{Key: variationValueAttribute, Value: "value2"},
+					{Key: sdkTypeAttribute, Value: sdkType},
+					{Key: sdkLanguageAttribute, Value: sdkLanguage},
+					{Key: sdkVersionAttribute, Value: SdkVersion},
+					{Key: targetAttribute, Value: globalTarget},
+				},
+				MetricsType: metricsclient.MetricsDataMetricsType(ffMetricType),
+				Timestamp:   timeStamp,
+			},
+		},
+		TargetData: &[]metricsclient.TargetData{
+			{
+				Identifier: "target1",
+				Name:       "Target One",
+				Attributes: []metricsclient.KeyValue{{Key: "key1", Value: "value1"}},
+			},
+			{
+				Identifier: "target2",
+				Name:       "Target Two",
+				Attributes: []metricsclient.KeyValue{},
+			},
+		},
+	}
+
+	// Verify that PostMetricsWithResponse was called correctly
+	assert.Equal(t, 1, mClient.CallCount, "PostMetricsWithResponse should be called once")
+	assert.ElementsMatch(t, *mClient.LastBody.MetricsData, *expectedAnalyticsPayload.MetricsData)
+	assert.ElementsMatch(t, *mClient.LastBody.TargetData, *expectedAnalyticsPayload.TargetData)
+
+	// Verify both caches were reset
+	if service.evaluationAnalytics.size() != 0 {
+		t.Errorf("Expected the evaluation analytics cache to be reset")
+	}
+
+	if service.targetAnalytics.size() != 0 {
+		t.Errorf("Expected the target analytics cache to be reset")
 	}
 }
 
