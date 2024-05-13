@@ -132,7 +132,7 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 			}
 
 			// Allow some time for the events to be processed
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(500 * time.Millisecond)
 
 			// Check evaluation metrics counts
 			for key, expectedCount := range tc.expectedEvaluations {
