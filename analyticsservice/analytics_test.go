@@ -303,6 +303,104 @@ func Test_ProcessEvaluationMetrics(t *testing.T) {
 	}
 }
 
+func Test_ProcessTargetMetrics(t *testing.T) {
+	cases := []struct {
+		name      string
+		targets   map[string]evaluation.Target
+		expLength int
+		expected  []metricsclient.TargetData
+	}{
+		{
+			name: "Single target",
+			targets: map[string]evaluation.Target{
+				"target1": {
+					Identifier: "target1",
+					Name:       "Target One",
+					Attributes: &map[string]interface{}{"key": "value"},
+				},
+			},
+			expLength: 1,
+			expected: []metricsclient.TargetData{
+				{
+					Identifier: "target1",
+					Name:       "Target One",
+					Attributes: []metricsclient.KeyValue{{Key: "key", Value: "value"}},
+				},
+			},
+		},
+		{
+			name: "Single target with no attributes",
+			targets: map[string]evaluation.Target{
+				"target1": {
+					Identifier: "target1",
+					Name:       "Target One",
+				},
+			},
+			expLength: 1,
+			expected: []metricsclient.TargetData{
+				{
+					Identifier: "target1",
+					Name:       "Target One",
+					Attributes: []metricsclient.KeyValue{},
+				},
+			},
+		},
+		{
+			name: "Two targets, one with no attributes",
+			targets: map[string]evaluation.Target{
+				"target1": {
+					Identifier: "target1",
+					Name:       "Target One",
+					Attributes: &map[string]interface{}{"key": "value"},
+				},
+				"target2": {
+					Identifier: "target2",
+					Name:       "Target Two",
+				},
+			},
+			expLength: 2,
+			expected: []metricsclient.TargetData{
+				{
+					Identifier: "target1",
+					Name:       "Target One",
+					Attributes: []metricsclient.KeyValue{{Key: "key", Value: "value"}},
+				},
+				{
+					Identifier: "target2",
+					Name:       "Target Two",
+					Attributes: []metricsclient.KeyValue{},
+				},
+			},
+		},
+		{
+			name:      "No targets",
+			targets:   map[string]evaluation.Target{},
+			expLength: 0,
+			expected:  []metricsclient.TargetData{},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cache := newSafeTargetAnalytics()
+			for key, target := range tc.targets {
+				cache.set(key, target)
+			}
+
+			service := AnalyticsService{
+				targetAnalytics: cache,
+			}
+
+			targetMetrics := service.processTargetMetrics(cache)
+			if len(targetMetrics) != tc.expLength {
+				t.Errorf("Expected %d target metrics, got %d", tc.expLength, len(targetMetrics))
+			}
+
+			assert.ElementsMatch(t, tc.expected, targetMetrics)
+		})
+	}
+}
+
 func boolPtr(b bool) *bool {
 	return &b
 }

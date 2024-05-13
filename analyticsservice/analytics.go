@@ -297,7 +297,7 @@ func (as *AnalyticsService) processTargetMetrics(targetAnalytics SafeAnalyticsCa
 	targetAnalytics.iterate(func(key string, target evaluation.Target) {
 		targetAttributes := make([]metricsclient.KeyValue, 0)
 		if target.Attributes != nil {
-			targetAttributes = make([]metricsclient.KeyValue, len(*target.Attributes))
+			targetAttributes = make([]metricsclient.KeyValue, 0, len(*target.Attributes))
 			for k, v := range *target.Attributes {
 				targetAttributes = append(targetAttributes, metricsclient.KeyValue{Key: k, Value: convertInterfaceToString(v)})
 			}
