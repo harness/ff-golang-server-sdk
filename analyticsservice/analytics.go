@@ -216,7 +216,8 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	as.logTargetLimitReached.Store(false)
 
 	// Process evaluation metrics
-	metricData := as.processEvaluationMetrics(evaluationAnalyticsClone)
+	timeStamp := time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
+	metricData := as.processEvaluationMetrics(evaluationAnalyticsClone, timeStamp)
 
 	// Process target metrics
 	targetData := as.processTargetMetrics(targetAnalyticsClone)
@@ -264,9 +265,9 @@ func (as *AnalyticsService) sendDataAndResetCache(ctx context.Context) {
 	}
 }
 
-func (as *AnalyticsService) processEvaluationMetrics(evaluationAnalyticsClone SafeAnalyticsCache[string, analyticsEvent]) []metricsclient.MetricsData {
-	metricData := make([]metricsclient.MetricsData, 0, evaluationAnalyticsClone.size())
-	evaluationAnalyticsClone.iterate(func(key string, analytic analyticsEvent) {
+func (as *AnalyticsService) processEvaluationMetrics(evaluationAnalytics SafeAnalyticsCache[string, analyticsEvent], timeStamp int64) []metricsclient.MetricsData {
+	metricData := make([]metricsclient.MetricsData, 0, evaluationAnalytics.size())
+	evaluationAnalytics.iterate(func(key string, analytic analyticsEvent) {
 		metricAttributes := []metricsclient.KeyValue{
 			{Key: featureIdentifierAttribute, Value: analytic.featureConfig.Feature},
 			{Key: featureNameAttribute, Value: analytic.featureConfig.Feature},
@@ -279,7 +280,7 @@ func (as *AnalyticsService) processEvaluationMetrics(evaluationAnalyticsClone Sa
 		}
 
 		md := metricsclient.MetricsData{
-			Timestamp:   time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)),
+			Timestamp:   timeStamp,
 			Count:       analytic.count,
 			MetricsType: metricsclient.MetricsDataMetricsType(ffMetricType),
 			Attributes:  metricAttributes,
@@ -290,10 +291,10 @@ func (as *AnalyticsService) processEvaluationMetrics(evaluationAnalyticsClone Sa
 	return metricData
 }
 
-func (as *AnalyticsService) processTargetMetrics(targetAnalyticsClone SafeAnalyticsCache[string, evaluation.Target]) []metricsclient.TargetData {
-	targetData := make([]metricsclient.TargetData, 0, targetAnalyticsClone.size())
+func (as *AnalyticsService) processTargetMetrics(targetAnalytics SafeAnalyticsCache[string, evaluation.Target]) []metricsclient.TargetData {
+	targetData := make([]metricsclient.TargetData, 0, targetAnalytics.size())
 
-	targetAnalyticsClone.iterate(func(key string, target evaluation.Target) {
+	targetAnalytics.iterate(func(key string, target evaluation.Target) {
 		targetAttributes := make([]metricsclient.KeyValue, 0)
 		if target.Attributes != nil {
 			targetAttributes = make([]metricsclient.KeyValue, len(*target.Attributes))

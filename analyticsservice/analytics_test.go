@@ -6,7 +6,9 @@ import (
 
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 	"github.com/harness/ff-golang-server-sdk/logger"
+	"github.com/harness/ff-golang-server-sdk/metricsclient"
 	"github.com/harness/ff-golang-server-sdk/rest"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestListenerHandlesEventsCorrectly(t *testing.T) {
@@ -182,6 +184,121 @@ func Test_convertInterfaceToString(t *testing.T) {
 			if actual != tc.expected {
 				t.Errorf("(%s): expected %s, actual %s", desc, tc.expected, actual)
 			}
+		})
+	}
+}
+
+func Test_ProcessEvaluationMetrics(t *testing.T) {
+	var timeStamp int64 = 1715600410545
+	testCases := []struct {
+		name      string
+		events    map[string]analyticsEvent
+		expected  []metricsclient.MetricsData
+		expLength int
+	}{
+		{
+			name: "One unique evaluation evaluated 10 times",
+			events: map[string]analyticsEvent{
+				"key1": {
+					featureConfig: &rest.FeatureConfig{Feature: "feature1"},
+					variation:     &rest.Variation{Identifier: "var1", Value: "value1"},
+					count:         10,
+				},
+			},
+			expLength: 1,
+			expected: []metricsclient.MetricsData{
+				{
+					Count: 10,
+					Attributes: []metricsclient.KeyValue{
+						{Key: featureIdentifierAttribute, Value: "feature1"},
+						{Key: featureNameAttribute, Value: "feature1"},
+						{Key: variationIdentifierAttribute, Value: "var1"},
+						{Key: variationValueAttribute, Value: "value1"},
+						{Key: sdkTypeAttribute, Value: sdkType},
+						{Key: sdkLanguageAttribute, Value: sdkLanguage},
+						{Key: sdkVersionAttribute, Value: SdkVersion},
+						{Key: targetAttribute, Value: globalTarget},
+					},
+					MetricsType: metricsclient.MetricsDataMetricsType(ffMetricType),
+					Timestamp:   timeStamp,
+				},
+			},
+		},
+		{
+			name: "Two unique evaluation evaluated 5 and 7 times",
+			events: map[string]analyticsEvent{
+				"key1": {
+					featureConfig: &rest.FeatureConfig{Feature: "feature1"},
+					variation:     &rest.Variation{Identifier: "var1", Value: "value1"},
+					count:         5,
+				},
+				"key2": {
+					featureConfig: &rest.FeatureConfig{Feature: "feature2"},
+					variation:     &rest.Variation{Identifier: "var2", Value: "value2"},
+					count:         7,
+				},
+			},
+			expLength: 2,
+			expected: []metricsclient.MetricsData{
+				{
+					Count: 5,
+					Attributes: []metricsclient.KeyValue{
+						{Key: featureIdentifierAttribute, Value: "feature1"},
+						{Key: featureNameAttribute, Value: "feature1"},
+						{Key: variationIdentifierAttribute, Value: "var1"},
+						{Key: variationValueAttribute, Value: "value1"},
+						{Key: sdkTypeAttribute, Value: sdkType},
+						{Key: sdkLanguageAttribute, Value: sdkLanguage},
+						{Key: sdkVersionAttribute, Value: SdkVersion},
+						{Key: targetAttribute, Value: globalTarget},
+					},
+					MetricsType: metricsclient.MetricsDataMetricsType(ffMetricType),
+					Timestamp:   timeStamp,
+				},
+				{
+					Count: 7,
+					Attributes: []metricsclient.KeyValue{
+						{Key: featureIdentifierAttribute, Value: "feature2"},
+						{Key: featureNameAttribute, Value: "feature2"},
+						{Key: variationIdentifierAttribute, Value: "var2"},
+						{Key: variationValueAttribute, Value: "value2"},
+						{Key: sdkTypeAttribute, Value: sdkType},
+						{Key: sdkLanguageAttribute, Value: sdkLanguage},
+						{Key: sdkVersionAttribute, Value: SdkVersion},
+						{Key: targetAttribute, Value: globalTarget},
+					},
+					MetricsType: metricsclient.MetricsDataMetricsType(ffMetricType),
+					Timestamp:   timeStamp,
+				},
+			},
+		},
+		{
+			name:      "No metrics",
+			events:    map[string]analyticsEvent{},
+			expLength: 0,
+			expected:  []metricsclient.MetricsData{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cache := newSafeEvaluationAnalytics()
+			for key, event := range tc.events {
+				cache.set(key, event)
+			}
+
+			service := AnalyticsService{
+				evaluationAnalytics: cache,
+			}
+
+			metrics := service.processEvaluationMetrics(cache, timeStamp)
+
+			assert.ElementsMatch(t, tc.expected, metrics)
+
+			if len(metrics) != tc.expLength {
+				t.Errorf("Expected %d metrics data, got %d", tc.expLength, len(metrics))
+			}
+
 		})
 	}
 }
