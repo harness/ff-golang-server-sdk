@@ -25,11 +25,8 @@ pipeline:
                   spec:
                     shell: Sh
                     command: |-
-                      ls -l 
-                      ls -l ../
-                      ls -l harness
-                      pwd -P
-                      go build
+                      go mod tidy
+                      go build examples/getting_started.go
                   timeout: ""
                   type: Run
               - step:
