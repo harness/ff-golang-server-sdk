@@ -25,7 +25,8 @@ pipeline:
                   spec:
                     shell: Sh
                     command: |-
-                      go mod tidy
+                      go version
+                      go get -u ./...
                       go build examples/getting_started.go
                   timeout: ""
                   type: Run
