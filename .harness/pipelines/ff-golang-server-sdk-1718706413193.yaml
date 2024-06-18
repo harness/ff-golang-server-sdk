@@ -25,6 +25,9 @@ pipeline:
                   spec:
                     shell: Sh
                     command: |-
+                      apt-get update
+                      apt purge golang
+                      apt install -y golang
                       go version
                       go get -u ./...
                       go build examples/getting_started.go
