@@ -23,7 +23,13 @@ pipeline:
                   identifier: gobuild
                   name: go_build
                   spec:
-                    command: go build
+                    shell: Sh
+                    command: |-
+                      ls -l 
+                      ls -l ../
+                      ls -l harness
+                      pwd -P
+                      go build
                   timeout: ""
                   type: Run
               - step:
@@ -46,9 +52,9 @@ pipeline:
                   timeout: ""
                   type: Run
           platform:
-            arch: Amd64
             os: Linux
+            arch: Amd64
           runtime:
-            spec: {}
             type: Cloud
+            spec: {}
         type: CI
