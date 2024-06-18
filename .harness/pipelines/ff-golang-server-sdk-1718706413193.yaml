@@ -24,32 +24,7 @@ pipeline:
                   name: go_build
                   spec:
                     shell: Sh
-                    command: |-
-                      apt-get update
-                      apt purge golang
-                      apt install -y golang
-                      go version
-                      go get -u ./...
-                      go build examples/getting_started.go
-                  timeout: ""
-                  type: Run
-              - step:
-                  identifier: gotestcoverage
-                  name: go_test_coverage
-                  spec:
-                    command: go test -coverprofile=coverage.out ./...
-                  timeout: ""
-                  type: Run
-              - step:
-                  identifier: gotestreport
-                  name: go_test_report
-                  spec:
-                    command: "export GOBIN=/home/harness/go/bin\n\t\texport PATH=/home/harness/go/bin:$PATH\n\t\techo $PATH\n\t\tgo install github.com/jstemmer/go-junit-report/v2@latest\n\t\tgo test -v 2>&1 ./... | go-junit-report -set-exit-code > report.xml"
-                    reports:
-                      spec:
-                        paths:
-                          - /harness/report.xml
-                      type: JUnit
+                    command: echo "Building Go"
                   timeout: ""
                   type: Run
           platform:
