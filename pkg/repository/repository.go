@@ -157,6 +157,9 @@ func (r FFRepository) SetFlag(featureConfig rest.FeatureConfig, initialLoad bool
 			return
 		}
 	}
+
+	SortFeatureConfigServingRules(&featureConfig)
+
 	flagKey := formatFlagKey(featureConfig.Feature)
 	if r.storage != nil {
 		if err := r.storage.Set(flagKey, featureConfig); err != nil {
@@ -179,6 +182,10 @@ func (r FFRepository) SetFlags(initialLoad bool, envID string, featureConfigs ..
 		if !r.areFlagsOutdated(envID, featureConfigs...) {
 			return
 		}
+	}
+
+	for i := range featureConfigs {
+		SortFeatureConfigServingRules(&featureConfigs[i])
 	}
 
 	key := formatFlagsKey(envID)
@@ -452,6 +459,19 @@ func (r FFRepository) areSegmentsOutdated(envID string, segments ...rest.Segment
 		}
 	}
 	return false
+}
+
+// SortFeatureConfigServingRules sorts the serving rules of a FeatureConfig by priority
+func SortFeatureConfigServingRules(featureConfig *rest.FeatureConfig) {
+	if featureConfig == nil || featureConfig.Rules == nil || len(*featureConfig.Rules) <= 1 {
+		return
+	}
+
+	rules := *featureConfig.Rules
+
+	sort.SliceStable(rules, func(i, j int) bool {
+		return rules[i].Priority < rules[j].Priority
+	})
 }
 
 // SortSegmentServingGroups sorts the serving rules of a segment by priority
