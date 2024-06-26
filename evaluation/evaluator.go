@@ -275,8 +275,6 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 		// `ServingRules` replaces `Rules, so if sent by the backend then we evaluate them instead
 		if segment.ServingRules != nil && len(*segment.ServingRules) > 0 {
 			v2Rules := *segment.ServingRules
-				return v2Rules[i].Priority < v2Rules[j].Priority
-			})
 			for _, v2rule := range v2Rules {
 				if e.evaluateGroupRulesV2(v2rule.Clauses, target) {
 					e.logger.Debugf(
