@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"sort"
 
 	"golang.org/x/exp/slices"
 
@@ -204,6 +205,7 @@ func (r FFRepository) SetSegment(segment rest.Segment, initialLoad bool) {
 			return
 		}
 	}
+	SortSegmentServingGroups(&segment)
 	segmentKey := formatSegmentKey(segment.Identifier)
 	if r.storage != nil {
 		if err := r.storage.Set(segmentKey, segment); err != nil {
@@ -226,6 +228,11 @@ func (r FFRepository) SetSegments(initialLoad bool, envID string, segments ...re
 		if !r.areSegmentsOutdated(envID, segments...) {
 			return
 		}
+	}
+
+	// Sort the serving rules of each segment before storing them
+	for i := range segments {
+		SortSegmentServingGroups(&segments[i])
 	}
 
 	key := formatSegmentsKey(envID)
@@ -445,6 +452,19 @@ func (r FFRepository) areSegmentsOutdated(envID string, segments ...rest.Segment
 		}
 	}
 	return false
+}
+
+// SortSegmentServingGroups sorts the serving rules of a segment by priority
+func SortSegmentServingGroups(segment *rest.Segment) {
+	if segment == nil || segment.ServingRules == nil || len(*segment.ServingRules) <= 1 {
+		return
+	}
+
+	v2Rules := *segment.ServingRules
+
+	sort.SliceStable(v2Rules, func(i, j int) bool {
+		return v2Rules[i].Priority < v2Rules[j].Priority
+	})
 }
 
 // Close all resources
