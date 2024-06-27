@@ -832,19 +832,6 @@ func TestEvaluator_evaluateRules(t *testing.T) {
 				// priority is on second one and should return true
 				servingRules: []rest.ServingRule{
 					{
-						Priority: 2,
-						Clauses: []rest.Clause{
-							{
-								Attribute: identifier,
-								Op:        equalOperator,
-								Values:    []string{harness},
-							},
-						},
-						Serve: rest.Serve{
-							Variation: &identifierFalse,
-						},
-					},
-					{
 						Priority: 1,
 						Clauses: []rest.Clause{
 							{
@@ -855,6 +842,19 @@ func TestEvaluator_evaluateRules(t *testing.T) {
 						},
 						Serve: rest.Serve{
 							Variation: &identifierTrue,
+						},
+					},
+					{
+						Priority: 2,
+						Clauses: []rest.Clause{
+							{
+								Attribute: identifier,
+								Op:        equalOperator,
+								Values:    []string{harness},
+							},
+						},
+						Serve: rest.Serve{
+							Variation: &identifierFalse,
 						},
 					},
 				},

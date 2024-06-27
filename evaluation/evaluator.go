@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -145,9 +144,6 @@ func (e Evaluator) evaluateRules(servingRules []rest.ServingRule, target *Target
 		return ""
 	}
 
-	sort.SliceStable(servingRules, func(i, j int) bool {
-		return servingRules[i].Priority < servingRules[j].Priority
-	})
 	for i := range servingRules {
 		rule := servingRules[i]
 		if len(rule.Clauses) == 0 {
@@ -279,9 +275,6 @@ func (e Evaluator) isTargetIncludedOrExcludedInSegment(segmentList []string, tar
 		// `ServingRules` replaces `Rules, so if sent by the backend then we evaluate them instead
 		if segment.ServingRules != nil && len(*segment.ServingRules) > 0 {
 			v2Rules := *segment.ServingRules
-			sort.SliceStable(v2Rules, func(i, j int) bool {
-				return v2Rules[i].Priority < v2Rules[j].Priority
-			})
 			for _, v2rule := range v2Rules {
 				if e.evaluateGroupRulesV2(v2rule.Clauses, target) {
 					e.logger.Debugf(
