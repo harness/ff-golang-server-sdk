@@ -159,6 +159,22 @@ pipeline:
                                         branch: <+trigger.sourceBranch>
                                   when:
                                     stageStatus: Success
+                              - step:
+                                  type: BuildAndPushGCR
+                                  name: Build And Push testgrid image
+                                  identifier: Build_And_Push_testgrid_image
+                                  spec:
+                                    connectorRef: platform205701
+                                    host: us.gcr.io
+                                    projectID: platform-205701
+                                    imageName: ff-testgrid-go
+                                    tags:
+                                      - <+trigger.commitSha>
+                                    dockerfile: ff-sdk-testgrid/go/Dockerfile
+                                    context: ff-sdk-testgrid/go
+                                    buildArgs:
+                                      SDK_VERSION: <+trigger.commitSha>
+                                      BUILD_MODE: local
                   when:
                     stageStatus: Success
                     condition: "!empty(<+codebase.tag>)"
