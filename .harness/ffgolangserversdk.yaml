@@ -282,6 +282,17 @@ pipeline:
               spec:
                 connectorRef: DockerHub
                 image: docker:dind
+        variables:
+          - name: pull_request
+            type: String
+            description: ""
+            required: false
+            value: <+input>.allowedValues(true,false)
+          - name: release
+            type: String
+            description: ""
+            required: false
+            value: <+input>.allowedValues(true,false)
     - stage:
         name: Publish Release Notes
         identifier: Publish_Release_Notes
