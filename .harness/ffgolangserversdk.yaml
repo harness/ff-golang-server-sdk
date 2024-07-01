@@ -107,35 +107,58 @@ pipeline:
                             spec:
                               branch: main
                         description: Get the source code for ff-sdk-testgrid so we can build the go test grid container
-                    - step:
-                        type: GitClone
-                        name: Copy SDK code
-                        identifier: Copy_SDK_code
-                        spec:
-                          connectorRef: ffsdks
-                          repoName: ff-golang-server-sdk
-                          cloneDirectory: ff-sdk-testgrid/go/ff-golang-server-sdk
-                          build:
-                            type: tag
-                            spec:
-                              tag: <+codebase.tag>
-                        description: Copy ff-golang-server-sdk code to the docker build context
-                    - step:
-                        type: BuildAndPushGCR
-                        name: Build And Push testgrid image to GCR
-                        identifier: Build_And_Push_testgrid_image_to_GCR
-                        spec:
-                          connectorRef: platform205701
-                          host: us.gcr.io
-                          projectID: platform-205701
-                          imageName: ff-testgrid-go
-                          tags:
-                            - <+codebase.tag>
-                          dockerfile: ff-sdk-testgrid/go/Dockerfile
-                          context: ff-sdk-testgrid/go
-                          buildArgs:
-                            SDK_VERSION: <+codebase.tag>
-                            BUILD_MODE: local
+                    - parallel:
+                        - stepGroup:
+                            name: Release
+                            identifier: Release
+                            steps:
+                              - step:
+                                  type: GitClone
+                                  name: Copy SDK code - Release
+                                  identifier: Copy_SDK_code
+                                  spec:
+                                    connectorRef: ffsdks
+                                    repoName: ff-golang-server-sdk
+                                    cloneDirectory: ff-sdk-testgrid/go/ff-golang-server-sdk
+                                    build:
+                                      type: tag
+                                      spec:
+                                        tag: <+codebase.tag>
+                                  description: Copy ff-golang-server-sdk code to the docker build context
+                              - step:
+                                  type: BuildAndPushGCR
+                                  name: Build And Push testgrid image to GCR
+                                  identifier: Build_And_Push_testgrid_image_to_GCR
+                                  spec:
+                                    connectorRef: platform205701
+                                    host: us.gcr.io
+                                    projectID: platform-205701
+                                    imageName: ff-testgrid-go
+                                    tags:
+                                      - <+codebase.tag>
+                                    dockerfile: ff-sdk-testgrid/go/Dockerfile
+                                    context: ff-sdk-testgrid/go
+                                    buildArgs:
+                                      SDK_VERSION: <+codebase.tag>
+                                      BUILD_MODE: local
+                        - stepGroup:
+                            name: Pull Request
+                            identifier: Pull_Request
+                            steps:
+                              - step:
+                                  type: GitClone
+                                  name: Copy SDK Code
+                                  identifier: Copy_SDK_Code
+                                  spec:
+                                    connectorRef: ffsdks
+                                    repoName: ff-golang-server-sdk
+                                    cloneDirectory: ff-sdk-testgrid/go/ff-golang-server-sdk
+                                    build:
+                                      type: branch
+                                      spec:
+                                        branch: <+trigger.sourceBranch>
+                                  when:
+                                    stageStatus: Success
                   when:
                     stageStatus: Success
                     condition: "!empty(<+codebase.tag>)"
