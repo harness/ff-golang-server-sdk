@@ -178,6 +178,10 @@ pipeline:
                                     buildArgs:
                                       SDK_VERSION: v0.1.24
                                       BUILD_MODE: local
+                                    resources:
+                                      limits:
+                                        memory: 10G
+                                        cpu: "10"
                             when:
                               stageStatus: Success
                               condition: <+stage.variables.pull_request>
