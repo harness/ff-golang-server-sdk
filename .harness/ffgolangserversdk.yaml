@@ -176,7 +176,7 @@ pipeline:
                                     dockerfile: ff-sdk-testgrid/go/Dockerfile
                                     context: ff-sdk-testgrid/go
                                     buildArgs:
-                                      SDK_VERSION: <+trigger.commitSha>
+                                      SDK_VERSION: v0.1.24
                                       BUILD_MODE: local
                             when:
                               stageStatus: Success
