@@ -91,7 +91,7 @@ pipeline:
 
                            echo "View Results Here: https://sonar.harness.io/dashboard?id=harness_ff-golang-server-sdk_AYSkVwnLWr37sP7QAgtQ"
               - stepGroup:
-                  name: Testgrid image
+                  name: Testgrid image - Release
                   identifier: Testgrid_image
                   steps:
                     - step:
