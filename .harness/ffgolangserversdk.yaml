@@ -180,7 +180,7 @@ pipeline:
                                       BUILD_MODE: local
                             when:
                               stageStatus: Success
-                              condition: <+pipeline.variables.pull_request>
+                              condition: <+codebase.build.type>=="PR"
                   when:
                     stageStatus: Success
               - step:
