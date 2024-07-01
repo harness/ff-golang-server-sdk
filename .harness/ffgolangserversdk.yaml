@@ -141,6 +141,9 @@ pipeline:
                                     buildArgs:
                                       SDK_VERSION: <+codebase.tag>
                                       BUILD_MODE: local
+                            when:
+                              stageStatus: Success
+                              condition: "!empty(<+codebase.tag>)"
                         - stepGroup:
                             name: Pull Request
                             identifier: Pull_Request
@@ -175,9 +178,11 @@ pipeline:
                                     buildArgs:
                                       SDK_VERSION: <+trigger.commitSha>
                                       BUILD_MODE: local
+                            when:
+                              stageStatus: Success
+                              condition: <+pipeline.variables.pull_request>
                   when:
                     stageStatus: Success
-                    condition: "!empty(<+codebase.tag>)"
               - step:
                   type: Run
                   name: CVE scan
