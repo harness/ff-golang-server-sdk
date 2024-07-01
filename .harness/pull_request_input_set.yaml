@@ -1,5 +1,6 @@
 inputSet:
   name: pull_request_input_set
+  tags: {}
   identifier: pull_request_input_set
   orgIdentifier: Feature_Flag
   projectIdentifier: FFPipelines
@@ -14,13 +15,23 @@ inputSet:
               branch: <+trigger.branch>
     stages:
       - stage:
+          identifier: Build
+          type: CI
+          variables:
+            - name: pull_request
+              type: String
+              value: "true"
+            - name: release
+              type: String
+              value: "false"
+      - stage:
           identifier: Publish_Release_Notes
           type: Approval
           variables:
             - name: release
               type: String
+              default: "false"
               value: "false"
             - name: pull_request
               type: String
               value: "true"
-  object Object: pipeline.properties.ci.codebase
