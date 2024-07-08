@@ -363,6 +363,8 @@ func (e Evaluator) evaluateAll(target *Target) ([]FlagVariation, error) {
 	if err != nil {
 		return variations, err
 	}
+
+	variations = make([]FlagVariation, 0, len(flags))
 	for _, f := range flags {
 		v, err := e.getVariationForTheFlag(f, target)
 		if err != nil {
