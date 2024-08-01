@@ -227,14 +227,17 @@ pipeline:
                         mode: ingestion
                         config: default
                         target:
-                          name: OWASP
                           type: repository
+                          name: OWASP
                           variant: main
                         advanced:
                           log:
                             level: info
                         ingestion:
                           file: ./output_owasp.json
+                      when:
+                        stageStatus: Success
+                        condition: "false"
               - parallel:
                   - step:
                       type: GCSUpload
