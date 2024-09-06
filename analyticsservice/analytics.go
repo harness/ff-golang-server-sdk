@@ -156,16 +156,12 @@ func (as *AnalyticsService) listener() {
 		}
 
 		// Check if target has been seen
-		_, seen := as.seenTargets.get(ad.target.Identifier)
-
-		if seen {
+		if _, seen := as.seenTargets.get(ad.target.Identifier); seen {
 			continue
 		}
 
 		// Check if seen targets limit has been hit
-		limitExceeded := as.seenTargets.isLimitExceeded()
-
-		if limitExceeded {
+		if as.seenTargets.isLimitExceeded() {
 			continue
 		}
 

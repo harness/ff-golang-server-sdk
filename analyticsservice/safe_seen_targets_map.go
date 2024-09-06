@@ -45,6 +45,7 @@ func (s *safeSeenTargets) setWithLimit(key string, seen bool) {
 
 	if len(s.data) >= s.maxSize {
 		s.limitExceeded.Store(true)
+		return
 	}
 
 	s.data[key] = seen
