@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/harness/ff-golang-server-sdk/evaluation"
 )
@@ -85,7 +84,7 @@ func TestSafeTargetAnalytics(t *testing.T) {
 func TestSafeSeenTargets(t *testing.T) {
 	// Initialize with a small maxSize for testing
 	maxSize := 3
-	s := newSafeSeenTargets(maxSize, 0).(SafeSeenTargetsCache[string, bool])
+	s := newSafeSeenTargets(maxSize).(SafeSeenTargetsCache[string, bool])
 
 	testData := map[string]bool{
 		"target1":  true,
@@ -135,7 +134,7 @@ func TestSafeSeenTargets(t *testing.T) {
 		concurrencyLevel := 100
 
 		// Re-initialize the map for concurrency testing
-		s = newSafeSeenTargets(100, 0).(SafeSeenTargetsCache[string, bool])
+		s = newSafeSeenTargets(100).(SafeSeenTargetsCache[string, bool])
 
 		// Concurrently set keys
 		for i := 0; i < concurrencyLevel; i++ {
@@ -173,32 +172,5 @@ func TestSafeSeenTargets(t *testing.T) {
 			t.Errorf("Map size should be 0 after clearing, got %d", s.size())
 		}
 	})
-
-	// Add test for clearing based on interval
-	t.Run("IntervalClearingTest", func(t *testing.T) {
-		// Re-initialize the map with a clearing interval
-		s = newSafeSeenTargets(10, 100*time.Millisecond)
-
-		for key, value := range testData {
-			s.set(key, value)
-		}
-
-		// Ensure the map has items initially
-		if s.size() != len(testData) {
-			t.Errorf("Expected map size to be %d, got %d", len(testData), s.size())
-		}
-
-		// Wait for the clearing to clear the map
-		time.Sleep(300 * time.Millisecond)
-
-		// Ensure the map is cleared after the interval
-		if s.size() != 0 {
-			t.Errorf("Expected map size to be 0 after clearing interval, got %d", s.size())
-		}
-
-		// Ensure the limitExceeded flag is reset
-		if s.isLimitExceeded() {
-			t.Errorf("Expected limitExceeded to be reset after clearing")
-		}
-	})
+	
 }
