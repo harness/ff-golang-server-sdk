@@ -49,7 +49,6 @@ type SafeAnalyticsCache[K comparable, V any] interface {
 // SafeSeenTargetsCache extends SafeAnalyticsCache and adds behavior specific to seen targets
 type SafeSeenTargetsCache[K comparable, V any] interface {
 	SafeAnalyticsCache[K, V]
-	setWithLimit(key K, value V)
 	isLimitExceeded() bool
 }
 
@@ -170,7 +169,7 @@ func (as *AnalyticsService) listener() {
 		}
 
 		// Update seen targets
-		as.seenTargets.setWithLimit(ad.target.Identifier, true)
+		as.seenTargets.set(ad.target.Identifier, true)
 
 		// Update target metrics
 		if as.targetAnalytics.size() < maxTargetEntries {

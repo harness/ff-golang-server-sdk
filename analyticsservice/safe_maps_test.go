@@ -102,7 +102,7 @@ func TestSafeSeenTargets(t *testing.T) {
 	}
 
 	// Add one more item to exceed the limit
-	s.setWithLimit("target4", true)
+	s.set("target4", true)
 
 	// Ensure limitExceeded is true after exceeding the limit
 	if !s.isLimitExceeded() {
@@ -110,7 +110,7 @@ func TestSafeSeenTargets(t *testing.T) {
 	}
 
 	// Ensure that new items are not added once the limit is exceeded
-	s.setWithLimit("target5", true)
+	s.set("target5", true)
 	if _, exists := s.get("target5"); exists {
 		t.Errorf("target5 should not have been added as the limit was exceeded")
 	}
@@ -123,7 +123,7 @@ func TestSafeSeenTargets(t *testing.T) {
 	}
 
 	// Add items again after clearing
-	s.setWithLimit("target6", true)
+	s.set("target6", true)
 	if _, exists := s.get("target6"); !exists {
 		t.Errorf("target6 should have been added after clearing the map")
 	}
@@ -142,7 +142,7 @@ func TestSafeSeenTargets(t *testing.T) {
 			go func(i int) {
 				defer wg.Done()
 				key := "target" + fmt.Sprint(i)
-				s.setWithLimit(key, true)
+				s.set(key, true)
 			}(i)
 		}
 
@@ -172,5 +172,5 @@ func TestSafeSeenTargets(t *testing.T) {
 			t.Errorf("Map size should be 0 after clearing, got %d", s.size())
 		}
 	})
-	
+
 }

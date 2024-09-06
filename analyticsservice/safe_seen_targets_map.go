@@ -20,11 +20,8 @@ func newSafeSeenTargets(maxSize int) SafeSeenTargetsCache[string, bool] {
 	}
 }
 
-func (s *safeSeenTargets) setWithLimit(key string, seen bool) {
-	if s.limitExceeded.Load() {
-		return
-	}
-
+// The regular set method just calls SetWithLimit
+func (s *safeSeenTargets) set(key string, seen bool) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -34,11 +31,6 @@ func (s *safeSeenTargets) setWithLimit(key string, seen bool) {
 	}
 
 	s.data[key] = seen
-}
-
-// The regular set method just calls SetWithLimit
-func (s *safeSeenTargets) set(key string, seen bool) {
-	s.setWithLimit(key, seen)
 }
 
 func (s *safeSeenTargets) get(key string) (bool, bool) {
