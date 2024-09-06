@@ -65,7 +65,7 @@ type AnalyticsService struct {
 	analyticsChan             chan analyticsEvent
 	evaluationAnalytics       SafeAnalyticsCache[string, analyticsEvent]
 	targetAnalytics           SafeAnalyticsCache[string, evaluation.Target]
-	seenTargets               SafeAnalyticsCache[string, bool]
+	seenTargets               SafeSeenTargetsCache[string, bool]
 	logEvaluationLimitReached atomic.Bool
 	logTargetLimitReached     atomic.Bool
 	timeout                   time.Duration
@@ -162,8 +162,15 @@ func (as *AnalyticsService) listener() {
 			continue
 		}
 
+		// Check if seen targets limit has been hit
+		limitExceeded := as.seenTargets.isLimitExceeded()
+
+		if limitExceeded {
+			continue
+		}
+
 		// Update seen targets
-		as.seenTargets.set(ad.target.Identifier, true)
+		as.seenTargets.setWithLimit(ad.target.Identifier, true)
 
 		// Update target metrics
 		if as.targetAnalytics.size() < maxTargetEntries {
