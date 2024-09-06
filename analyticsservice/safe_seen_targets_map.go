@@ -3,7 +3,6 @@ package analyticsservice
 import (
 	"sync"
 	"sync/atomic"
-	"time"
 )
 
 type safeSeenTargets struct {
@@ -11,28 +10,14 @@ type safeSeenTargets struct {
 	data          map[string]bool
 	maxSize       int
 	limitExceeded atomic.Bool
-	clearingTimer *time.Ticker
 }
 
 // Implements SafeSeenTargetsCache
-func newSafeSeenTargets(maxSize int, clearingInterval time.Duration) SafeSeenTargetsCache[string, bool] {
-	st := &safeSeenTargets{
+func newSafeSeenTargets(maxSize int) SafeSeenTargetsCache[string, bool] {
+	return &safeSeenTargets{
 		data:    make(map[string]bool),
 		maxSize: maxSize,
 	}
-
-	if clearingInterval > 0 {
-		st.clearingTimer = time.NewTicker(clearingInterval)
-
-		// Start a goroutine to clear the cache at a set interval
-		go func() {
-			for range st.clearingTimer.C {
-				st.clear()
-			}
-		}()
-	}
-
-	return st
 }
 
 func (s *safeSeenTargets) setWithLimit(key string, seen bool) {

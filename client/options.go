@@ -156,7 +156,8 @@ func WithSeenTargetsMaxSize(maxSize int) ConfigOption {
 	}
 }
 
-// WithSeenTargetsClearInterval sets the clearing interval for the seen targets map.
+// WithSeenTargetsClearInterval sets the clearing interval for the seen targets map. By default, the interval
+// is set to 24 hours.
 func WithSeenTargetsClearInterval(interval time.Duration) ConfigOption {
 	return func(config *config) {
 		config.seenTargetsClearInterval = interval
