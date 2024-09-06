@@ -120,7 +120,7 @@ func TestListenerHandlesEventsCorrectly(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			service := NewAnalyticsService(1*time.Minute, noOpLogger)
+			service := NewAnalyticsService(1*time.Minute, noOpLogger, 10, time.Hour)
 			defer close(service.analyticsChan)
 
 			// Start the listener in a goroutine

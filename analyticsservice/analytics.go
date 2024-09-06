@@ -46,6 +46,13 @@ type SafeAnalyticsCache[K comparable, V any] interface {
 	iterate(func(K, V))
 }
 
+// SafeSeenTargetsCache extends SafeAnalyticsCache and adds behavior specific to seen targets
+type SafeSeenTargetsCache[K comparable, V any] interface {
+	SafeAnalyticsCache[K, V]
+	setWithLimit(key K, value V)
+	isLimitExceeded() bool
+}
+
 type analyticsEvent struct {
 	target        *evaluation.Target
 	featureConfig *rest.FeatureConfig
@@ -68,7 +75,7 @@ type AnalyticsService struct {
 }
 
 // NewAnalyticsService creates and starts a analytics service to send data to the client
-func NewAnalyticsService(timeout time.Duration, logger logger.Logger) *AnalyticsService {
+func NewAnalyticsService(timeout time.Duration, logger logger.Logger, seenTargetsMaxSize int, seenTargetsClearingSchedule time.Duration) *AnalyticsService {
 	serviceTimeout := timeout
 	if timeout < 60*time.Second {
 		serviceTimeout = 60 * time.Second
@@ -79,7 +86,7 @@ func NewAnalyticsService(timeout time.Duration, logger logger.Logger) *Analytics
 		analyticsChan:       make(chan analyticsEvent),
 		evaluationAnalytics: newSafeEvaluationAnalytics(),
 		targetAnalytics:     newSafeTargetAnalytics(),
-		seenTargets:         newSafeSeenTargets(),
+		seenTargets:         newSafeSeenTargets(seenTargetsMaxSize, seenTargetsClearingSchedule),
 		timeout:             serviceTimeout,
 		logger:              logger,
 	}
