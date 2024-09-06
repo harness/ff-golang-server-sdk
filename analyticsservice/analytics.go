@@ -334,7 +334,7 @@ func (as *AnalyticsService) startSeenTargetsClearingSchedule(ctx context.Context
 	for {
 		select {
 		case <-ticker.C:
-			as.logger.Infof("Clearing seen targets")
+			as.logger.Debugf("Clearing seen targets")
 			as.seenTargets.clear()
 
 		case <-ctx.Done():
