@@ -1,6 +1,9 @@
 package client
 
 import (
+	"net/http"
+	"time"
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/ff-golang-server-sdk/cache"
 	"github.com/harness/ff-golang-server-sdk/evaluation"
@@ -8,7 +11,6 @@ import (
 	"github.com/harness/ff-golang-server-sdk/storage"
 	"github.com/harness/ff-golang-server-sdk/stream"
 	"github.com/harness/ff-golang-server-sdk/types"
-	"net/http"
 )
 
 // ConfigOption is used as return value for advanced client configuration
@@ -140,5 +142,24 @@ func WithAuthRetryStrategy(retryStrategy *backoff.ExponentialBackOff) ConfigOpti
 func WithSleeper(sleeper types.Sleeper) ConfigOption {
 	return func(config *config) {
 		config.sleeper = sleeper
+	}
+}
+
+// WithSeenTargetsMaxSize sets the maximum size for the seen targets map.
+// The SeenTargetsCache helps to reduce the size of the analytics payload that the SDK sends to the Feature Flags Service.
+// This method allows you to set the maximum number of unique targets that will be stored in the SeenTargets cache.
+// By default, the limit is set to 500,000 unique targets. You can increase this number if you need to handle more than
+// 500,000 targets, which will reduce the payload size but will also increase memory usage.
+func WithSeenTargetsMaxSize(maxSize int) ConfigOption {
+	return func(config *config) {
+		config.seenTargetsMaxSize = maxSize
+	}
+}
+
+// WithSeenTargetsClearInterval sets the clearing interval for the seen targets map. By default, the interval
+// is set to 24 hours.
+func WithSeenTargetsClearInterval(interval time.Duration) ConfigOption {
+	return func(config *config) {
+		config.seenTargetsClearInterval = interval
 	}
 }

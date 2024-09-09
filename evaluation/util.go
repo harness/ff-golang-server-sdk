@@ -80,7 +80,7 @@ func isEnabled(target *Target, bucketBy string, percentage int) bool {
 		if value == "" {
 			return false
 		}
-		log.Warnf("%s BucketBy attribute not found in target attributes, falling back to 'identifier': missing=%s, using value=%s", sdk_codes.MissingBucketBy, bucketBy, value)
+		log.Debugf("%s BucketBy attribute not found in target attributes, falling back to 'identifier': missing=%s, using value=%s", sdk_codes.MissingBucketBy, bucketBy, value)
 		bucketBy = "identifier"
 	}
 

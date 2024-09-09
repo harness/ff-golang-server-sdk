@@ -79,7 +79,7 @@ func NewCfClient(sdkKey string, options ...ConfigOption) (*CfClient, error) {
 		opt(config)
 	}
 
-	analyticsService := analyticsservice.NewAnalyticsService(time.Minute, config.Logger)
+	analyticsService := analyticsservice.NewAnalyticsService(time.Minute, config.Logger, config.seenTargetsMaxSize, config.seenTargetsClearInterval)
 
 	client := &CfClient{
 		sdkKey:                 sdkKey,

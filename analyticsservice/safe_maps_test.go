@@ -1,6 +1,7 @@
 package analyticsservice
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
 	"testing"
@@ -81,13 +82,95 @@ func TestSafeTargetAnalytics(t *testing.T) {
 }
 
 func TestSafeSeenTargets(t *testing.T) {
-	s := newSafeSeenTargets()
+	// Initialize with a small maxSize for testing
+	maxSize := 3
+	s := newSafeSeenTargets(maxSize).(SafeSeenTargetsCache[string, bool])
+
 	testData := map[string]bool{
 		"target1":  true,
 		"target21": true,
 		"target3":  true,
-		"target4":  true,
 	}
 
-	testMapOperations[string, bool](t, s, testData)
+	// Insert items and ensure limit is not exceeded
+	for key, value := range testData {
+		s.set(key, value)
+	}
+
+	if s.isLimitExceeded() {
+		t.Errorf("Limit should not have been exceeded yet")
+	}
+
+	// Add one more item to exceed the limit
+	s.set("target4", true)
+
+	// Ensure limitExceeded is true after exceeding the limit
+	if !s.isLimitExceeded() {
+		t.Errorf("Limit should be exceeded after adding target4")
+	}
+
+	// Ensure that new items are not added once the limit is exceeded
+	s.set("target5", true)
+	if _, exists := s.get("target5"); exists {
+		t.Errorf("target5 should not have been added as the limit was exceeded")
+	}
+
+	// Clear the map and ensure limit is reset
+	s.clear()
+
+	if s.isLimitExceeded() {
+		t.Errorf("Limit should have been reset after clearing the map")
+	}
+
+	// Add items again after clearing
+	s.set("target6", true)
+	if _, exists := s.get("target6"); !exists {
+		t.Errorf("target6 should have been added after clearing the map")
+	}
+
+	// Concurrency test
+	t.Run("ConcurrencyTest", func(t *testing.T) {
+		var wg sync.WaitGroup
+		concurrencyLevel := 100
+
+		// Re-initialize the map for concurrency testing
+		s = newSafeSeenTargets(100).(SafeSeenTargetsCache[string, bool])
+
+		// Concurrently set keys
+		for i := 0; i < concurrencyLevel; i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				key := "target" + fmt.Sprint(i)
+				s.set(key, true)
+			}(i)
+		}
+
+		// Concurrently get keys
+		for i := 0; i < concurrencyLevel; i++ {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+				key := "target" + fmt.Sprint(i)
+				s.get(key)
+			}(i)
+		}
+
+		// Concurrently clear the map
+		for i := 0; i < concurrencyLevel/2; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				s.clear()
+			}()
+		}
+
+		wg.Wait()
+
+		// Ensure the map is cleared after the concurrency operations
+		if s.size() > 0 {
+			t.Errorf("Map size should be 0 after clearing, got %d", s.size())
+		}
+	})
+
 }

@@ -18,26 +18,28 @@ import (
 )
 
 type config struct {
-	url                    string
-	eventsURL              string
-	pullInterval           uint // in seconds
-	Cache                  cache.Cache
-	Store                  storage.Storage
-	Logger                 logger.Logger
-	httpClient             *http.Client
-	authHttpClient         *http.Client
-	enableStream           bool
-	enableStore            bool
-	target                 evaluation.Target
-	eventStreamListener    stream.EventStreamListener
-	enableAnalytics        bool
-	proxyMode              bool
-	waitForInitialized     bool
-	maxAuthRetries         int
-	authRetryStrategy      *backoff.ExponentialBackOff
-	streamingRetryStrategy *backoff.ExponentialBackOff
-	sleeper                types.Sleeper
-	apiConfig              *apiConfiguration
+	url                      string
+	eventsURL                string
+	pullInterval             uint // in seconds
+	Cache                    cache.Cache
+	Store                    storage.Storage
+	Logger                   logger.Logger
+	httpClient               *http.Client
+	authHttpClient           *http.Client
+	enableStream             bool
+	enableStore              bool
+	target                   evaluation.Target
+	eventStreamListener      stream.EventStreamListener
+	enableAnalytics          bool
+	proxyMode                bool
+	waitForInitialized       bool
+	maxAuthRetries           int
+	authRetryStrategy        *backoff.ExponentialBackOff
+	streamingRetryStrategy   *backoff.ExponentialBackOff
+	sleeper                  types.Sleeper
+	apiConfig                *apiConfiguration
+	seenTargetsMaxSize       int
+	seenTargetsClearInterval time.Duration
 }
 
 type apiConfiguration struct {
@@ -87,24 +89,25 @@ func newDefaultConfig(log logger.Logger) *config {
 	}
 
 	return &config{
-		url:             "https://config.ff.harness.io/api/1.0",
-		eventsURL:       "https://events.ff.harness.io/api/1.0",
-		pullInterval:    60,
-		Cache:           defaultCache,
-		Store:           defaultStore,
-		Logger:          log,
-		authHttpClient:  authHttpClient,
-		httpClient:      requestHttpClient.StandardClient(),
-		enableStream:    true,
-		enableStore:     true,
-		enableAnalytics: true,
-		proxyMode:       false,
-		// Indicate that we should retry forever by default
-		maxAuthRetries:         -1,
-		authRetryStrategy:      getDefaultExpBackoff(),
-		streamingRetryStrategy: getDefaultExpBackoff(),
-		sleeper:                &types.RealClock{},
-		apiConfig:              apiConfig,
+		url:                      "https://config.ff.harness.io/api/1.0",
+		eventsURL:                "https://events.ff.harness.io/api/1.0",
+		pullInterval:             60,
+		Cache:                    defaultCache,
+		Store:                    defaultStore,
+		Logger:                   log,
+		authHttpClient:           authHttpClient,
+		httpClient:               requestHttpClient.StandardClient(),
+		enableStream:             true,
+		enableStore:              true,
+		enableAnalytics:          true,
+		proxyMode:                false,
+		maxAuthRetries:           -1, // Indicate that we should retry forever by default
+		authRetryStrategy:        getDefaultExpBackoff(),
+		streamingRetryStrategy:   getDefaultExpBackoff(),
+		sleeper:                  &types.RealClock{},
+		apiConfig:                apiConfig,
+		seenTargetsMaxSize:       500000,
+		seenTargetsClearInterval: 24 * time.Hour,
 	}
 }
 

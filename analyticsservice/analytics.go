@@ -26,7 +26,7 @@ const (
 	variationValueAttribute      string = "featureValue"
 	targetAttribute              string = "target"
 	sdkVersionAttribute          string = "SDK_VERSION"
-	SdkVersion                   string = "0.1.24"
+	SdkVersion                   string = "0.1.25"
 	sdkTypeAttribute             string = "SDK_TYPE"
 	sdkType                      string = "server"
 	sdkLanguageAttribute         string = "SDK_LANGUAGE"
@@ -46,6 +46,12 @@ type SafeAnalyticsCache[K comparable, V any] interface {
 	iterate(func(K, V))
 }
 
+// SafeSeenTargetsCache extends SafeAnalyticsCache and adds behavior specific to seen targets
+type SafeSeenTargetsCache[K comparable, V any] interface {
+	SafeAnalyticsCache[K, V]
+	isLimitExceeded() bool
+}
+
 type analyticsEvent struct {
 	target        *evaluation.Target
 	featureConfig *rest.FeatureConfig
@@ -55,20 +61,21 @@ type analyticsEvent struct {
 
 // AnalyticsService provides a way to cache and send analytics to the server
 type AnalyticsService struct {
-	analyticsChan             chan analyticsEvent
-	evaluationAnalytics       SafeAnalyticsCache[string, analyticsEvent]
-	targetAnalytics           SafeAnalyticsCache[string, evaluation.Target]
-	seenTargets               SafeAnalyticsCache[string, bool]
-	logEvaluationLimitReached atomic.Bool
-	logTargetLimitReached     atomic.Bool
-	timeout                   time.Duration
-	logger                    logger.Logger
-	metricsClient             metricsclient.ClientWithResponsesInterface
-	environmentID             string
+	analyticsChan               chan analyticsEvent
+	evaluationAnalytics         SafeAnalyticsCache[string, analyticsEvent]
+	targetAnalytics             SafeAnalyticsCache[string, evaluation.Target]
+	seenTargets                 SafeSeenTargetsCache[string, bool]
+	logEvaluationLimitReached   atomic.Bool
+	logTargetLimitReached       atomic.Bool
+	timeout                     time.Duration
+	logger                      logger.Logger
+	metricsClient               metricsclient.ClientWithResponsesInterface
+	environmentID               string
+	seenTargetsClearingInterval time.Duration
 }
 
 // NewAnalyticsService creates and starts a analytics service to send data to the client
-func NewAnalyticsService(timeout time.Duration, logger logger.Logger) *AnalyticsService {
+func NewAnalyticsService(timeout time.Duration, logger logger.Logger, seenTargetsMaxSize int, seenTargetsClearingSchedule time.Duration) *AnalyticsService {
 	serviceTimeout := timeout
 	if timeout < 60*time.Second {
 		serviceTimeout = 60 * time.Second
@@ -76,12 +83,13 @@ func NewAnalyticsService(timeout time.Duration, logger logger.Logger) *Analytics
 		serviceTimeout = 1 * time.Hour
 	}
 	as := AnalyticsService{
-		analyticsChan:       make(chan analyticsEvent),
-		evaluationAnalytics: newSafeEvaluationAnalytics(),
-		targetAnalytics:     newSafeTargetAnalytics(),
-		seenTargets:         newSafeSeenTargets(),
-		timeout:             serviceTimeout,
-		logger:              logger,
+		analyticsChan:               make(chan analyticsEvent),
+		evaluationAnalytics:         newSafeEvaluationAnalytics(),
+		targetAnalytics:             newSafeTargetAnalytics(),
+		seenTargets:                 newSafeSeenTargets(seenTargetsMaxSize),
+		timeout:                     serviceTimeout,
+		logger:                      logger,
+		seenTargetsClearingInterval: seenTargetsClearingSchedule,
 	}
 	go as.listener()
 
@@ -94,6 +102,7 @@ func (as *AnalyticsService) Start(ctx context.Context, client metricsclient.Clie
 	as.metricsClient = client
 	as.environmentID = environmentID
 	go as.startTimer(ctx)
+	go as.startSeenTargetsClearingSchedule(ctx, as.seenTargetsClearingInterval)
 }
 
 func (as *AnalyticsService) startTimer(ctx context.Context) {
@@ -103,6 +112,7 @@ func (as *AnalyticsService) startTimer(ctx context.Context) {
 			timeStamp := time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 			as.sendDataAndResetCache(ctx, timeStamp)
 		case <-ctx.Done():
+			close(as.analyticsChan)
 			as.logger.Infof("%s Metrics stopped", sdk_codes.MetricsStopped)
 			return
 		}
@@ -149,9 +159,12 @@ func (as *AnalyticsService) listener() {
 		}
 
 		// Check if target has been seen
-		_, seen := as.seenTargets.get(ad.target.Identifier)
+		if _, seen := as.seenTargets.get(ad.target.Identifier); seen {
+			continue
+		}
 
-		if seen {
+		// Check if seen targets limit has been hit
+		if as.seenTargets.isLimitExceeded() {
 			continue
 		}
 
@@ -312,6 +325,22 @@ func (as *AnalyticsService) processTargetMetrics(targetAnalytics SafeAnalyticsCa
 	})
 
 	return targetData
+}
+
+func (as *AnalyticsService) startSeenTargetsClearingSchedule(ctx context.Context, clearingInterval time.Duration) {
+	ticker := time.NewTicker(clearingInterval)
+
+	for {
+		select {
+		case <-ticker.C:
+			as.logger.Debugf("Clearing seen targets")
+			as.seenTargets.clear()
+
+		case <-ctx.Done():
+			ticker.Stop()
+			return
+		}
+	}
 }
 
 func getEvaluationAnalyticKey(event analyticsEvent) string {
