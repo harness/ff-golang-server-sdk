@@ -12,7 +12,6 @@ type safeSeenTargets struct {
 	limitExceeded atomic.Bool
 }
 
-// Implements SafeSeenTargetsCache
 func newSafeSeenTargets(maxSize int) SafeSeenTargetsCache[string, bool] {
 	return &safeSeenTargets{
 		data:    make(map[string]bool),
@@ -20,7 +19,6 @@ func newSafeSeenTargets(maxSize int) SafeSeenTargetsCache[string, bool] {
 	}
 }
 
-// The regular set method just calls SetWithLimit
 func (s *safeSeenTargets) set(key string, seen bool) {
 	s.Lock()
 	defer s.Unlock()
