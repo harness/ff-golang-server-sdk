@@ -136,6 +136,7 @@ pipeline:
                                     imageName: ff-testgrid-go
                                     tags:
                                       - <+codebase.tag>
+                                      - latest
                                     dockerfile: ff-sdk-testgrid/go/Dockerfile
                                     context: ff-sdk-testgrid/go
                                     buildArgs:
