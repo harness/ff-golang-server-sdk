@@ -141,23 +141,6 @@ pipeline:
                                     buildArgs:
                                       SDK_VERSION: <+codebase.tag>
                                       BUILD_MODE: local
-                              - step:
-                                  type: BuildAndPushGCR
-                                  name: Build and Push testgrid image as latest
-                                  identifier: Build_and_Push_testgrid_image_as_latest
-                                  spec:
-                                    connectorRef: platform205701
-                                    host: us.gcr.io
-                                    projectID: platform-205701
-                                    imageName: ff-testgrid-go
-                                    tags:
-                                      - latest
-                                    caching: true
-                                    dockerfile: ff-sdk-testgrid/go/Dockerfile
-                                    context: ff-sdk-testgrid/go
-                                    buildArgs:
-                                      SDK_VERSION: latest
-                                      BUILD_MODE: local
                             when:
                               stageStatus: Success
                               condition: <+stage.variables.release>
@@ -199,6 +182,23 @@ pipeline:
                                       limits:
                                         memory: 10G
                                         cpu: "10"
+                              - step:
+                                  type: BuildAndPushGCR
+                                  name: Build and Push testgrid image as latest
+                                  identifier: Build_and_Push_testgrid_image_as_latest
+                                  spec:
+                                    connectorRef: platform205701
+                                    host: us.gcr.io
+                                    projectID: platform-205701
+                                    imageName: ff-testgrid-go
+                                    tags:
+                                      - latest
+                                    caching: true
+                                    dockerfile: ff-sdk-testgrid/go/Dockerfile
+                                    context: ff-sdk-testgrid/go
+                                    buildArgs:
+                                      SDK_VERSION: latest
+                                      BUILD_MODE: local
                             when:
                               stageStatus: Success
                               condition: <+stage.variables.pull_request>
