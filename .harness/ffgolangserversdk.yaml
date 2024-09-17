@@ -192,12 +192,12 @@ pipeline:
                                     projectID: platform-205701
                                     imageName: ff-testgrid-go
                                     tags:
-                                      - latest
+                                      - test-latest
                                     caching: true
                                     dockerfile: ff-sdk-testgrid/go/Dockerfile
                                     context: ff-sdk-testgrid/go
                                     buildArgs:
-                                      SDK_VERSION: latest
+                                      SDK_VERSION: test-latest
                                       BUILD_MODE: local
                             when:
                               stageStatus: Success
