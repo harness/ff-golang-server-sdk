@@ -42,7 +42,7 @@ pipeline:
               - parallel:
                   - step:
                       type: Run
-                      name: Build and Test
+                      name: Build and Test Go 1_23_0
                       identifier: Build_and_Test
                       spec:
                         connectorRef: DockerHub
@@ -90,6 +90,14 @@ pipeline:
                            
 
                            echo "View Results Here: https://sonar.harness.io/dashboard?id=harness_ff-golang-server-sdk_AYSkVwnLWr37sP7QAgtQ"
+                  - step:
+                      type: Run
+                      name: Build and Test Go 1_20_0
+                      identifier: Build_and_Test_Go_1_20_0
+                      spec:
+                        connectorRef: account.dockerhub
+                        image: golang:1.20.0
+                        shell: Sh
               - stepGroup:
                   name: Testgrid image
                   identifier: Testgrid_image
