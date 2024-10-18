@@ -100,7 +100,6 @@ pipeline:
                         shell: Sh
                         command: |-
                           make tools
-                          make tidy 
                           make generate 
                           make build 
                           go test -race 
