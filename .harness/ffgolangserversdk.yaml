@@ -98,6 +98,13 @@ pipeline:
                         connectorRef: account.dockerhub
                         image: golang:1.20.0
                         shell: Sh
+                        command: |-
+                          make tools
+                          make tidy 
+                          make generate 
+                          make build 
+                          go test -race 
+                          ls -l
               - stepGroup:
                   name: Testgrid image
                   identifier: Testgrid_image
