@@ -102,7 +102,7 @@ pipeline:
                       make tools
                       make generate 
                       make build 
-                      go test -race 
+                      go test -race ./...
                       ls -l
               - stepGroup:
                   name: Testgrid image
