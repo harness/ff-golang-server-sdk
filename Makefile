@@ -85,11 +85,9 @@ $(GOPATH)/bin/golangci-lint:
 
 $(GOPATH)/bin/golint:
 	@echo "🔘 Installing golint ... (`date '+%H:%M:%S'`)"
-	@GO111MODULE=off go get -u golang.org/x/lint/golint
 
 $(GOPATH)/bin/goimports:
 	@echo "🔘 Installing goimports ... (`date '+%H:%M:%S'`)"
-	@GO111MODULE=off go get -u golang.org/x/tools/cmd/goimports
 
 $(GOPATH)/bin/gosec:
 	@echo "🔘 Installing gosec ... (`date '+%H:%M:%S'`)"
