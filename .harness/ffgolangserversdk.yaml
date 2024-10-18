@@ -46,7 +46,7 @@ pipeline:
                       identifier: Build_and_Test
                       spec:
                         connectorRef: DockerHub
-                        image: golang:1.20.0
+                        image: golang:1.23.0
                         shell: Sh
                         command: |-
                           go install github.com/jstemmer/go-junit-report@latest
