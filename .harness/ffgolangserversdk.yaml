@@ -23,7 +23,7 @@ pipeline:
           infrastructure:
             type: KubernetesDirect
             spec:
-              connectorRef: ffplayci
+              connectorRef: ffplaycinew
               namespace: default
               automountServiceAccountToken: true
               nodeSelector: {}
