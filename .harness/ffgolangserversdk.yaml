@@ -145,6 +145,12 @@ pipeline:
                             when:
                               stageStatus: Success
                               condition: <+stage.variables.release>
+                            failureStrategies:
+                              - onFailure:
+                                  errors:
+                                    - AllErrors
+                                  action:
+                                    type: Ignore
                         - stepGroup:
                             name: Pull Request
                             identifier: Pull_Request
@@ -186,6 +192,12 @@ pipeline:
                             when:
                               stageStatus: Success
                               condition: <+stage.variables.pull_request>
+                            failureStrategies:
+                              - onFailure:
+                                  errors:
+                                    - AllErrors
+                                  action:
+                                    type: Ignore
                   when:
                     stageStatus: Success
               - step:
