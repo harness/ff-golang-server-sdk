@@ -65,6 +65,10 @@ pipeline:
                           spec:
                             paths:
                               - junit.xml
+                        outputVariables:
+                          - name: Foo
+                            type: String
+                            value: <+pipeline.properties.ci.codebase.repoName>
                         resources:
                           limits:
                             memory: 1G
