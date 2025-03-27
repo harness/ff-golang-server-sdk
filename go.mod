@@ -5,10 +5,10 @@ go 1.23.0
 toolchain go1.23.7
 
 require (
-	github.com/cenkalti/backoff/v4 v4.2.1
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/deepmap/oapi-codegen/v2 v2.1.0
 	github.com/getkin/kin-openapi v0.124.0
-	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/uuid v1.5.0
 	github.com/harness-community/sse/v3 v3.1.0
 	github.com/hashicorp/go-retryablehttp v0.7.7

@@ -25,7 +25,7 @@ import (
 	"github.com/harness/ff-golang-server-sdk/metricsclient"
 
 	"github.com/deepmap/oapi-codegen/v2/pkg/securityprovider"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/harness/ff-golang-server-sdk/rest"
 	"github.com/harness/ff-golang-server-sdk/stream"
 	"github.com/harness/ff-golang-server-sdk/types"
