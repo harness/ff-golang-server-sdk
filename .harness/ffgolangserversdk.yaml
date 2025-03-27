@@ -199,7 +199,7 @@ pipeline:
                                     dockerfile: ff-sdk-testgrid/go/Dockerfile
                                     context: ff-sdk-testgrid/go
                                     buildArgs:
-                                      SDK_VERSION: v0.1.25
+                                      SDK_VERSION: v0.1.26
                                       BUILD_MODE: local
                                     resources:
                                       limits:
