@@ -66,9 +66,21 @@ pipeline:
                             paths:
                               - junit.xml
                         outputVariables:
-                          - name: Foo
+                          - name: RepoName
                             type: String
                             value: <+pipeline.properties.ci.codebase.repoName>
+                          - name: RepoBranch
+                            type: String
+                            value: <+pipeline.properties.ci.codebase.build.spec.branch>
+                          - name: RepoTag
+                            type: String
+                            value: <+pipeline.properties.ci.codebase.build.spec.tag>
+                          - name: PRNumber
+                            type: String
+                            value: <+pipeline.properties.ci.codebase.build.spec.number>
+                          - name: CommitSHA
+                            type: String
+                            value: <+trigger.commitSha>
                         resources:
                           limits:
                             memory: 1G
