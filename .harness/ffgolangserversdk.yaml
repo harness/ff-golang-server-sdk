@@ -222,9 +222,9 @@ pipeline:
                   identifier: CVE_scan
                   spec:
                     connectorRef: platform205701
-                    image: us.gcr.io/platform-205701/ff-sdk-sto-scanner:latest
+                    image: us-west1-docker.pkg.dev/ff-play-335721/docker/ff-sdk-sto-scanner:latest
                     shell: Bash
-                    command: |
+                    command: |-
                       /run.sh
                       find .
                     envVariables:
@@ -297,10 +297,10 @@ pipeline:
                   name: Make Test Coverage Public
                   identifier: Make_Test_Coverage_Public
                   spec:
-                    connectorRef: ffplay
-                    image: us.gcr.io/ff-play-335721/ff-ci-base:latest
+                    connectorRef: ffplayviaharnessplatform
+                    image: us-west1-docker.pkg.dev/ff-play-335721/docker/ff-ci-base:latest
                     shell: Sh
-                    command: |
+                    command: |-
                       echo <+pipeline.variables.GCR_KEY_B64> > keyfile.b64
                       base64 -d keyfile.b64 > keyfile.json
                       gcloud auth activate-service-account platform-gcr-admin@platform-205701.iam.gserviceaccount.com --key-file=./keyfile.json 
