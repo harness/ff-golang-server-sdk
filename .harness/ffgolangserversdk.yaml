@@ -314,6 +314,9 @@ pipeline:
                           - AllErrors
                         action:
                           type: Ignore
+                  when:
+                    stageStatus: Success
+                    condition: "false"
           serviceDependencies:
             - identifier: docker_in_docker
               name: docker in docker
