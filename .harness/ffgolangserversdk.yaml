@@ -106,6 +106,9 @@ pipeline:
                            
 
                            echo "View Results Here: https://sonar.harness.io/dashboard?id=harness_ff-golang-server-sdk_AYSkVwnLWr37sP7QAgtQ"
+                      when:
+                        stageStatus: Success
+                        condition: "false"
               - stepGroup:
                   name: Testgrid image
                   identifier: Testgrid_image
