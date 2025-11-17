@@ -280,6 +280,9 @@ pipeline:
                         bucket: ff-test-coverage
                         sourcePath: coverage-report.html
                         target: ff-golang-server-sdk/coverage-report.html
+                      when:
+                        stageStatus: Success
+                        condition: "false"
                   - step:
                       type: Run
                       name: Setup CodeCov
