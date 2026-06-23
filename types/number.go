@@ -17,7 +17,7 @@ func NewNumber(value interface{}) (*Number, error) {
 		newStr := Number(num)
 		return &newStr, nil
 	}
-	return nil, fmt.Errorf("%v: cant cast to a number", ErrWrongTypeAssertion)
+	return nil, fmt.Errorf("%v: can't cast to a number", ErrWrongTypeAssertion)
 }
 
 // numberOperator takes the first element from the slice, converts it to a float64 and passes to fn for processing.
@@ -34,32 +34,32 @@ func numberOperator(value []string, fn func(float64) bool) bool {
 	return false
 }
 
-// StartsWith always return false
+// StartsWith always returns false
 func (n Number) StartsWith(value []string) bool {
 	return false
 }
 
-// EndsWith always return false
+// EndsWith always returns false
 func (n Number) EndsWith(value []string) bool {
 	return false
 }
 
-// Match always return false
+// Match always returns false
 func (n Number) Match(value []string) bool {
 	return false
 }
 
-// Contains always return false
+// Contains always returns false
 func (n Number) Contains(value []string) bool {
 	return false
 }
 
-// EqualSensitive always return false
+// EqualSensitive always returns false
 func (n Number) EqualSensitive(value []string) bool {
 	return false
 }
 
-// Equal check if the number and value are equal
+// Equal checks if the number and value are equal
 func (n Number) Equal(value []string) bool {
 	return numberOperator(value, func(f float64) bool {
 		return float64(n) == f
@@ -73,7 +73,7 @@ func (n Number) GreaterThan(value []string) bool {
 	})
 }
 
-// GreaterThanEqual checks if the number is greater or equal than the value
+// GreaterThanEqual checks if the number is greater than or equal to the value
 func (n Number) GreaterThanEqual(value []string) bool {
 	return numberOperator(value, func(f float64) bool {
 		return float64(n) >= f
@@ -87,14 +87,14 @@ func (n Number) LessThan(value []string) bool {
 	})
 }
 
-// LessThanEqual checks if the number is less or equal than the value
+// LessThanEqual checks if the number is less than or equal to the value
 func (n Number) LessThanEqual(value []string) bool {
 	return numberOperator(value, func(f float64) bool {
 		return float64(n) <= f
 	})
 }
 
-// In checks if the number exist in slice of numbers (value)
+// In checks if the number exists in a slice of numbers (value)
 func (n Number) In(value []string) bool {
 	for _, x := range value {
 		if n.Equal([]string{x}) {
