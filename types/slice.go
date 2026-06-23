@@ -78,52 +78,52 @@ func (s Slice) In(values []string) bool {
 	return false
 }
 
-// Equal always return false
+// Equal always returns false
 func (s Slice) Equal(value []string) bool {
 	return s.In(value)
 }
 
-// Contains always return false
+// Contains always returns false
 func (s Slice) Contains(values []string) bool {
 	return s.In(values)
 }
 
-// StartsWith always return false
+// StartsWith always returns false
 func (s Slice) StartsWith(value []string) bool {
 	return false
 }
 
-// EndsWith always return false
+// EndsWith always returns false
 func (s Slice) EndsWith(value []string) bool {
 	return false
 }
 
-// Match always return false
+// Match always returns false
 func (s Slice) Match(value []string) bool {
 	return false
 }
 
-// EqualSensitive always return false
+// EqualSensitive always returns false
 func (s Slice) EqualSensitive(value []string) bool {
 	return false
 }
 
-// GreaterThan always return false
+// GreaterThan always returns false
 func (s Slice) GreaterThan(value []string) bool {
 	return false
 }
 
-// GreaterThanEqual always return false
+// GreaterThanEqual always returns false
 func (s Slice) GreaterThanEqual(value []string) bool {
 	return false
 }
 
-// LessThan always return false
+// LessThan always returns false
 func (s Slice) LessThan(value []string) bool {
 	return false
 }
 
-// LessThanEqual always return false
+// LessThanEqual always returns false
 func (s Slice) LessThanEqual(value []string) bool {
 	return false
 }
@@ -173,7 +173,7 @@ func boolcmp(attribute bool, values []string) bool {
 	return false
 }
 
-// validateSlice checks if this is a ptr and deference it
+// validateSlice checks if this is a ptr and dereference it
 // then validates that we are working with a slice.
 func validateSlice(data interface{}) interface{} {
 	v := reflect.ValueOf(data)

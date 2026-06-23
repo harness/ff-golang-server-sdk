@@ -16,10 +16,10 @@ func NewString(value interface{}) (*String, error) {
 		newStr := String(str)
 		return &newStr, nil
 	}
-	return nil, fmt.Errorf("%v: cant cast to a string", ErrWrongTypeAssertion)
+	return nil, fmt.Errorf("%v: can't cast to a string", ErrWrongTypeAssertion)
 }
 
-// String implement Stringer interface
+// String implements Stringer interface
 func (s String) String() string {
 	return string(s)
 }
@@ -33,21 +33,21 @@ func stringOperator(value []string, fn func(string) bool) bool {
 	return false
 }
 
-// StartsWith check if the string starts with the value
+// StartsWith checks if the string starts with the value
 func (s String) StartsWith(value []string) bool {
 	return stringOperator(value, func(c string) bool {
 		return strings.HasPrefix(string(s), c)
 	})
 }
 
-// EndsWith check if the string ends with the value
+// EndsWith checks if the string ends with the value
 func (s String) EndsWith(value []string) bool {
 	return stringOperator(value, func(c string) bool {
 		return strings.HasSuffix(string(s), c)
 	})
 }
 
-// Match check if the string match the regex value
+// Match checks if the string matches the regex value
 func (s String) Match(value []string) bool {
 	return stringOperator(value, func(c string) bool {
 		if matched, err := regexp.MatchString(string(s), c); err == nil {
@@ -57,21 +57,21 @@ func (s String) Match(value []string) bool {
 	})
 }
 
-// Contains check if the string contains the value
+// Contains checks if the string contains the value
 func (s String) Contains(value []string) bool {
 	return stringOperator(value, func(c string) bool {
 		return strings.Contains(string(s), c)
 	})
 }
 
-// EqualSensitive check if the string and value are equal (case sensitive)
+// EqualSensitive checks if the string and value are equal (case sensitive)
 func (s String) EqualSensitive(value []string) bool {
 	return stringOperator(value, func(c string) bool {
 		return string(s) == c
 	})
 }
 
-// Equal check if the string and value are equal
+// Equal checks if the string and value are equal
 func (s String) Equal(value []string) bool {
 	return stringOperator(value, func(c string) bool {
 		return strings.EqualFold(string(s), c)
@@ -85,7 +85,7 @@ func (s String) GreaterThan(value []string) bool {
 	})
 }
 
-// GreaterThanEqual checks if the string is greater or equal than the value
+// GreaterThanEqual checks if the string is greater than or equal to the value
 func (s String) GreaterThanEqual(value []string) bool {
 	return stringOperator(value, func(c string) bool {
 		return strings.ToLower(string(s)) >= strings.ToLower(c)
@@ -99,14 +99,14 @@ func (s String) LessThan(value []string) bool {
 	})
 }
 
-// LessThanEqual checks if the string is less or equal than the value
+// LessThanEqual checks if the string is less than or equal to the value
 func (s String) LessThanEqual(value []string) bool {
 	return stringOperator(value, func(c string) bool {
 		return strings.ToLower(string(s)) <= strings.ToLower(c)
 	})
 }
 
-// In checks if the string exist in slice of strings (value)
+// In checks if the string exists in a slice of strings (value)
 func (s String) In(value []string) bool {
 	for _, x := range value {
 		if strings.EqualFold(string(s), x) {

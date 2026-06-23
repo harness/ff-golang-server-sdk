@@ -17,10 +17,10 @@ func NewInteger(value interface{}) (*Integer, error) {
 		newStr := Integer(num)
 		return &newStr, nil
 	}
-	return nil, fmt.Errorf("%v: cant cast to a integer", ErrWrongTypeAssertion)
+	return nil, fmt.Errorf("%v: can't cast to an integer", ErrWrongTypeAssertion)
 }
 
-// intOperator takes the first element from the slice, converts it to a int64 and passes to fn for processing.
+// intOperator takes the first element from the slice, converts it to an int64 and passes to fn for processing.
 // we ignore any additional elements if they exist.
 func intOperator(value []string, fn func(int64) bool) bool {
 	if len(value) > 0 {
@@ -35,32 +35,32 @@ func intOperator(value []string, fn func(int64) bool) bool {
 	return false
 }
 
-// StartsWith always return false
+// StartsWith always returns false
 func (n Integer) StartsWith([]string) bool {
 	return false
 }
 
-// EndsWith always return false
+// EndsWith always returns false
 func (n Integer) EndsWith([]string) bool {
 	return false
 }
 
-// Match always return false
+// Match always returns false
 func (n Integer) Match([]string) bool {
 	return false
 }
 
-// Contains always return false
+// Contains always returns false
 func (n Integer) Contains([]string) bool {
 	return false
 }
 
-// EqualSensitive always return false
+// EqualSensitive always returns false
 func (n Integer) EqualSensitive([]string) bool {
 	return false
 }
 
-// Equal check if the number and value are equal
+// Equal checks if the number and value are equal
 func (n Integer) Equal(value []string) bool {
 	return intOperator(value, func(f int64) bool {
 		return int64(n) == f
@@ -74,7 +74,7 @@ func (n Integer) GreaterThan(value []string) bool {
 	})
 }
 
-// GreaterThanEqual checks if the number is greater or equal than the value
+// GreaterThanEqual checks if the number is greater than or equal to the value
 func (n Integer) GreaterThanEqual(value []string) bool {
 	return intOperator(value, func(f int64) bool {
 		return int64(n) >= f
@@ -88,14 +88,14 @@ func (n Integer) LessThan(value []string) bool {
 	})
 }
 
-// LessThanEqual checks if the number is less or equal than the value
+// LessThanEqual checks if the number is less than or equal to the value
 func (n Integer) LessThanEqual(value []string) bool {
 	return intOperator(value, func(f int64) bool {
 		return int64(n) <= f
 	})
 }
 
-// In checks if the number exist in slice of numbers (value)
+// In checks if the number exists in a slice of numbers (value)
 func (n Integer) In(value []string) bool {
 	for _, x := range value {
 		if n.Equal([]string{x}) {

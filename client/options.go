@@ -24,28 +24,28 @@ func WithAnalyticsEnabled(val bool) ConfigOption {
 	}
 }
 
-// WithURL set baseUrl for communicating with ff server
+// WithURL sets baseUrl for communicating with ff server
 func WithURL(url string) ConfigOption {
 	return func(config *config) {
 		config.url = url
 	}
 }
 
-// WithEventsURL set eventsURL for communicating with ff server
+// WithEventsURL sets eventsURL for communicating with ff server
 func WithEventsURL(url string) ConfigOption {
 	return func(config *config) {
 		config.eventsURL = url
 	}
 }
 
-// WithPullInterval set pulling interval in minutes
+// WithPullInterval sets pulling interval in minutes
 func WithPullInterval(interval uint) ConfigOption {
 	return func(config *config) {
 		config.pullInterval = interval
 	}
 }
 
-// WithCache set custom cache or predefined one from cache package
+// WithCache sets custom cache or predefined one from cache package
 func WithCache(cache cache.Cache) ConfigOption {
 	return func(config *config) {
 		config.Cache = cache
@@ -55,7 +55,7 @@ func WithCache(cache cache.Cache) ConfigOption {
 	}
 }
 
-// WithStore set custom storage or predefined one from storage package
+// WithStore sets custom storage or predefined one from storage package
 func WithStore(store storage.Storage) ConfigOption {
 	return func(config *config) {
 		config.Store = store
@@ -65,28 +65,28 @@ func WithStore(store storage.Storage) ConfigOption {
 	}
 }
 
-// WithLogger set custom logger used in main application
+// WithLogger sets custom logger used in main application
 func WithLogger(logger logger.Logger) ConfigOption {
 	return func(config *config) {
 		config.Logger = logger
 	}
 }
 
-// WithStreamEnabled set stream on or off
+// WithStreamEnabled sets stream on or off
 func WithStreamEnabled(val bool) ConfigOption {
 	return func(config *config) {
 		config.enableStream = val
 	}
 }
 
-// WithStoreEnabled set store on or off
+// WithStoreEnabled sets store on or off
 func WithStoreEnabled(val bool) ConfigOption {
 	return func(config *config) {
 		config.enableStore = val
 	}
 }
 
-// WithHTTPClient set auth and http client for use in interactions with ff server
+// WithHTTPClient sets auth and http client for use in interactions with ff server
 func WithHTTPClient(client *http.Client) ConfigOption {
 	return func(config *config) {
 		config.authHttpClient = client
@@ -131,7 +131,7 @@ func WithMaxAuthRetries(i int) ConfigOption {
 }
 
 // WithAuthRetryStrategy sets the backoff and retry strategy for client authentication requests
-// Mainly used for testing purposes, as the SDKs default backoff strategy should be sufficient for most if not all scenarios.
+// Mainly used for testing purposes, as the SDK's default backoff strategy should be sufficient for most if not all scenarios.
 func WithAuthRetryStrategy(retryStrategy *backoff.ExponentialBackOff) ConfigOption {
 	return func(config *config) {
 		config.authRetryStrategy = retryStrategy
