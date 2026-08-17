@@ -92,7 +92,13 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 	onConnect := func(s *sse.Client) {
 		// Start the dead stream timer
 		deadStreamTimer.Reset(timeout)
-		c.streamConnected <- struct{}{}
+
+		// The SDK stops reading this channel once its context is cancelled, so guard the send
+		// to avoid parking this goroutine for the lifetime of the process.
+		select {
+		case c.streamConnected <- struct{}{}:
+		case <-ctx.Done():
+		}
 	}
 	c.client.OnConnect(onConnect)
 	out := make(chan Event)
@@ -102,17 +108,35 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		// Create another context off of the main SDK context, so we can close dead streams.
 		deadStreamCtx, deadStreamCancel := context.WithCancel(ctx)
 		defer deadStreamCancel()
+		defer deadStreamTimer.Stop()
 
+		// Signals that this subscription was torn down because the stream went dead, rather than
+		// because the server closed the connection or the SDK shut down.
+		deadStream := make(chan struct{})
+
+		// This waiter must observe deadStreamCtx and not the SDK context: the SDK context lives for
+		// the lifetime of the process, whereas deadStreamCtx is cancelled every time a subscription
+		// ends. Stopping the timer does not send on its channel, so watching the SDK context here
+		// parks one goroutine per reconnect for the lifetime of the process.
 		go func() {
 			select {
-			case <-ctx.Done():
+			case <-deadStreamCtx.Done():
 				return
 			case <-deadStreamTimer.C:
-				deadStreamTimer.Stop()
+				close(deadStream)
 				deadStreamCancel()
 				return
 			}
 		}()
+
+		// The SDK stops reading this channel once its context is cancelled, so guard the send
+		// to avoid parking this goroutine for the lifetime of the process.
+		notifyDisconnected := func(err error) {
+			select {
+			case c.streamDisconnected <- err:
+			case <-ctx.Done():
+			}
+		}
 
 		err := c.client.SubscribeWithContext(deadStreamCtx, "*", func(msg *sse.Event) {
 
@@ -141,18 +165,28 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 			}
 
 		})
+
+		// Release the dead stream waiter before signalling the disconnect: the signal can block
+		// until the SDK reconnects, and the waiter must not outlive this subscription.
+		deadStreamTimer.Stop()
+		deadStreamCancel()
+
 		if err != nil {
-			deadStreamTimer.Stop()
-			c.streamDisconnected <- err
+			notifyDisconnected(err)
 			return
 		}
 
-		deadStreamTimer.Stop()
+		// When we cancel the deadStreamContext, we exit the `SubscribeWithContext` function with a nil error,
+		// so we need an explicit check to see why the subscription ended.
+		select {
+		case <-deadStream:
+			notifyDisconnected(fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting"))
+			return
+		default:
+		}
 
-		// When we cancel the deadStreamContext, we exit the `SubscribeWithContext` function with a nil error.
-		// So we need an explicit check to see if the reason was
-		if errors.Is(deadStreamCtx.Err(), context.Canceled) {
-			c.streamDisconnected <- fmt.Errorf("no SSE events received for 30 seconds. Assuming stream is dead and restarting")
+		// The SDK is shutting down, there is nothing to reconnect to.
+		if errors.Is(ctx.Err(), context.Canceled) {
 			return
 		}
 
@@ -161,7 +195,7 @@ func (c *SSEClient) subscribe(ctx context.Context, environment string, apiKey st
 		// So we need to signal the stream disconnected channel any time we've exited SubscribeWithContext.
 		// If we don't do this and the server closes the connection the Go SDK will still think it's connected to the stream
 		// even though it isn't.
-		c.streamDisconnected <- fmt.Errorf("server closed the connection")
+		notifyDisconnected(fmt.Errorf("server closed the connection"))
 	}()
 
 	return out
